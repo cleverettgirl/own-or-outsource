@@ -578,6 +578,16 @@ export default class App extends React.Component {
     if (c && c.type === 'explain') return c.keyPoints.length ? c.keyPoints : ['Explains the idea and applies it'];
     return w.requirements && w.requirements.length ? w.requirements : ['Meets the task'];
   }
+  // The same items, named so they can be shown before the try without giving answers away; null when they can't
+  // be (an explanation's key ideas, generated requirements), and then only the count is shown.
+  plannedTopics(o = this.state.own) {
+    const c = o.write.check;
+    if (c && c.type === 'choice') return c.questions.map(q => q.short || q.prompt);
+    if (c && c.type === 'steps') return c.steps.map(st => st.label);
+    if (c && c.type === 'sql' && c.items && c.items.every(i => i.topic)) return c.items.map(i => i.topic);
+    if (c && c.type === 'number' && c.labels) return c.labels;
+    return null;
+  }
   pickPrediction(n) {
     // After a chat that already taught it, everyone starts at the test; the visual stays one click away.
     // Arrange first only when the written order is the insight and you predicted you'd get under half right.
@@ -1118,19 +1128,18 @@ export default class App extends React.Component {
       seeIsProse: o.lang === 'email',
       phasePredict: o.phase === 'predict', phaseLadder: o.phase === 'ladder', phaseReveal: o.phase === 'reveal', phaseTeach: o.phase === 'teach',
       cancelOwn: this.cancelOwn, leaveOwn: this.leaveOwn, changeFocus: this.changeFocus,
-      predictHint: "Then you'll try it on a new case. Claude's answer is your material; there's no studying first.",
+      predictHint: "Claude's answer is your material; there's no studying first.",
       ...(() => {
         const w = o.write, chk = w.check, label = o.focus ? o.focus.label : 'this';
-        if (w.loading || (!w.task && !chk)) return { predictReady: false, predictQuestion: 'Preparing your try…', predictNext: '', predictOptions: [] };
-        const n = this.plannedItems(o).length;
-        const what = chk && chk.type === 'choice' ? `${n} question${n > 1 ? 's' : ''} on “${label}”, on a new case`
-          : chk && chk.type === 'explain' ? `one question in your own words, checked for ${n} key idea${n > 1 ? 's' : ''}`
-          : chk && chk.type === 'number' ? 'a new case to work out'
-          : chk && chk.type === 'steps' ? `a new case to work out, in ${n} step${n > 1 ? 's' : ''}`
-          : chk && chk.type === 'sql' ? `a new query, checked for ${n} thing${n > 1 ? 's' : ''} it has to get right`
-          : `a new case to write, checked for ${n} requirement${n > 1 ? 's' : ''}`;
-        return { predictReady: true, predictNext: `Next: ${what}.`,
-          predictQuestion: n === 1 ? 'Will you get it right on your own?' : `How many of these ${n} will you get right on your own?`,
+        if (w.loading || (!w.task && !chk)) return { predictReady: false, predictQuestion: 'Preparing your try…', predictTask: '', predictTopics: [], predictWhat: '', predictOptions: [] };
+        // You predict about the try itself: it's shown, with what it will be checked on, so "these" points at something.
+        const n = this.plannedItems(o).length, topics = this.plannedTopics(o);
+        const thing = chk && chk.type === 'choice' ? 'question' : chk && chk.type === 'steps' ? 'step' : chk && chk.type === 'explain' ? 'key idea' : chk && chk.type === 'sql' ? 'thing' : 'requirement';
+        const plural = n === 1 ? thing : thing + 's';
+        return { predictReady: true, predictTask: w.task, predictTopics: topics || [],
+          predictWhat: chk && chk.type === 'choice' ? `${n} ${plural}, on:` : topics ? `It's checked on ${n} ${plural}:` : chk && chk.type === 'explain' ? `Your answer is checked for ${n} ${plural}.` : `It's checked on ${n} ${plural}.`,
+          predictQuestion: n === 1 ? 'Will you get it right on your own?' : `How many of the ${n} will you get right on your own?`,
+          predictLow: this.frame(o).orderMatters ? 'Under half? You\'ll start with a quick warm-up.' : '',
           predictOptions: (n === 1 ? [[0, 'Not yet'], [1, 'Yes']] : Array.from({ length: n + 1 }, (_, k) => [k, k === 0 ? 'none' : k === n ? 'all' : ''])).map(([k, l]) => ({ n: k, label: l, onPick: () => this.pickPrediction(k), border: '#E3C9B8', bg: '#fff', fg: '#1F1D1A' })) };
       })(),
       writeRefresher: o.write.grade ? [] : [...(this.frame(o).orderMatters ? [{ label: 'Warm up with the pieces', onClick: goStep('assemble') }] : []), ...(this.visualStep(o) ? [{ label: 'See it visually', onClick: goStep(this.visualStep(o)) }] : [])],

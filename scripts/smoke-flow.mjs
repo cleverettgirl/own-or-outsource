@@ -75,7 +75,7 @@ step('tip goes away once you own something', !document.querySelector('[data-role
 step('panel: no copy of Claude\'s text; the whole reply is marked as being owned in the chat', document.querySelectorAll('[data-msg-id][data-owning=whole]').length === 1 && !document.querySelector('[data-role=own-panel] pre') && text().includes('Reread it in your chat'));
 step('panel: Own it opens on the side, chat stays visible, chip marks it', !!document.querySelector('[data-role=own-panel]') && !!document.querySelector('[data-role=own-chip]') && !!document.querySelector('main pre'));
 await click('The whole query');
-step('predict: names the focus, and asks how many of N you will get right', text().includes('Owning: The whole query') && text().includes('How many of these 4 will you get right on your own?') && text().includes('Next: a new query, checked for 4 things') && document.querySelectorAll('[data-role=predict-option]').length === 5);
+step('predict: the try is shown with what it is checked on, named without giving answers away', text().includes('Owning: The whole query') && !!document.querySelector('[data-role=predict-try]') && text().includes('total pages per author') && [...document.querySelectorAll('[data-role=predict-topics] li')].map(li => li.textContent).join(' | ') === 'who appears | what an empty total shows | which pages count | the sort order' && !text().includes('even Cal') && text().includes('How many of the 4 will you get right on your own?') && text().includes("Under half? You'll start with a quick warm-up.") && document.querySelectorAll('[data-role=predict-option]').length === 5);
 await act(async () => { document.querySelector('button[data-role=change-focus]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(50);
 step('"change" reopens the focus question', text().includes('What do you want to own here?') && text().includes('When to use LEFT vs INNER'));
@@ -237,7 +237,7 @@ const focusLabels = buttons().map(b => b.textContent.trim()).filter(t => /concep
 step('unmatched part: options name it, no unrelated join options', focusLabels[0]?.includes('ORDER BY revenue DESC') && !focusLabels.some(t => /JOIN|ON, not WHERE/.test(t)), focusLabels.join(' | '));
 await click('What ORDER BY');
 await wait(50);
-step('unmatched part: the prediction names the try it fits (explain, not "write code")', text().includes('Will you get it right on your own?') && text().includes('Next: one question in your own words'));
+step('unmatched part: the prediction shows the try it fits (explain, not "write code")', text().includes('Will you get it right on your own?') && text().includes('Your answer is checked for 1 key idea.'));
 await predict(0);
 await wait(200);
 step('unmatched part: straight to the try (no hand-written visual for it)', !!document.querySelector('button[data-role=leave]') && !!document.querySelector('textarea[data-role=write]') && !text().includes('See it visually'));
@@ -407,7 +407,7 @@ step('check it landed: saved under "You asked about" on Learnings', !!document.q
 await click('Own it');
 await wait(50);
 step('one action, one name: the chip is "Own it" too, and the owned answer\'s icon shows it', [...document.querySelectorAll('button[data-role=own-all]')].some(b => b.getAttribute('aria-pressed') === 'true') && text().includes('Own it · When the cleanup runs'));
-step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && text().includes('Owning: When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of these 3 will you get right on your own?'));
+step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && text().includes('Owning: When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of the 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-topics] li').length === 3);
 await act(async () => { document.querySelector('button[data-role=leave]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(20);
 step('check it landed: once checked, it leaves "You asked about" and the chip goes', !document.querySelector('button[data-role=own-all][data-expanded]'));
@@ -492,7 +492,7 @@ await click('aggregation theory');
 await wait(50);
 await ownAll();
 await click('Which side an aggregator owns');
-step('calibration: the prediction is how many of the 3 questions you will get right', text().includes('How many of these 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-option]').length === 4);
+step('calibration: the prediction is about the 3 questions shown with the try', text().includes('How many of the 3 will you get right on your own?') && text().includes('3 questions, on:') && document.querySelectorAll('[data-role=predict-topics] li').length === 3 && document.querySelectorAll('[data-role=predict-option]').length === 4);
 await predict(3);
 await click('Stay on Vela and train with someone else'); // one right answer; the other two left blank
 await click('Check my version');
@@ -556,7 +556,7 @@ await ownAll();
 await wait(80);
 await click('Converting baselines to the same units');
 await wait(120);
-step('steps: a calculation is predicted step by step', text().includes('How many of these 3 will you get right on your own?') && text().includes('Next: a new case to work out, in 3 steps'));
+step('steps: a calculation is predicted step by step, with the steps shown', text().includes('How many of the 3 will you get right on your own?') && text().includes("It's checked on 3 steps:") && text().includes("D's baseline, per 1,000"));
 await predict(3);
 await wait(50);
 const stepInputs = () => [...document.querySelectorAll('input[data-role=step-input]')];

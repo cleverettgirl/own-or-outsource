@@ -44,7 +44,16 @@ export default function OwnPanel({ V }) {
 
               {!!(V.phasePredict) && (<>
                 <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
-                  <div style={css(`display:flex;justify-content:space-between;align-items:baseline;gap:12px`)}><div style={css(`display:flex;flex-direction:column;gap:4px`)}><div style={css(`font-size:12px;color:#9E4B2A`)}>Owning: {V.focusLabel} <button onClick={V.changeFocus} data-role="change-focus" style={css(`background:none;border:none;padding:0;font-size:12px;color:#8A847A;text-decoration:underline;text-underline-offset:2px`)}>change</button></div><div style={css(`font-size:14.5px`)}>{V.predictQuestion}</div>{!!V.predictNext && <div data-role="predict-next" style={css(`font-size:12.5px;color:#716C64`)}>{V.predictNext}</div>}</div><button onClick={V.leaveOwn} style={css(`background:none;border:none;font-size:13px;color:#8A847A;flex:none`)}>Never mind</button></div>
+                  <div style={css(`display:flex;justify-content:space-between;align-items:baseline;gap:12px`)}><div style={css(`display:flex;flex-direction:column;gap:4px`)}><div style={css(`font-size:12px;color:#9E4B2A`)}>Owning: {V.focusLabel} <button onClick={V.changeFocus} data-role="change-focus" style={css(`background:none;border:none;padding:0;font-size:12px;color:#8A847A;text-decoration:underline;text-underline-offset:2px`)}>change</button></div></div><button onClick={V.leaveOwn} style={css(`background:none;border:none;font-size:13px;color:#8A847A;flex:none`)}>Never mind</button></div>
+                  {!!V.predictTask && (
+                    <div data-role="predict-try" style={css(`display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #E3DFD6;border-radius:10px;padding:12px 14px`)}>
+                      <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8A847A`)}>Your try</div>
+                      <div style={css(`font-size:14px;line-height:1.5`)}>{V.predictTask}</div>
+                      <div style={css(`font-size:13px;color:#514C44`)}>{V.predictWhat}</div>
+                      {V.predictTopics.length > 0 && <ul data-role="predict-topics" style={css(`margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:#514C44`)}>{V.predictTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+                    </div>
+                  )}
+                  <div style={css(`font-size:14.5px`)}>{V.predictQuestion}{!!V.predictLow && <span style={css(`font-size:12.5px;color:#8A847A`)}> {V.predictLow}</span>}</div>
                   <div style={css(`display:flex;gap:6px;max-width:${V.predictOptions.length * 84}px`)}>
                     {(V.predictOptions || []).map((p, _i) => (<React.Fragment key={_i}>
                       <button onClick={p.onPick} data-role="predict-option" data-n={p.n} style={css(`flex:1;border:1px solid ${p.border};background:${p.bg};color:${p.fg};border-radius:10px;padding:12px 6px;display:flex;flex-direction:column;gap:3px;align-items:center`)} className="hv3">
