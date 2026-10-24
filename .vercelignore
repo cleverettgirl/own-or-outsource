@@ -1,0 +1,5 @@
+# Never upload secrets or local scratch files to Vercel.
+.env
+.env.*
+Untitled
+scripts
