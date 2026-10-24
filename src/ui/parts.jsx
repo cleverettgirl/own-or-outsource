@@ -4,7 +4,38 @@ import { css } from '../css.js';
 
 
 // Claude's answers as Claude renders them: paragraphs, ## headings, - bullets, `inline code`, fenced code blocks.
-export const inline = t => t.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/).map((p, i) => p.startsWith('**') && p.endsWith('**') && p.length > 4 ? <b key={i}>{inline(p.slice(2, -2))}</b> : p.startsWith('*') && p.endsWith('*') && p.length > 2 && !p.startsWith('**') ? <i key={i}>{inline(p.slice(1, -1))}</i> : p.startsWith('`') && p.endsWith('`') && p.length > 1 ? <code key={i} style={css(`font-family:'JetBrains Mono',monospace;font-size:.86em;background:#F1EEE8;border-radius:4px;padding:1px 5px`)}>{p.slice(1, -1)}</code> : p);
+// Inline markdown: `code`, **bold**, *italic*, nested in any combination (*italic with **bold***, ***both***).
+// Runs of asterisks are paired the way markdown renderers do it: each closing run matches the nearest open run
+// before it, taking 2 (bold) when both runs have 2, else 1 (italic). Unpaired asterisks stay as text.
+const codeCss = `font-family:'JetBrains Mono',monospace;font-size:.86em;background:#F1EEE8;border-radius:4px;padding:1px 5px`;
+export function inline(t) {
+  const toks = [];
+  for (const m of String(t).matchAll(/`[^`]+`|\*+|[^*`]+|`/g)) {
+    const x = m[0], before = t[m.index - 1] || ' ', after = t[m.index + x.length] || ' ';
+    if (x[0] === '`' && x.length > 1) toks.push({ code: x.slice(1, -1) });
+    else if (x[0] === '*') toks.push({ star: x.length, open: !/\s/.test(after), close: !/\s/.test(before) });
+    else toks.push({ text: x });
+  }
+  // Each token becomes a list of nodes; matched runs wrap the nodes between them.
+  const out = []; // items: { nodes } or an open star run { star, open, close, at }
+  const stack = [];
+  for (const tk of toks) {
+    if (!tk.star) { out.push({ nodes: [tk.code != null ? <code style={css(codeCss)}>{tk.code}</code> : tk.text] }); continue; }
+    let left = tk.star;
+    while (left && tk.close && stack.length) {
+      const op = stack[stack.length - 1], use = op.star >= 2 && left >= 2 ? 2 : 1;
+      const inner = keyed(out.splice(op.at + 1).flatMap(x => x.nodes || ['*'.repeat(x.star)]));
+      const node = use === 2 ? <b>{inner}</b> : <i>{inner}</i>;
+      op.star -= use; left -= use;
+      out.push({ nodes: [node] });
+      if (!op.star) { out.splice(op.at, 1); stack.pop(); }
+    }
+    if (left && tk.open) { stack.push({ star: left }); out.push(stack[stack.length - 1]); stack[stack.length - 1].at = out.length - 1; }
+    else if (left) out.push({ nodes: ['*'.repeat(left)] });
+  }
+  return keyed(out.flatMap(x => x.nodes || ['*'.repeat(x.star)]));
+}
+const keyed = nodes => nodes.map((n, i) => (typeof n === 'string' ? n : React.cloneElement(n, { key: i })));
 
 export function Md({ text, small }) {
   const body = small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55;white-space:pre-wrap' : SERIF;

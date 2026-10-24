@@ -797,7 +797,7 @@ export default class App extends React.Component {
         const ok = res.points.filter(p => p.ok);
         const items = o.write.check.keyPoints.length ? o.write.check.keyPoints.map((p, i) => ({ short: p, ok: !!(res.points[i] && res.points[i].ok) })) : [{ short: 'Explains the idea and applies it', ok: res.closed }];
         g = { items, score: !res.points.length ? 2 : res.closed ? 5 : ok.length ? 3 : 2, why: res.closed ? 'Your answer has every key idea.' : ok.length ? 'Some of the key ideas are there, not all.' : res.points.length ? "The key ideas aren't there yet." : "This couldn't be checked just now.",
-          worked: ok.length ? 'You covered: ' + ok.map(p => p.point.toLowerCase()).join('; ') + '.' : '', gap: res.feedback, corrections: [] };
+          worked: '', gap: res.feedback, corrections: [] }; // what was covered is the ✓ list itself
       } else
       g = await runCheck(o.write.check, o.write.text, o.write.before, o.write.after, o.write.picked);
     } catch (_) { try {
@@ -827,7 +827,7 @@ export default class App extends React.Component {
     const done = extra => this.setOwn(cur => ({ write: { ...cur.write, notes: (cur.write.notes || []).concat(extra).slice(0, 3), notesLoading: false } }));
     if ((w.check && ['choice', 'steps'].includes(w.check.type)) || text.trim().length < 40) return done([]);
     try {
-      const r = await this.ask('notes', { gap: g.gap, task: w.task, lang: o.lang, text, have: have.map(n => n.text) });
+      const r = await this.ask('notes', { gap: g.gap, task: w.task, lang: o.lang, text, have: have.map(n => n.text), isCode: !(w.check && w.check.type === 'explain') && !(o.scenario && o.scenario.prose) && !!o.write.ref && /[;{}=()]|\bSELECT\b/i.test(o.write.ref) });
       done(keepQuoted(r.notes, text).filter(n => !have.some(h => h.quote.toLowerCase() === n.quote.toLowerCase())).slice(0, 2));
     } catch (e) { done([]); }
   }

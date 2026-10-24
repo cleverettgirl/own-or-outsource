@@ -587,6 +587,18 @@ step('not ready: the panel closes and your highlight is quoted in the chat box, 
 await openLearnings();
 step('not ready: Learnings keeps it as a choice you can pick back up', text().includes('went to Claude first'));
 
+// ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).
+{
+  const { inline } = await vite.ssrLoadModule('/src/ui/parts.jsx');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const html = t => renderToStaticMarkup(React.createElement('span', null, inline(t)));
+  const plain = t => html(t).replace(/<[^>]+>/g, '');
+  step('markdown: *Grant, **Think Again**: confident humility.*', html('*Grant, **Think Again**: confident humility.*') === '<span><i>Grant, <b>Think Again</b>: confident humility.</i></span>');
+  step('markdown: ***bold italic***', !plain('***bold italic***').includes('*') && html('***bold italic***').includes('<b>') && html('***bold italic***').includes('<i>'));
+  step('markdown: **Sinek** (*Leaders Eat Last*)', html('**Sinek** (*Leaders Eat Last*)') === '<span><b>Sinek</b> (<i>Leaders Eat Last</i>)</span>');
+  step('markdown: emphasis closing with *** leaves no stray asterisks', ['**Brown: *trust (psychological safety).***', '*Grant: **change your mind.***', '***Sinek:** start with why.*'].every(t => !plain(t).includes('*')));
+}
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));
 console.error = origError;
