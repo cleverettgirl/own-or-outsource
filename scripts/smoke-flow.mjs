@@ -287,7 +287,7 @@ await click('≈ 94%');
 step('book: five samples, 32 patterns', document.querySelectorAll('[data-role=patterns] span').length === 32 && text().includes('Right: 93.75%'));
 await click('Got it, now write one yourself');
 step('book: transfer task is new (4 calls)', text().includes('4 random support calls'));
-step('book: the try asks about the reasoning, not a percentage', text().includes('How likely is your shortest-to-longest range') && !document.querySelector('textarea[data-role=write]'));
+step('book: the try asks about the reasoning, not a percentage', text().includes('How likely is the range from the shortest to the longest of your 4 calls') && !document.querySelector('textarea[data-role=write]'));
 await click('Certain: a median is always between the min and max'); // her original confusion
 await click('A little less likely to catch it');
 await click('All 4 calls could happen to be longer');
@@ -453,7 +453,7 @@ const dueTitles = () => [...document.querySelectorAll('[data-role=due-item]')].m
 step('recall: the Rule of Five item from your book chat is ready, owned 3 days ago', dueTitles().length === 1 && dueTitles()[0].includes('The Rule of Five') && dueTitles()[0].includes('owned 3 days ago'));
 await click('Recall now');
 step('recall: a new case, from memory', text().includes('6 random houses'));
-step('recall: questions about the reasoning, not the arithmetic', text().includes('how likely is your cheapest-to-priciest range') && text().includes('When would your range miss') && text().includes('Which of these would break the rule?'));
+step('recall: questions about the reasoning, not the arithmetic', text().includes('the range from the cheapest to the priciest of your 6 houses') && text().includes('When would your range miss') && text().includes('Which of these would break the rule?'));
 await click('More likely');
 await click('Only if all 6 houses are above it');
 await click('You only looked at houses at the expensive end');

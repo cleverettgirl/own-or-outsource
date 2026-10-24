@@ -54,7 +54,7 @@ export const BOOK_TARGETS = {
       task: 'Now a new situation: you time 4 random support calls, to get a feel for how long a typical call takes.',
       hints: ['Each sampled call is a coin flip: longer or shorter than the median of all calls. When does your range miss it?', 'Missing needs every call on the same side. Does that get more or less likely with fewer calls?', "Is the median you care about the one of your 4 calls, or of all calls?"],
       check: { type: 'choice', questions: [
-        { id: 'catch', short: 'how likely it catches it', prompt: 'How likely is your shortest-to-longest range to catch the median length of ALL calls?', answer: 'likely', options: [
+        { id: 'catch', short: 'how likely it catches it', prompt: 'How likely is the range from the shortest to the longest of your 4 calls to catch the median length of ALL calls?', answer: 'likely', options: [
           { v: 'likely', l: 'Very likely, but not certain' },
           { v: 'certain', l: 'Certain: a median is always between the min and max', gap: "That's true of your 4 calls' own median. The median of all calls is the one you can't see, and your 4 could all land on one side of it. (Your original question in the chat.)" },
           { v: 'unlikely', l: 'Unlikely with only 4 calls', gap: "Even 4 is usually enough: the range only misses if all 4 land on the same side of the median, and that's rare." },
@@ -75,7 +75,7 @@ export const BOOK_TARGETS = {
     delayed: {
       task: 'From memory, a new situation: you note the price of 6 random houses on a long street, to get a feel for the typical (median) price of the whole street.',
       check: { type: 'choice', questions: [
-        { id: 'more', short: 'how sample size changes it', prompt: "Compared with checking 5 houses, how likely is your cheapest-to-priciest range to catch the street's median?", answer: 'more', ordered: true, options: [
+        { id: 'more', short: 'how sample size changes it', prompt: "Compared with checking 5 houses, how likely is the range from the cheapest to the priciest of your 6 houses to catch the whole street's median?", answer: 'more', ordered: true, options: [
           { v: 'less', l: 'Less likely', gap: "More houses can't hurt here: the range only misses if every house lands on the same side of the median, and that gets rarer with each extra house." },
           { v: 'same', l: 'About the same', gap: "Each extra house is another chance for your samples to land on both sides of the median. Missing needs every one of them on the same side, which gets rarer with each house you add." },
           { v: 'more', l: 'More likely' },
@@ -125,7 +125,7 @@ export const BOOK_TARGETS = {
     delayed: {
       task: 'From memory, a new situation: you weigh 4 random apples from a big crate.',
       check: { type: 'choice', questions: [
-        { id: 'which', short: 'which median is certain', prompt: 'Which median is always between your lightest and heaviest apple?', answer: 'sample', options: [
+        { id: 'which', short: 'which median is certain', prompt: 'Which median is always between the lightest and the heaviest of your 4 apples?', answer: 'sample', options: [
           { v: 'sample', l: 'The median of your 4 apples' },
           { v: 'crate', l: 'The median of the whole crate', gap: "The crate's median is the one you can't see, and all 4 of your apples could happen to be heavier (or lighter) than it." },
           { v: 'both', l: 'Both', gap: "Only your own 4 apples' median is guaranteed. The crate's is usually caught, not always." },
