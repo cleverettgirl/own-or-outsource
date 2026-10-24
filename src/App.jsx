@@ -22,8 +22,19 @@ import Chat from './ui/Chat.jsx';
 import OwnPanel from './ui/OwnPanel.jsx';
 import { isColdStart, COLD_START, judgeColdStartOffline } from './gaps.js';
 import { REACT_TURNS } from './reactTranscript.js';
+
+// The leadership starter: a question nobody prepared targets for, so it shows the generated path (spec-leadership-fixes.md).
+// It asks about disagreeing and names Roger Martin's question, so the answer reliably includes it, credited to him
+// (Claude once credited it to Adam Grant; log 85). That's the person's question, not app logic about leadership.
+const LEAD_QUESTION = "I'm not a manager, but I want to grow as a leader on my team. What does leading without a title actually look like day to day, including how to disagree with a plan without just criticizing it? Draw on Brené Brown, Adam Grant, Simon Sinek, or Roger Martin's 'what would have to be true?' where it's relevant.";
+// The risk starter: a real health headline (WHO/IARC 2015: 50g of processed meat a day, +18% bowel cancer risk), asked
+// the way a person would. Relative vs absolute risk is what the answer has to teach; owning a calculation in it gets a
+// generated "work it out" try (log 63).
+const RISK_QUESTION = 'I just saw a headline saying that eating 50g of processed meat a day, about two slices of bacon, raises your risk of bowel cancer by 18%. Should I stop eating meat?';
+// Names userId, as the recorded component and its walkthrough do (asked with "id", live answers used `id`).
+const REACT_LIVE_QUESTION = 'How do I fetch a user by userId in a React component when it mounts, and refetch when userId changes?';
 import { REACT_TARGETS } from './reactTargets.js';
-import { SQL_TURNS } from './sqlTranscript.js';
+import { SQL_TURNS, SQL_QUESTION } from './sqlTranscript.js';
 
 
 // Every hand-written learning target, by id. Ids are unique across starters.
@@ -295,9 +306,21 @@ export default class App extends React.Component {
     if (b && (!a || a.phase !== b.phase || a.step !== b.step)) { const pn = this.panelRef.current; if (pn) pn.scrollTop = 0; }
   }
   newChat = () => this.setState({ messages: [], own: null, sel: null, chatTitle: 'New chat', composer: '', view: 'chat', activeGap: null });
-  openLearnings = () => this.setState({ view: 'learnings', sel: null });
-  startSql = () => this.replay(this.SQL, SQL_TURNS);
-  startReact = () => this.replay(this.REACT, REACT_TURNS);
+  // Learnings remembers where you came from, so Back returns there: the chat, with the Own it panel as you left it.
+  openLearnings = () => this.setState(s => ({ view: 'learnings', sel: null, justOwned: null, learnFrom: s.view === 'learnings' ? s.learnFrom : s.messages.length || s.own ? 'chat' : null }));
+  // From the end of a try: see the thing you just owned on the map and in your cards.
+  seeInLearnings = () => this.setState(s => ({ view: 'learnings', sel: null, justOwned: s.own && s.own.id, learnFrom: 'chat' }));
+  backFromLearnings = () => this.setState({ view: 'chat', learnFrom: null, justOwned: null });
+  // The home starters are prompts, sent live, so you watch Claude answer. SQL and React keep their scenario, so the
+  // hand-written targets and the "see it run" walkthroughs still apply: live answers to these prompts match the
+  // recorded query and component (sampled 2026-10-24). If the model can't be reached, the recorded answer stands in.
+  startLive(text, sc = null, recorded = null) {
+    this.setState({ messages: [], own: null, sel: null, chatTitle: 'New chat', composer: '', view: 'chat', activeGap: null, learnFrom: null }, () => this.sendText(text, sc, false, { recorded }));
+  }
+  startLead = () => this.startLive(LEAD_QUESTION);
+  startRisk = () => this.startLive(RISK_QUESTION);
+  startSql = () => this.startLive(SQL_QUESTION, this.SQL, SQL_TURNS[0].claude);
+  startReact = () => this.startLive(REACT_LIVE_QUESTION, this.REACT, REACT_TURNS[0].claude);
   // Replays a real chat as-is. Every answer can be highlighted or owned whole (the icon under it).
   // turns: [{ user, claude }] pairs, or single { user } / { claude } / { gap } entries.
   replay(sc, turns) {
@@ -325,11 +348,12 @@ export default class App extends React.Component {
   };
   // No upfront "just the answer / learn this too" toggle: intent is declared by what you choose to own,
   // and confidence by what you predict. Every answer can be owned.
-  sendText(text, scenario, followUp = false) {
+  // starter: a home quick-start prompt. Its answer streams in, so you watch Claude write it.
+  sendText(text, scenario, followUp = false, starter = null) {
     const learn = true;
-    const m = { id: this.nid(), scenario, question: text, followUp };
+    const m = { id: this.nid(), scenario, question: text, followUp, starter: !!starter, recorded: starter && starter.recorded };
     // A question you bring from a try or a recall ("About my…") is asking, not outsourcing: no go-first offer.
-    const firstOfChat = !this.state.messages.length && !this.state.activeGap && !scenario && !/^About (my|this)/.test(text);
+    const firstOfChat = !this.state.messages.length && !this.state.activeGap && !scenario && !m.starter && !/^About (my|this)/.test(text);
     const msgs = this.state.messages.concat([{ id: this.nid(), type: 'user', text }, { id: this.nid(), type: 'thinking' }]);
     this.setState({ messages: msgs, composer: '', chatTitle: this.state.messages.length ? this.state.chatTitle : (scenario ? scenario.title : text.slice(0, 40)) },
       () => (firstOfChat && this.ownedTitles().length ? this.answerOrGoFirst(m, learn) : this.answer(m, learn)));
@@ -377,26 +401,34 @@ export default class App extends React.Component {
     return out;
   }
   async answer(m, learn) {
-    const reply = await this.fetchReply(m);
-    this.showReply(m, learn, reply);
+    const id = this.nid();
+    const reply = await this.fetchReply(m, m.starter ? t => this.streamInto(id, m, learn, t) : null);
+    this.showReply(m, learn, reply, id);
   }
-  async fetchReply(m) {
+  // The answer so far, shown as it streams in (replacing the thinking dots). showReply puts the finished one in its place.
+  streamInto(id, m, learn, text) {
+    this.setState(s => ({ messages: s.messages.some(x => x.id === id)
+      ? s.messages.map(x => (x.id === id ? { ...x, code: text } : x))
+      : s.messages.filter(x => x.type !== 'thinking').concat([{ id, type: 'assistant', learn, at: Date.now(), askedId: null, intro: '', code: text, lang: 'text', outro: '', scenario: m.scenario || null, plain: true, streaming: true }]) }));
+  }
+  async fetchReply(m, onText) {
     let reply;
     const gap = this.state.activeGap ? this.state.gaps.find(g => g.id === this.state.activeGap) : null;
     try {
-      const t = String(await complete({ task: 'chat', input: gap ? { gap } : { mode: m.followUp ? 'followUp' : 'answer' }, messages: this.chatHistory() })).trim();
+      const t = String(await complete({ task: 'chat', input: gap ? { gap } : { mode: m.followUp ? 'followUp' : 'answer' }, messages: this.chatHistory().filter(x => x.content), onText })).trim();
       reply = { intro: '', code: t, lang: (t.match(/```(\w+)/) || [])[1] || 'text', outro: '', scenario: m.scenario || null, plain: true };
     } catch (e) {
       // Offline, the cold-start gap still gets a real explanation (hand-written), so the loop can be demoed.
       const first = !this.state.messages.some(x => x.type === 'assistant');
       reply = gap && isColdStart(gap) && first ? { intro: '', code: COLD_START.offlineAnswer, lang: 'text', outro: '', scenario: null, plain: true }
-        : { intro: "I couldn't reach the model just now. Try one of the starters, which work offline.", code: '', lang: '', outro: '', scenario: null };
+        : m.recorded ? { intro: '', code: m.recorded, lang: m.scenario.lang, outro: "(I couldn't reach the model just now, so this is Claude's saved answer to the same question.)", scenario: m.scenario, plain: true }
+        : { intro: "I couldn't reach the model just now. Try again in a moment, or open a past chat in the sidebar.", code: '', lang: '', outro: '', scenario: null };
     }
     return reply;
   }
-  showReply(m, learn, reply) {
-    const id = this.nid(), followUp = this.canOfferOwn();
-    this.setState({ messages: this.state.messages.filter(x => x.type !== 'thinking').concat([{ id, type: 'assistant', learn, at: Date.now(), askedId: null, ...reply }]) });
+  showReply(m, learn, reply, id = this.nid()) {
+    const followUp = this.canOfferOwn();
+    this.setState(s => ({ messages: s.messages.filter(x => x.type !== 'thinking' && x.id !== id).concat([{ id, type: 'assistant', learn, at: Date.now(), askedId: null, ...reply }]) }));
     // Trying to understand something is the moment to offer Own it: Claude judges that from the message.
     if (reply.plain && followUp) this.inferLearning(m.question, reply.code, id);
   }
@@ -532,7 +564,7 @@ export default class App extends React.Component {
     const prose = !!(o.scenario && o.scenario.prose);
     const fallback = prose ? [{ label: `What “${o.code.trim().split(/\s+/).slice(0, 6).join(' ')}…” means`, mode: 'concept' }] : [
       { label: `What ${part} does and when to use it`, mode: 'concept' },
-      ...(this.isMultiLine(o.code) ? [{ label: "The whole thing: each part and why it's in that order", mode: 'sequence' }] : []),
+      ...(this.isMultiLine(o.code) ? [{ label: "The whole thing: each part and why it's in that order", mode: 'sequence', whole: true }] : []),
       ...(o.scenario === this.SQL ? [{ label: SQL_TARGETS.whole.label, mode: 'sequence', target: 'whole' }] : []),
     ];
     try {
@@ -545,9 +577,10 @@ export default class App extends React.Component {
   wholeFocus(m) {
     if (m.scenario === this.SQL) return { label: SQL_TARGETS.whole.label, mode: SQL_TARGETS.whole.kind, target: 'whole' };
     if (m.scenario === this.BOOK) return { label: BOOK_TARGETS.rule.label, mode: BOOK_TARGETS.rule.kind, target: 'rule' };
-    if (m.scenario === this.REACT) return { label: 'When the effect, cleanup and responses run', mode: 'sequence' };
+    // React's lesson is when things run, not writing the component (reactTargets.js), so the whole answer owns that.
+    if (m.scenario === this.REACT) return { label: REACT_TARGETS.timing.label, mode: REACT_TARGETS.timing.kind, target: 'timing' };
     if (m.scenario === this.JUNO) return { label: JUNO_TARGETS.ownside.label, mode: JUNO_TARGETS.ownside.kind, target: 'ownside' };
-    return { label: "The whole thing: each part and why it's in that order", mode: this.isMultiLine(m.code) ? 'sequence' : 'concept' };
+    return { label: "The whole thing: each part and why it's in that order", mode: this.isMultiLine(m.code) ? 'sequence' : 'concept', whole: true };
   }
   changeFocus = () => { this.setOwn({ phase: 'focus', focus: null, askedFocus: true }, () => { if (!this.state.own.focusOptions) this.loadFocusOptions(); }); };
   // The try is prepared as soon as the focus is known, so the prediction can say what you'll be asked to do.
@@ -580,7 +613,10 @@ export default class App extends React.Component {
     if (t) return { orderMatters: !!t.writtenOrderMatters, visual: t.visual || null };
     return { orderMatters: !!(o.write && o.write.orderMatters) && o.code.split('\n').filter(l => l.trim()).length >= 3, visual: null };
   }
-  visualStep(o = this.state.own) { const v = this.frame(o).visual; return v === 'compare' ? 'compare' : v ? 'see' : null; }
+  // The panel no longer shows visuals (log 83): seeing it another way is a different explanation, and explaining is
+  // the chat's job (research §8f). Targets still declare their visual, and the Compare and timeline steps are kept
+  // for moving into the chat (§12); nothing in the panel leads to them.
+  visualStep() { return null; }
   ladder(o = this.state.own) { const f = this.frame(o), v = this.visualStep(o); return [...(f.orderMatters ? ['assemble'] : []), ...(v ? [v] : []), 'write']; }
   // Leaving a visual goes to the try, or back to the reveal if you've already checked.
   goNext = () => { if (this.state.own.write.grade) return this.setOwn({ phase: 'reveal' }); const L = this.ladder(), i = L.indexOf(this.state.own.step); if (i >= 0 && i < L.length - 1) this.enterStep(L[i + 1]); };
@@ -602,16 +638,21 @@ export default class App extends React.Component {
     const exit = { id: o.id, title: o.focus ? o.focus.label : o.lang, predicted: o.prediction, n, step: at, stepOf: `${L.indexOf(o.step) + 1} of ${L.length}`, startStep: stepLabel(o, o.startStep), scenario: o.scenario };
     this.setState({ own: null, exits: this.state.exits.concat([exit]), messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Outsourced', summary } : m) });
   };
-  // Predicting under half says "not ready yet": that's a moment for explanation, which is the chat's job. The try
-  // offers the way back to Claude with what you're owning quoted, and the question left to you. Going to Claude
-  // first is kept as a choice on Learnings (where you can pick it back up), not counted as a miss.
+  // "I have no idea" (before predicting) or predicting under half says "not ready yet": that's a moment for
+  // explanation, which is the chat's job (the chat explains; the panel checks and reinforces). It goes back to the
+  // main chat with the message written for you, asking Claude to explain it another way. It names no format: the chat
+  // prompt lists what the chat can show (tables, flip-through views…) and Claude picks what fits the topic, which
+  // works for SQL and React and for a people skill like leadership (log 84). Predicting stays in the panel. Someone with no idea doesn't know what to ask
+  // yet, so here the app does put words in your mouth (unlike "Ask Claude about this" after a try). It's not
+  // counted as a miss: Own it is offered again under the explanation.
   askClaudeFirst = () => {
     const o = this.state.own, n = this.plannedItems(o).length, label = o.focus ? o.focus.label : o.lang;
     const part = o.code !== o.fullCode && o.code.length <= 400 ? o.code : '';
-    const text = part ? `About this part of your answer:\n${part.split('\n').map(l => '> ' + l).join('\n')}\n\n` : `About “${label}”:\n\n`;
+    const ask = "I don't really get this yet. Can you explain it another way, with a concrete example, in whatever form makes it clearest?";
+    const text = part ? `About this part of your answer:\n${part.split('\n').map(l => '> ' + l).join('\n')}\n\n${ask}` : `About “${label}”: ${ask}`;
     const exit = { id: o.id, title: label, predicted: o.prediction, n, step: 'asked Claude first', askedFirst: true, stepOf: '', startStep: stepLabel(o, o.startStep), scenario: o.scenario };
     this.setState({ own: null, composer: text, exits: this.state.exits.concat([exit]),
-      messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Asked Claude first', summary: `${label} · predicted ${o.prediction} of ${n}` } : m) },
+      messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Asked Claude first', summary: o.prediction == null ? label : `${label} · predicted ${o.prediction} of ${n}` } : m) },
       () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
   };
   // What the try will check, known before you try it: the prediction is "how many of these N will you get right?".
@@ -625,10 +666,13 @@ export default class App extends React.Component {
     if (c && c.type === 'explain') return c.keyPoints.length ? c.keyPoints : ['Explains the idea and applies it'];
     return w.requirements && w.requirements.length ? w.requirements : ['Meets the task'];
   }
-  // The same items, named so they can be shown before the try without giving answers away; null when they can't
-  // be (an explanation's key ideas, generated requirements), and then only the count is shown.
+  // The same items, named so they can be shown before the try without giving answers away. A code try's requirements
+  // are its spec, so they're shown as they are; an explanation's key ideas would be answers, so it shows their
+  // neutral topics. null only when there's nothing safe to show, and then only the count is shown.
   plannedTopics(o = this.state.own) {
     const c = o.write.check;
+    if (c && c.type === 'explain') return c.topics && c.topics.length === c.keyPoints.length && c.keyPoints.length ? c.topics : null;
+    if (!c && o.write.requirements && o.write.requirements.length) return o.write.requirements;
     if (c && c.type === 'choice') return c.questions.map(q => q.short || q.prompt);
     if (c && c.type === 'steps') return c.steps.map(st => st.label);
     if (c && c.type === 'sql' && c.items && c.items.every(i => i.topic)) return c.items.map(i => i.topic);
@@ -774,12 +818,14 @@ export default class App extends React.Component {
       this.setOwn(cur => ({ write: { ...cur.write, task: w.task, schema: w.schema, before: w.before, after: w.after, placeholder: w.placeholder, check: w.check, ref: w.check.expected, authoredHints: w.hints } }));
       return;
     }
-    if (sc && (!o.focus || o.focus.mode === 'sequence')) { this.setOwn(cur => ({ write: { ...cur.write, task: sc.writeTask, ref: sc.writeRef, schema: sc.schema, requirements: sc.writeRequirements || null } })); return; }
+    // The chat's fixed "write a new one" task is only for owning the whole thing. Any other focus, including one about
+    // order or timing, gets a try designed for it (writeTask decides whether producing it is the skill, research §8f).
+    if (sc && sc.writeTask && (!o.focus || o.focus.whole)) { this.setOwn(cur => ({ write: { ...cur.write, task: sc.writeTask, ref: sc.writeRef, schema: sc.schema, requirements: sc.writeRequirements || null } })); return; }
     this.setOwn(cur => ({ write: { ...cur.write, loading: true } }));
     try {
       const r = await this.ask('writeTask', { label: o.focus ? o.focus.label : '', code: o.code, fullCode: o.fullCode });
       const fmt = ['code', 'choice', 'explain', 'steps'].includes(r.format) ? r.format : 'explain';
-      let patch = { task: r.task, schema: String(r.context || '').replace(/```\w*\n?/g, '').trim(), format: fmt, loading: false, orderMatters: !!r.orderIsInsight };
+      let patch = { task: r.task, schema: String(r.context || '').trim(), format: fmt, loading: false, orderMatters: !!r.orderIsInsight };
       if (fmt === 'code') patch = { ...patch, ref: r.reference || '', requirements: (r.requirements || []).filter(Boolean).slice(0, 4) };
       if (fmt === 'choice') {
         const questions = (r.questions || []).slice(0, 3).map((q, i) => {
@@ -792,7 +838,7 @@ export default class App extends React.Component {
         const steps = (r.steps || []).slice(0, 4).map((x, i) => ({ id: 's' + i, label: String(x.label || ''), answer: Number(x.answer), unit: x.unit === '%' ? '%' : '', how: x.how || '' })).filter(x => x.label && Number.isFinite(x.answer));
         patch = steps.length ? { ...patch, ref: steps.map(x => `${x.label}: ${x.answer}${x.unit}`).join('\n'), check: { type: 'steps', steps } } : { ...patch, format: 'explain', check: { type: 'explain', question: r.task, keyPoints: [] } };
       }
-      if (fmt === 'explain') patch = { ...patch, placeholder: 'Explain it in your own words, and apply it to the new case.', check: { type: 'explain', question: r.task, keyPoints: (r.keyPoints || []).slice(0, 3) } };
+      if (fmt === 'explain') patch = { ...patch, placeholder: 'Explain it in your own words, and apply it to the new case.', check: { type: 'explain', question: r.task, keyPoints: (r.keyPoints || []).slice(0, 3), topics: (r.keyTopics || []).slice(0, 3).map(String) } };
       this.setOwn(cur => ({ write: { ...cur.write, ...patch } }));
     } catch (e) {
       const label = o.focus ? o.focus.label : 'the part you highlighted';
@@ -909,7 +955,11 @@ export default class App extends React.Component {
   fixWrite = () => this.setOwn(cur => ({ phase: 'ladder', step: 'write', write: { ...cur.write, lastGap: cur.write.grade && cur.write.grade.gap, grade: null } }));
 
   // Teach one
-  goTeach = () => { const o = this.state.own; this.setOwn({ phase: 'teach', teach: { ...o.teach, msgs: o.teach.msgs.length ? o.teach.msgs : [{ role: 'sam', text: (o.scenario && o.scenario.samOpen) || "Hey! So I've never done this before. Can you tell me what this code is for, like, what problem it solves?" }] } }); };
+  // Is what you're owning code? The replayed chats say so themselves; otherwise it's code only when the try was
+  // writing code. A live answer about a health headline or leadership is an idea, so Sam asks about an idea.
+  isCodeOwn(o = this.state.own) { return o.scenario ? !o.scenario.prose : o.write.format === 'code'; }
+  goTeach = () => { const o = this.state.own; this.setOwn({ phase: 'teach', teach: { ...o.teach, msgs: o.teach.msgs.length ? o.teach.msgs : [{ role: 'sam', text: (o.scenario && o.scenario.samOpen)
+    || (this.isCodeOwn(o) ? "Hey! So I've never done this before. Can you tell me what this code is for, like, what problem it solves?" : "Hi! I've never come across this before. What's the main idea, in plain words, and why does it matter?") }] } }); };
   sendTeach = async () => {
     const o = this.state.own; const t = o.teach.input.trim(); if (!t || o.teach.loading) return;
     const msgs = o.teach.msgs.concat([{ role: 'user', text: t }]); const turns = o.teach.turns + 1;
@@ -920,7 +970,7 @@ export default class App extends React.Component {
       const hist = msgs.map(m => ({ role: m.role === 'sam' ? 'assistant' : 'user', content: m.text }));
       // The API needs the conversation to open with a user turn; Sam speaks first in the UI.
       if (hist[0].role === 'assistant') hist.unshift({ role: 'user', content: '(The learner opens the chat with Sam.)' });
-      reply = await complete({ task: 'sam', input: { lang: o.lang, prose: !!(o.scenario && o.scenario.prose), code: o.code, gap, last: turns >= 3 }, messages: hist });
+      reply = await complete({ task: 'sam', input: { lang: o.lang, prose: !this.isCodeOwn(o), code: o.code, gap, last: turns >= 3 }, messages: hist });
       reply = String(reply).trim();
     } catch (e) { const sl = o.scenario && o.scenario.samLines; reply = sl ? sl[Math.min(turns, 3) - 1] : turns >= 3 ? "Ok I think I get it: you squash the rows into one per person first, and only then can you ask about the totals. Thanks!" : turns === 1 ? "Hm ok. So the part that filters, does it look at every single row, or at the totals? I don't get when the totals show up." : "Wait so if I wanted only people whose total is big, why can't I just put that in the first filter?"; }
     this.setOwn(cur => ({ teach: { ...cur.teach, msgs: msgs.concat([{ role: 'sam', text: reply }]), loading: false } }), () => { if (turns >= 3) this.debriefTeach(); });
@@ -1117,6 +1167,7 @@ export default class App extends React.Component {
       .map(chip => ({ label: chip.split(' · ')[1], parent: items.find(it => it.newLabel === chip).id }));
     const sorted = S.learnSort === 'due' ? items.slice().sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)) : items;
     return {
+      back: S.learnFrom ? this.backFromLearnings : null, backLabel: S.own ? 'Back to your try' : 'Back to the chat', justOwned: S.justOwned || null,
       isDemo: this.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => this.setState(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
       recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
       calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
@@ -1159,7 +1210,7 @@ export default class App extends React.Component {
           goText: e2 => this.setGo(m.id, { text: e2.target.value }), goPick: (id, val) => this.setGo(m.id, x => ({ picked: { ...x.picked, [id]: val } })), goCheck: () => this.goCheck(m),
           goResult: m.grade ? (() => { const t = tally(m.grade), said = `You said ${m.prediction} of ${t.n} and got ${t.right}.`; return t.right === m.prediction ? `${said} Spot on.` : t.right > m.prediction ? `${said} You own more than you thought.` : said; })() : '', goItems: m.grade && m.grade.items ? m.grade.items : [] });
       }
-      if (v.isAssistant) { v.flash = S.flashMsg === m.id; v.owning = o && o.msgId === m.id ? (o.code === o.fullCode || o.code.length > 400 ? 'whole' : 'part') : null; v.hasIntro = !!m.intro; v.hasOutro = !!m.outro; v.hasCode = !!m.code; v.showOwnHint = m.learn && !!m.code; v.checkChip = !!openGap && m === lastAnswer && !checkOpen ? () => this.checkMeFromChat(openGap.id) : null;
+      if (v.isAssistant) { v.flash = S.flashMsg === m.id; v.owning = o && o.msgId === m.id ? (o.code === o.fullCode || o.code.length > 400 ? 'whole' : 'part') : null; v.hasIntro = !!m.intro; v.hasOutro = !!m.outro; v.hasCode = !!m.code; v.showOwnHint = m.learn && !!m.code && !m.streaming; v.checkChip = !!openGap && m === lastAnswer && !checkOpen ? () => this.checkMeFromChat(openGap.id) : null;
         const askedItem = m.askedId && S.asked.find(a => a.id === m.askedId);
         v.ownExpanded = !!(askedItem && !askedItem.checked && !o); v.showTip = !S.tipDismissed && !o && m === firstAnswer; v.ownActive = !!o && o.msgId === m.id; v.ownBlocked = !!o && !v.ownActive; v.onCopy = () => this.copyAnswer(m); v.onSpeak = () => this.speakAnswer(m); v.copied = this.state.copied === m.id; v.when = m.at ? ago(m.at) : ''; v.onMouseUp = e => this.onCodeMouseUp(m, e); v.ownAll = () => { if (this.state.own) { if (this.state.own.msgId === m.id) { const pn = this.panelRef.current; if (pn) pn.scrollTop = 0; } return; } this.beginOwn(m, m.code, m.plain ? null : this.wholeFocus(m)); }; // The expanded button owns exactly what you asked about (no focus question): set after the default, which it replaces.
         if (v.ownExpanded) v.ownAll = () => this.checkLanded(askedItem.id); v.ownAllLabel = m.lang === 'email' ? 'Own the whole email' : m.lang === 'sql' ? 'Own the whole query' : m.plain ? 'Own this response' : 'Own the whole thing'; v.isMd = !!m.plain; v.isProse = !v.isMd && (m.lang === 'email' || !!(m.scenario && m.scenario.prose) || !!m.plain); v.isCodeBlock = !v.isMd && !v.isProse; }
@@ -1184,7 +1235,7 @@ export default class App extends React.Component {
       messages, ledger, ledgerEmpty: !S.ledger.length && !S.exits.length, exits: S.exits, hasExits: !!S.exits.length, chatTitle: S.chatTitle, isEmpty: !S.messages.length, composer: S.composer,
       hasCalibration: cal.items > 0, calibrationText: cal.text, calibrationTitle: cal.title,
       composerBorder: '#D9D4CA', composerPlaceholder: 'Ask Claude anything…',
-      onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
+      onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startLead: this.startLead, startRisk: this.startRisk, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
             composerRef: this.composerRef, hasSel: !!S.sel, selX: S.sel ? S.sel.x + 'px' : '0px', selY: S.sel ? S.sel.y + 'px' : '0px', ownSelection: this.ownSelection, askSelection: this.askSelection, scrollRef: this.scrollRef,
     };
     if (!o) return V;
@@ -1217,7 +1268,8 @@ export default class App extends React.Component {
       seeIsProse: o.lang === 'email',
       phasePredict: o.phase === 'predict', phaseLadder: o.phase === 'ladder', phaseReveal: o.phase === 'reveal', phaseTeach: o.phase === 'teach',
       cancelOwn: this.cancelOwn, leaveOwn: this.leaveOwn, changeFocus: this.changeFocus,
-      predictHint: "Claude's answer is your material; there's no studying first.",
+      // Before you commit to a number: a nudge back to what you're owning, which stays open in the chat beside the panel.
+      predictReread: o.code === o.fullCode || o.code.length > 400 ? "Claude's answer" : 'the part you highlighted',
       ...(() => {
         const w = o.write, chk = w.check, label = o.focus ? o.focus.label : 'this';
         if (w.loading || (!w.task && !chk)) return { predictReady: false, predictQuestion: 'Preparing your try…', predictTask: '', predictTopics: [], predictWhat: '', predictOptions: [] };
@@ -1300,7 +1352,7 @@ export default class App extends React.Component {
     const w = o.write;
     Object.assign(V, {
       writeFixing: !!w.firstGrade && !w.grade, writeTry: w.attempts + 1, writeLastGap: w.firstGrade ? (w.lastGap || w.firstGrade.gap || '') : '',
-      notReady: o.prediction != null && !w.firstGrade && o.prediction / Math.max(1, this.plannedItems(o).length) < 0.5, askClaudeFirst: this.askClaudeFirst,
+      notReady: o.prediction != null && !w.firstGrade && o.prediction / Math.max(1, this.plannedItems(o).length) < 0.5, askClaudeFirst: this.askClaudeFirst, seeInLearnings: this.seeInLearnings,
       writeIsChoice: !!(w.check && w.check.type === 'choice'), writeIsSteps: !!(w.check && w.check.type === 'steps'), writeSteps: w.check && w.check.steps ? w.check.steps : [], writeQs: w.check && w.check.questions ? w.check.questions : [], writePicked: w.picked,
       onWritePick: (id, v) => this.setOwn(cur => ({ write: { ...cur.write, picked: { ...cur.write.picked, [id]: v } } })),
       writeBefore: w.before, writeAfter: w.after, writePlaceholder: w.placeholder || 'Write it here. Ask for a hint any time; hints are part of learning, not cheating.',

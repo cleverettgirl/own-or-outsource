@@ -37,16 +37,75 @@ export function inline(t) {
 }
 const keyed = nodes => nodes.map((n, i) => (typeof n === 'string' ? n : React.cloneElement(n, { key: i })));
 
+// A flip-through block: views you look at one at a time (steps of a process, or versions to compare).
+// Claude writes   :::flip / ## Label / markdown… / ## Label / markdown… / :::   (chat prompt, src/prompts.js).
+// Each view is ordinary markdown, so tables and code work inside. While it streams, an unclosed block is shown
+// as far as it has got. Fewer than two views isn't a flip-through, so it renders as plain markdown.
+function splitFlips(text) {
+  const out = []; let buf = [], flip = null;
+  for (const l of String(text).split('\n')) {
+    if (!flip && /^:::flip\b/.test(l.trim())) { out.push({ md: buf.join('\n') }); buf = []; flip = []; continue; }
+    if (flip && /^:::\s*$/.test(l.trim())) { out.push({ flip: flip.join('\n') }); flip = null; continue; }
+    (flip || buf).push(l);
+  }
+  if (flip) out.push({ flip: flip.join('\n') });
+  out.push({ md: buf.join('\n') });
+  return out.filter(x => (x.md != null ? x.md.trim() : x.flip.trim()));
+}
+function Flip({ text, small }) {
+  const views = text.split(/^## /m).map(v => v.trim()).filter(Boolean).map(v => { const nl = v.indexOf('\n'); return nl < 0 ? { label: v, body: '' } : { label: v.slice(0, nl).trim(), body: v.slice(nl + 1) }; });
+  const [at, setAt] = React.useState(0);
+  if (views.length < 2) return <MdBlocks text={text.replace(/^## /gm, '### ')} small={small} />;
+  const i = Math.min(at, views.length - 1), nav = `background:none;border:1px solid #D9D4CA;border-radius:8px;padding:5px 11px;font-size:12.5px;color:#514C44`;
+  return (
+    <div data-role="flip" style={css(`border:1px solid #E3DFD6;border-radius:12px;background:#fff;overflow:hidden`)}>
+      <div style={css(`display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #EEEAE2;background:#FBFAF7`)}>
+        {views.map((v, j) => <button key={j} onClick={() => setAt(j)} aria-pressed={j === i} style={css(`border-radius:99px;padding:4px 11px;font-size:12.5px;border:1px solid ${j === i ? '#C4613A' : '#E3DFD6'};background:${j === i ? '#C4613A' : '#fff'};color:${j === i ? '#fff' : '#514C44'}`)}>{inline(v.label)}</button>)}
+      </div>
+      <div style={css(`padding:14px 16px`)}><MdBlocks text={views[i].body} small={small} /></div>
+      <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid #EEEAE2`)}>
+        <button onClick={() => setAt(i - 1)} disabled={i === 0} style={css(nav + (i === 0 ? ';opacity:.4' : ''))}>← Back</button>
+        <span style={css(`font-size:12px;color:#8A847A`)}>{i + 1} of {views.length}</span>
+        <button onClick={() => setAt(i + 1)} disabled={i === views.length - 1} data-role="flip-next" style={css(nav + (i === views.length - 1 ? ';opacity:.4' : ''))}>Next →</button>
+      </div>
+    </div>
+  );
+}
+
 export function Md({ text, small }) {
+  const parts = splitFlips(text);
+  if (parts.length === 1 && parts[0].md != null) return <MdBlocks text={parts[0].md} small={small} />;
+  return <div style={css(`display:flex;flex-direction:column;gap:12px`)}>{parts.map((p, i) => (p.flip != null ? <Flip key={i} text={p.flip} small={small} /> : <MdBlocks key={i} text={p.md} small={small} />))}</div>;
+}
+
+// Markdown doesn't need blank lines between a heading, a list, a table and a paragraph, and Claude often leaves them
+// out ("## Where to start\n1. …\n2. …"). This puts a blank line wherever the kind of line changes, so each becomes
+// its own block. A list item's indented continuation line joins the item.
+function separate(text) {
+  const kind = l => (/^#{1,6} /.test(l) ? 'h' : /^\d+\. /.test(l) ? 'ol' : /^[-*] /.test(l) ? 'ul' : /^\s*\|/.test(l) ? 'tb' : /^(-{3,}|\*{3,}|_{3,})$/.test(l.trim()) ? 'hr' : !l.trim() ? '' : 'p');
+  const out = []; let prev = '';
+  for (const l of String(text).split('\n')) {
+    const k = kind(l);
+    if (k === 'p' && /^\s+\S/.test(l) && (prev === 'ol' || prev === 'ul')) { out[out.length - 1] += ' ' + l.trim(); continue; }
+    if (k && prev && (k !== prev || k === 'h' || k === 'hr')) out.push('');
+    out.push(l); prev = k;
+  }
+  return out.join('\n');
+}
+
+function MdBlocks({ text, small }) {
   const body = small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55;white-space:pre-wrap' : SERIF;
   const parts = text.split(/```(\w*)\n([\s\S]*?)```/);
   const out = [];
   for (let i = 0; i < parts.length; i += 3) {
-    parts[i].split(/\n{2,}/).map(b => b.trim()).filter(Boolean).forEach((b, j) => {
+    separate(parts[i]).split(/\n{2,}/).map(b => b.trim()).filter(Boolean).forEach((b, j) => {
       const key = `${i}-${j}`;
-      if (/^#{1,3} /.test(b)) out.push(<div key={key} style={css(`font-family:Newsreader,serif;font-size:${small ? '15.5px' : '18.5px'};font-weight:600;margin-top:4px`)}>{inline(b.replace(/^#{1,3} /, ''))}</div>);
+      const tb = mdTable(b, small, key);
+      if (tb) out.push(...tb);
+      else if (/^(-{3,}|\*{3,}|_{3,})$/.test(b)) out.push(<hr key={key} style={css(`border:none;border-top:1px solid #E3DFD6;margin:4px 0;width:100%`)} />);
+      else if (/^#{1,3} /.test(b)) out.push(<div key={key} style={css(`font-family:Newsreader,serif;font-size:${small ? '15.5px' : '18.5px'};font-weight:600;margin-top:4px`)}>{inline(b.replace(/^#{1,3} /, ''))}</div>);
       else if (b.split('\n').every(l => /^\d+\. /.test(l))) out.push(<ol key={key} style={css(`margin:0;padding-left:24px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.replace(/^\d+\. /, ''))}</li>)}</ol>);
-      else if (b.split('\n').every(l => l.startsWith('- '))) out.push(<ul key={key} style={css(`margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.slice(2))}</li>)}</ul>);
+      else if (b.split('\n').every(l => /^[-*] /.test(l))) out.push(<ul key={key} style={css(`margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.slice(2))}</li>)}</ul>);
       else out.push(<div key={key} style={css(body)}>{inline(b)}</div>);
     });
     if (parts[i + 2] != null) out.push(
@@ -58,6 +117,25 @@ export function Md({ text, small }) {
   return <div style={css(`display:flex;flex-direction:column;gap:12px`)}>{out}</div>;
 }
 
+
+// A GitHub-style table (| a | b | rows under a |---| line), styled like the panel's Compare tables. Lines before it
+// in the same block (e.g. "Here are the rows:") stay a paragraph. Returns null when the block has no table.
+const cellsOf = l => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+function mdTable(b, small, key) {
+  const lines = b.split('\n'), sep = lines.findIndex(l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes('-'));
+  if (sep < 1 || !lines[sep - 1].includes('|') || !lines.slice(sep - 1).every(l => l.includes('|'))) return null;
+  const head = cellsOf(lines[sep - 1]), rows = lines.slice(sep + 1).map(cellsOf), before = lines.slice(0, sep - 1).join('\n').trim();
+  const cell = `padding:5px 12px;text-align:left;vertical-align:top;border-bottom:1px solid #EEEAE2`;
+  return [
+    before && <div key={key + 'p'} style={css(small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55' : SERIF)}>{inline(before)}</div>,
+    <div key={key} data-role="md-table" style={css(`border:1px solid #E3DFD6;border-radius:8px;overflow:auto;background:#fff`)}>
+      <table style={css(`border-collapse:collapse;width:100%;font-size:${small ? '12px' : '13px'};line-height:1.45`)}>
+        <thead><tr>{head.map((h, i) => <th key={i} style={css(cell + `;font-size:11px;font-weight:600;color:#8A847A`)}>{inline(h)}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={i}>{head.map((_, j) => <td key={j} style={css(cell + (i === rows.length - 1 ? ';border-bottom:none' : ''))}>{inline(r[j] || '')}</td>)}</tr>)}</tbody>
+      </table>
+    </div>,
+  ].filter(Boolean);
+}
 
 // What a check looked at, item by item: ✓ or ✗, with the idea you came to own marked.
 export function ItemList({ items, ownedNote = '', title }) {
@@ -95,10 +173,10 @@ export function ChoiceQuestions({ qs, picked, onPick, locked }) {
     <div style={css(`display:flex;flex-direction:column;gap:14px`)}>
       {qs.map((q, i) => (
         <div key={q.id} data-role="choice-q" style={css(`display:flex;flex-direction:column;gap:6px`)}>
-          <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:#9E4B2A`)}>{i + 1}.</span> {q.prompt}</div>
+          <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:#9E4B2A`)}>{i + 1}.</span> {inline(q.prompt)}</div>
           {shuffled(q).map(o => {
             const on = picked[q.id] === o.v;
-            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? '#C4613A' : '#E3C9B8'};background:${on ? '#FFF1E8' : '#fff'};color:#1F1D1A;border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{o.l}</button>;
+            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? '#C4613A' : '#E3C9B8'};background:${on ? '#FFF1E8' : '#fff'};color:#1F1D1A;border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
           })}
         </div>
       ))}

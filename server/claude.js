@@ -47,7 +47,8 @@ export function isAllowed(ip, now = Date.now()) {
   return true;
 }
 
-export async function handleClaude({ ip, body }) {
+// onText, when given, streams a chat answer's text as it's written (the app shows Claude typing, as claude.ai does).
+export async function handleClaude({ ip, body, onText }) {
   if (!isAllowed(ip)) return { status: 429, json: { error: 'Too many requests. Try again in a few minutes.' } };
 
   const { task: name, input = {}, messages = [] } = body || {};
@@ -68,16 +69,22 @@ export async function handleClaude({ ip, body }) {
   const size = system.length + clean.reduce((n, m) => n + m.content.length, 0);
   if (size > MAX_INPUT_CHARS) return { status: 413, json: { error: 'Input too long for this prototype.' } };
 
+  const params = {
+    model: MODEL,
+    max_tokens: cfg.max_tokens,
+    output_config: { effort: cfg.effort },
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system,
+    messages: clean,
+  };
   try {
-    const response = await client.beta.messages.create({
-      model: MODEL,
-      max_tokens: cfg.max_tokens,
-      output_config: { effort: cfg.effort },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system,
-      messages: clean,
-    });
+    let response;
+    if (onText && body.stream && task.chat) {
+      const stream = client.beta.messages.stream(params);
+      for await (const ev of stream) if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') onText(ev.delta.text);
+      response = await stream.finalMessage();
+    } else response = await client.beta.messages.create(params);
     logUsage(name, response);
     if (response.stop_reason === 'refusal') return { status: 422, json: { error: 'The model declined this request.' } };
     const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
@@ -92,4 +99,21 @@ export async function handleClaude({ ip, body }) {
     const detail = process.env.NODE_ENV === 'production' ? '' : ` (${error.message})`;
     return { status: 500, json: { error: 'Server error.' + detail } };
   }
+}
+
+// The HTTP side, shared by Vercel (api/claude.js) and local dev (vite.config.js). A streamed answer goes out as
+// NDJSON lines, {"t": text} per piece and then {"done": true} or {"error": ...}; anything that fails before the first
+// piece is an ordinary JSON response with its status code.
+export async function serve({ ip, body, res }) {
+  let started = false;
+  const line = o => res.write(JSON.stringify(o) + '\n');
+  const onText = t => {
+    if (!started) { started = true; res.statusCode = 200; res.setHeader('Content-Type', 'application/x-ndjson'); res.setHeader('Cache-Control', 'no-cache'); }
+    line({ t });
+  };
+  const { status, json } = await handleClaude({ ip, body, onText });
+  if (started) { line(status === 200 ? { done: true } : { error: json.error }); return res.end(); }
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(json));
 }

@@ -24,11 +24,13 @@ export default function Chat({ V }) {
               <div data-role="framing" style={css(`font-size:15px;color:#514C44;text-align:center;max-width:500px;line-height:1.55;margin-top:-12px`)}>Claude's answers make things feel clear. <b style={css(`font-weight:600;color:#9E4B2A`)}>Own it</b> checks whether you could do it yourself, and brings it back so it sticks.</div>
               {<Composer V={V} home />}
               <div style={css(`display:flex;gap:8px;flex-wrap:wrap;justify-content:center`)}>
-                <button onClick={V.startJuno} data-role="start-here" style={css(CHIP + ';border-color:#E3C9B8;color:#9E4B2A')} className="hv3">Start here · your Juno strategy chat</button>
-                <button onClick={V.startSql} style={css(CHIP)} className="hv3">SQL · revenue per customer</button>
-                <button onClick={V.startReact} style={css(CHIP)} className="hv3">React · fetch on mount</button>
+                {/* Prompts, sent live. The Juno chat is a long past conversation, so it lives in the sidebar. */}
+                <button onClick={V.startLead} data-role="start-lead" style={css(CHIP)} className="hv3">Leadership · leading without a title</button>
+                <button onClick={V.startSql} data-role="start-sql" style={css(CHIP)} className="hv3">SQL · revenue per customer</button>
+                <button onClick={V.startReact} data-role="start-react" style={css(CHIP)} className="hv3">React · fetch on mount</button>
+                <button onClick={V.startRisk} data-role="start-risk" style={css(CHIP)} className="hv3">Health · a bacon and cancer headline</button>
               </div>
-              <div style={css(`font-size:12.5px;color:#9A948A;text-align:center;max-width:440px;line-height:1.5`)}>Ask anything, or open a past chat. Under any answer, the Own it icon turns it into a try.</div>
+              <div style={css(`font-size:12.5px;color:#9A948A;text-align:center;max-width:440px;line-height:1.5`)}>Ask anything, or open a past chat like the Juno strategy chat. Under any answer, the Own it icon turns it into a try.</div>
             </div>
           )}
 
@@ -55,7 +57,7 @@ export default function Chat({ V }) {
                 </>)}
                 {!!(m.hasOutro) && (<><div style={css(SERIF)}>{m.outro}</div></>)}
                 {/* Claude's action row: copy · read aloud · retry, then Own it in the same quiet style, then the time. */}
-                <div style={css(`display:flex;align-items:center;gap:2px;margin-top:-4px;color:#8A847A`)}>
+                {!m.streaming && <div style={css(`display:flex;align-items:center;gap:2px;margin-top:-4px;color:#8A847A`)}>
                   <button onClick={m.onCopy} aria-label="Copy" title={m.copied ? 'Copied' : 'Copy'} style={css(ACT)} className="hv4">{m.copied ? <span style={css(`font-size:11px`)}>✓</span> : <CopyIcon />}</button>
                   <button onClick={m.onSpeak} aria-label="Read aloud" title="Read aloud" style={css(ACT)} className="hv4"><SpeakIcon /></button>
                   <button aria-label="Retry (not in this prototype)" title="Retry (not in this prototype)" aria-disabled="true" style={css(ACT + `;opacity:.45;cursor:default`)}><RetryIcon /></button>
@@ -64,7 +66,7 @@ export default function Chat({ V }) {
                     title={m.ownActive ? 'Owning this · open in the side panel' : m.ownBlocked ? 'Close the current Own it first' : `${m.ownAllLabel} · or highlight any part`}
                     style={css(ACT + (m.ownActive ? `;background:#C4613A;color:#fff` : m.ownBlocked ? `;color:#C9C3B8;cursor:default` : `;color:#9E4B2A`))} className={m.ownActive || m.ownBlocked ? '' : 'hv4'}><OwnIcon /></button>}
                   {!!(m.when) && <span style={css(`font-size:12.5px;color:#9A948A;margin-left:6px`)}>{m.when}</span>}
-                </div>
+                </div>}
                 {!!(m.checkChip) && (
                   <div style={css(`display:flex;gap:8px;margin-top:-2px`)}>
                     <button onClick={m.checkChip} data-role="gap-check-chip" style={css(`background:#fff;border:1px solid #E3C9B8;border-radius:99px;padding:6px 13px;font-size:13px;color:#9E4B2A`)} className="hv3">I think I've got it: check me</button>

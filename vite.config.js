@@ -8,17 +8,15 @@ function devApi() {
     name: 'dev-api',
     configureServer(server) {
       server.middlewares.use('/api/claude', async (req, res) => {
-        const { handleClaude } = await server.ssrLoadModule('/server/claude.js');
+        const { serve } = await server.ssrLoadModule('/server/claude.js');
         let raw = '';
         for await (const chunk of req) raw += chunk;
         let body = {};
         try { body = JSON.parse(raw || '{}'); } catch { /* handled as bad request below */ }
-        const { status, json } = req.method === 'POST'
-          ? await handleClaude({ ip: req.socket.remoteAddress || 'local', body })
-          : { status: 405, json: { error: 'POST only' } };
-        res.statusCode = status;
+        if (req.method === 'POST') return serve({ ip: req.socket.remoteAddress || 'local', body, res });
+        res.statusCode = 405;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(json));
+        res.end(JSON.stringify({ error: 'POST only' }));
       });
     },
   };

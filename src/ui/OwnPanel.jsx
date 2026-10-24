@@ -1,7 +1,11 @@
 // The Own it panel: what to own, predict, the try, the reveal, and teaching Sam.
 import React from 'react';
 import { css } from '../css.js';
-import { ItemList, ChoiceQuestions, StepInputs, OwnDiagram, CompareTable } from './parts.jsx';
+import { ItemList, ChoiceQuestions, StepInputs, OwnDiagram, CompareTable, Md, inline } from './parts.jsx';
+
+// What you have to work with: hand-written schemas are plain text; a generated try's context is markdown (tables of
+// rows, fenced code), so it renders as markdown when it has any.
+const isMdBlock = t => /```|^\s*\|.*\|\s*$/m.test(String(t || ''));
 import EffectTimeline from '../EffectTimeline.jsx';
 
 export default function OwnPanel({ V }) {
@@ -58,7 +62,7 @@ export default function OwnPanel({ V }) {
                   {!!V.predictTask && (
                     <div data-role="predict-try" style={css(`display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #E2DCD0;border-radius:12px;padding:16px 18px`)}>
                       <div style={css(`font-size:11px;font-weight:600;letter-spacing:.06em;color:#8A8477`)}>YOUR TRY</div>
-                      <div style={css(`font-size:14.5px;line-height:1.5`)}>{V.predictTask}</div>
+                      <div style={css(`font-size:14.5px;line-height:1.5`)}>{inline(V.predictTask)}</div>
                       <div style={css(`font-size:13px;color:#514C44`)}>{V.predictWhat}</div>
                       {V.predictTopics.length > 0 && <ul data-role="predict-topics" style={css(`margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:#514C44`)}>{V.predictTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>}
                     </div>
@@ -71,7 +75,10 @@ export default function OwnPanel({ V }) {
                       </button>
                     ))}
                   </div>
-                  <div style={css(`font-size:14px;line-height:1.55;color:#6B665C`)}>{V.predictHint}{!!V.predictLow && <> {V.predictLow}</>}</div>
+                  <div data-role="predict-hint" style={css(`font-size:14px;line-height:1.55;color:#6B665C`)}>Not sure? <button onClick={V.rereadChat} data-role="predict-reread" style={css(`background:none;border:none;padding:0;font-size:14px;color:#6B665C;text-decoration:underline;text-underline-offset:2px`)}>Reread {V.predictReread}</button> before you lock in a number.{!!V.predictLow && <> {V.predictLow}</>}</div>
+              <div data-role="no-idea" style={css(`font-size:13.5px;line-height:1.5;color:#514C44;border-top:1px solid #E2DCD0;padding-top:14px`)}>
+                No idea where to start? <button onClick={V.askClaudeFirst} data-role="ask-first-predict" style={css(`background:none;border:none;padding:0;font-size:13.5px;color:#9E4B2A;text-decoration:underline;text-underline-offset:2px`)}>Have Claude walk you through it first</button>, step by step in the chat. Come back to Own it after.
+              </div>
                 </div>
               </>)}
 
@@ -148,7 +155,6 @@ export default function OwnPanel({ V }) {
                     {!!(V.asmNotCorrect) && (<>
                       <div style={css(`display:flex;gap:8px;align-items:center`)}>
                         <button onClick={V.checkAsm} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Check order</button>
-                        <button onClick={V.goSee} style={css(`background:none;border:none;font-size:13px;color:#8A847A`)}>Watch it run again</button>
                         {!!(V.asmLoading) && (<><span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>checking…</span></>)}
                       </div>
                     </>)}
@@ -268,7 +274,7 @@ export default function OwnPanel({ V }) {
                 {!!(V.stepWrite) && (<>
                   <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
                     <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9E4B2A`)}>{V.writeFixing ? `Fixing it · try ${V.writeTry}` : 'Your turn'}</div>
-                    {!!(V.writeFixing) && <div style={css(`font-size:13px;color:#514C44;background:#F4F1EA;border-radius:8px;padding:7px 11px;line-height:1.45`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {V.writeLastGap}</div>}
+                    {!!(V.writeFixing) && <div style={css(`font-size:13px;color:#514C44;background:#F4F1EA;border-radius:8px;padding:7px 11px;line-height:1.45`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {inline(V.writeLastGap || "")}</div>}
                     {!!(V.writeLoading) && (<><div style={css(`font-size:13px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>Picking a variant for you…</div></>)}
                     {!!V.notReady && (
                       <div data-role="not-ready" style={css(`font-size:13px;color:#514C44;background:#F4F1EA;border-radius:8px;padding:8px 11px;line-height:1.45;display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>
@@ -277,7 +283,7 @@ export default function OwnPanel({ V }) {
                         <span style={css(`color:#8A847A`)}>or give it a go: a wrong first try still teaches.</span>
                       </div>
                     )}
-                    <div style={css(`font-size:15px;line-height:1.5`)}>{V.writeTask}</div>
+                    <div style={css(`font-size:15px;line-height:1.5`)}>{inline(V.writeTask || '')}</div>
                     {V.writeRefresher.length > 0 && (
                       <div data-role="refresher" style={css(`font-size:12.5px;color:#8A847A;display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>
                         <span>{V.writeRefresher.length > 1 ? 'Want a warm-up first?' : V.writeRefresher[0].label === 'See it visually' ? 'Want a picture of it first?' : 'Want a warm-up first?'}</span>
@@ -287,7 +293,7 @@ export default function OwnPanel({ V }) {
                     {!!(V.hasWriteSchema) && (<>
                       <div style={css(`display:flex;flex-direction:column;gap:4px`)}>
                         <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8A847A`)}>What you have to work with</div>
-                        <pre style={css(`margin:0;padding:9px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;color:#514C44`)}>{V.writeSchema}</pre>
+                        {isMdBlock(V.writeSchema) ? <div data-role="schema-md" style={css(`font-size:13px`)}><Md text={V.writeSchema} small /></div> : <pre style={css(`margin:0;padding:9px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;color:#514C44`)}>{V.writeSchema}</pre>}
                       </div>
                     </>)}
                     {!!(V.writeBefore) && (<><pre style={css(`margin:0;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.55;white-space:pre-wrap;color:#8A847A;background:#F4F1EA;border-radius:8px`)}>{V.writeBefore}</pre></>)}
@@ -301,7 +307,7 @@ export default function OwnPanel({ V }) {
                       </div>
                     </>)}
                     {!!(V.writeNotGraded) && (<>
-                      <div style={css(`display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>
+                  <div style={css(`display:flex;gap:8px;margin-top:24px;align-items:center;flex-wrap:wrap`)}>
                         <button onClick={V.submitWrite} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Check my version</button>
                         <button onClick={V.askHint} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">Give me a hint</button>
                         <button onClick={V.askAboutIt} data-role="ask-stuck" style={css(`background:none;border:none;font-size:13px;color:#9E4B2A`)}>Stuck? Ask Claude in the chat</button>
@@ -346,7 +352,7 @@ export default function OwnPanel({ V }) {
                   {V.revealItems.length > 0 && <ItemList items={V.revealItems} ownedNote={V.revealOwnedNote} title={V.revealScale} />}
                   {!!V.revealWhy && <div title={V.revealScale} style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}>{V.revealWhy}</div>}
                   {!!(V.revealCorrection) && (<><div style={css(`font-size:13px;line-height:1.5;color:#514C44;background:#F4F1EA;border-radius:8px;padding:7px 11px`)}>{V.revealCorrection}</div></>)}
-                  {!!(V.hasGap) && (<><div style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {V.gradeGap}</div></>)}
+                  {!!(V.hasGap) && (<><div style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {inline(V.gradeGap || '')}</div></>)}
                   {V.revealTables.length > 0 && (
                     <div style={css(`display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:start`)}>
                       {V.revealTables.map((t, i) => (
@@ -375,6 +381,7 @@ export default function OwnPanel({ V }) {
                     {!!(V.canFix) && <button onClick={V.askAboutIt} data-role="ask-claude" style={css(`background:none;border:1px solid #E3C9B8;border-radius:9px;padding:8px 13px;font-size:13px;color:#9E4B2A`)} className="hv4">Ask Claude about this</button>}
                     {!!(V.canFix) && <button onClick={V.fixWrite} data-role="fix" style={css(`background:#C4613A;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Fix it</button>}
                     <button onClick={V.finishOwn} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Back to chat</button>
+                <button onClick={V.seeInLearnings} data-role="see-in-learnings" style={css(`background:none;border:1px solid #CFE3DE;border-radius:9px;padding:8px 13px;font-size:13px;color:#1F6B64`)} className="hv6">See it in Learnings →</button>
                     <button onClick={V.goTeach} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">Optional: explain it to Sam</button>
                     <span style={css(`font-size:12px;color:#9A948A`)}>Sam is a beginner. Teaching closes the gap faster than rereading.</span>
                   </div>
@@ -433,7 +440,7 @@ export default function OwnPanel({ V }) {
                       {V.teachDebrief.unsure.length === 0 && <div style={css(`font-size:13px;color:#1F6B64`)}>No shaky spots: you answered every question Sam asked. Explaining it is the strongest sign you own it.</div>}
                     </div>
                   )}
-                  <div style={css(`display:flex;gap:8px`)}>{!!(V.canWrap) && <button onClick={V.wrapTeach} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">I'm done explaining</button>}<button onClick={V.finishOwn} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)}>Done, back to chat</button></div>
+              <div style={css(`display:flex;gap:8px`)}>{!!(V.canWrap) && <button onClick={V.wrapTeach} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">I'm done explaining</button>}<button onClick={V.finishOwn} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)}>Done, back to chat</button><button onClick={V.seeInLearnings} data-role="see-in-learnings" style={css(`background:none;border:none;padding:0 4px;font-size:13px;color:#1F6B64;text-decoration:underline;text-underline-offset:2px`)}>See it in Learnings →</button></div>
                 </div>
               </>)}
 

@@ -59,7 +59,8 @@ function Map({ L }) {
       <div style={css(at(cx, cy) + `;width:64px;height:64px;border-radius:50%;background:${INK};color:#fff;display:grid;place-items:center;font-size:11px;font-weight:500`)}>you</div>
       {L.items.map(it => (
         <button key={it.id} onClick={it.due && !it.recall ? it.onRecall : undefined} title={it.title} style={css(at(pos[it.id].x, pos[it.id].y) + `;background:none;border:none;padding:0;cursor:${it.due ? 'pointer' : 'default'}`)}>
-          <span style={css(`width:${it.due ? 30 : 22}px;height:${it.due ? 30 : 22}px;border-radius:50%;background:${it.due ? ORANGE : GREEN};${it.due ? 'animation:mappulse 1.8s ease-out infinite' : ''}`)}></span>
+          <span style={css(`width:${it.due ? 30 : 22}px;height:${it.due ? 30 : 22}px;border-radius:50%;background:${it.due ? ORANGE : GREEN};${it.due ? 'animation:mappulse 1.8s ease-out infinite' : ''}${it.id === L.justOwned ? `;box-shadow:0 0 0 4px #fff,0 0 0 6px ${ORANGE}` : ''}`)}></span>
+          {it.id === L.justOwned && <span data-role="just-owned" style={css(`font-size:10.5px;font-weight:600;letter-spacing:.05em;color:${ORANGE}`)}>JUST OWNED</span>}
           <span style={css(`font-size:12.5px;font-weight:500;text-align:center;max-width:150px;line-height:1.3;color:${INK}`)}>{shortTitle(it.title)}</span>
           <span style={css(`font-size:11px;color:${FAINT}`)}>{shortFrom(it.from)}</span>
         </button>
@@ -91,6 +92,7 @@ export default function Learnings({ V }) {
       <div style={css(`max-width:1124px;margin:0 auto;display:flex;flex-direction:column;gap:28px`)}>
         <div style={css(`display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap`)}>
           <div>
+            {!!L.back && <button onClick={L.back} data-role="learnings-back" style={css(`background:none;border:none;padding:0;margin:0 0 14px;font-size:14px;color:${MUTE};display:block`)} className="hv2">← {L.backLabel}</button>}
             <h1 style={css(`font-family:${SERIF};font-weight:400;font-size:44px;margin:0 0 6px;letter-spacing:-.01em`)}>Learnings</h1>
             <p style={css(`margin:0;font-size:16px;color:${MUTE}`)}>What you chose to own, how your predictions compared, and what stuck.</p>
           </div>
@@ -151,7 +153,7 @@ export default function Learnings({ V }) {
             </div>
             <div style={css(`display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px`)}>
               {L.sorted.map(it => (
-                <div key={it.id} data-role={it.due ? 'due-item' : 'learning'} style={css(`background:#fff;border:1px solid ${it.due ? '#E8C9BA' : LINE};border-radius:12px;overflow:hidden;display:flex;flex-direction:column`)}>
+                <div key={it.id} data-role={it.due ? 'due-item' : 'learning'} data-just-owned={it.id === L.justOwned || undefined} style={css(`background:#fff;border:${it.id === L.justOwned ? `2px solid ${ORANGE}` : `1px solid ${it.due ? '#E8C9BA' : LINE}`};border-radius:12px;overflow:hidden;display:flex;flex-direction:column`)}>
                   <Cover it={it} />
                   <div style={css(`padding:16px;display:flex;flex-direction:column;gap:10px;flex:1`)}>
                     <span style={css(`font-size:15px;font-weight:600;line-height:1.3`)}>{it.title}</span>
