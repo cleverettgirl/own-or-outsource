@@ -76,26 +76,30 @@ export default class App extends React.Component {
   // browser (localStorage), so someone who comes back days later finds their recalls due. Chats aren't kept.
   // Scenarios are saved by name and the Own-it state is trimmed to what Learnings and recall read.
   static STORE = 'own-it:v1';
+  // ?demo in the URL loads a realistic sample state (for recording the demo video), kept under its own key so it
+  // never mixes with a real tester's progress.
+  isDemo = typeof window !== 'undefined' && /[?&]demo\b/.test(window.location.search);
+  storeKey = this.isDemo ? 'own-it:demo:v1' : App.STORE;
   scKey(sc) { return ['SQL', 'REACT', 'BOOK', 'JUNO'].find(k => this[k] === sc) || null; }
   saveProgress() {
     const S = this.state, sc = x => ({ ...x, scenario: this.scKey(x.scenario) });
     const own = o => o && { scenario: this.scKey(o.scenario), focus: o.focus, lang: o.lang, code: String(o.code || '').slice(0, 4000), write: { schema: (o.write && o.write.schema) || '' } };
     const data = { v: 1, uid: this.uid, timeShift: S.timeShift, tipDismissed: S.tipDismissed, gaps: S.gaps, asked: S.asked.map(sc), exits: S.exits.map(sc), ledger: S.ledger.map(e => ({ ...e, own: own(e.own) })) };
-    try { window.localStorage.setItem(App.STORE, JSON.stringify(data)); } catch (e) { /* storage blocked or full: progress just isn't kept */ }
+    try { window.localStorage.setItem(this.storeKey, JSON.stringify(data)); } catch (e) { /* storage blocked or full: progress just isn't kept */ }
   }
   loadProgress() {
     let d = null;
-    try { d = JSON.parse(window.localStorage.getItem(App.STORE) || 'null'); } catch (e) { d = null; }
+    try { d = JSON.parse(window.localStorage.getItem(this.storeKey) || 'null'); } catch (e) { d = null; }
     if (!d || d.v !== 1) return null;
     const sc = x => ({ ...x, scenario: x.scenario ? this[x.scenario] : null });
     this.uid = Math.max(this.uid, d.uid || 0);
     return { timeShift: d.timeShift || 0, tipDismissed: !!d.tipDismissed, gaps: d.gaps || [], asked: (d.asked || []).map(sc), exits: (d.exits || []).map(sc), ledger: (d.ledger || []).map(e => ({ ...e, own: sc(e.own) })) };
   }
   resetDemo = () => {
-    if (!window.confirm('Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
-    try { window.localStorage.removeItem(App.STORE); } catch (e) { /* nothing saved */ }
+    if (!window.confirm(this.isDemo ? 'Reset the sample data to how it started?' : 'Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
+    try { window.localStorage.removeItem(this.storeKey); } catch (e) { /* nothing saved */ }
     this.uid = 0;
-    this.setState({ messages: [], own: null, ledger: this.seedLedger(), exits: [], gaps: [], asked: [], timeShift: 0, tipDismissed: false, recall: null, activeGap: null, chatTitle: 'New chat', view: 'chat', composer: '' });
+    this.setState({ messages: [], own: null, ledger: this.seedLedger(), exits: [], gaps: [], asked: [], ...(this.isDemo ? this.demoState() : {}), timeShift: 0, tipDismissed: false, recall: null, activeGap: null, chatTitle: 'New chat', view: 'chat', composer: '' });
   };
 
   // ---------- scenarios ----------
@@ -228,9 +232,34 @@ export default class App extends React.Component {
       ownedAt: t - 3 * DAY, dueAt: t - 60 * 60 * 1000,
       own: { scenario: this.BOOK, focus: { label, mode: 'concept', target: 'rule' }, lang: 'statistics', code: '', write: { schema: '' } } }];
   }
+  // The ?demo sample: what a few days of real use looks like, built on the real targets so recall, "try a new
+  // question" and the gap actions all work on it. Times are relative to now, so something is always due.
+  demoState() {
+    const t = Date.now(), H = 60 * 60 * 1000;
+    const own = (scenario, focus, lang, code = '') => ({ scenario, focus, lang, code, write: { schema: '' } });
+    const entry = (id, title, predicted, actual, n, ownedDaysAgo, dueInDays, o, extra = {}) => ({ id, title, predicted, actual, n, fixed: null, hints: 0, realWork: [], reviews: [], ownedAt: t - ownedDaysAgo * DAY, dueAt: t + dueInDays * DAY, own: o, ...extra });
+    const cold = { id: 'demo-g1', topic: 'How a two-sided platform solves the cold start', question: 'On day one there are no readers or writers, so what makes the first ones show up?', quote: "I'm not sure, maybe they pay the first writers?", source: 'teach', origin: 'while you were explaining “Which side an aggregator owns” to Sam', from: JUNO_TARGETS.ownside.label, at: t - 2 * DAY, status: 'closed', closedAt: t - 1 * DAY, context: COLD_START.context };
+    const open = { id: 'demo-g2', topic: 'When to push back on a team decision, and when to commit', question: "But if you disagree with the plan and you're not the manager, do you still have to go along with it?", quote: "I guess you just say it once and then do it anyway?", source: 'teach', origin: 'while you were explaining “Helping generously without burning out” to Sam', from: 'Helping generously without burning out', at: t - 3 * H, status: 'open', context: '' };
+    return {
+      ledger: [
+        entry('demo-1', BOOK_TARGETS.rule.label, 3, 2, 3, 4, -2 * H / DAY, own(this.BOOK, { label: BOOK_TARGETS.rule.label, mode: 'concept', target: 'rule' }, 'statistics')),
+        entry('demo-2', JUNO_TARGETS.ownside.label, 2, 3, 3, 9, 5, own(this.JUNO, { label: JUNO_TARGETS.ownside.label, mode: 'concept', target: 'ownside' }, 'strategy'),
+          { reviews: [{ at: t - 2 * DAY, right: 3, n: 3 }], realWork: [{ predicted: 1, actual: 2, n: 2 }] }),
+        entry('demo-3', SQL_TARGETS.onwhere.label, 1, 1, 2, 1, 2, own(this.SQL, { label: SQL_TARGETS.onwhere.label, mode: 'concept', target: 'onwhere' }, 'sql'),
+          { fixed: 2, realWork: [{ outsourced: true }] }),
+        { id: 'gap-demo-g1', kind: 'gap', title: cold.topic, predicted: null, actual: null, fixed: null, hints: 0, realWork: [], reviews: [], ownedAt: t - 1 * DAY, dueAt: t + 2 * DAY,
+          gap: { ...cold, check: COLD_START.check }, own: own(null, { label: cold.topic, mode: 'concept' }, 'concept') },
+        entry('demo-4', 'Converting both baselines to the same units', 4, 3, 4, 1, 2, own(null, { label: 'Converting both baselines to the same units', mode: 'concept' }, 'text', 'Put both baselines in the same units. Convert B\'s "20 in 100" into "__ in 1,000". Find the extra cases. Compare the two absolute numbers, not the percentages.')),
+        entry('demo-5', 'Helping generously without burning out', 3, 1, 3, 0.1, 3, own(null, { label: 'Helping generously without burning out', mode: 'concept' }, 'text', 'Givers who succeed protect their time: they help in ways that have high impact for others and low cost to themselves, and they set boundaries so helping doesn\'t crowd out their own work.')),
+      ],
+      gaps: [cold, open],
+      asked: [{ id: 'demo-a1', msgId: null, quote: 'COUNT(*) counts rows, so it counts that one', question: "why does COUNT(*) count the empty row but COUNT(o.id) doesn't?", scenario: this.SQL, chatTitle: this.SQL.title, at: t - 5 * H, label: 'Why COUNT(*) counts the empty row in a LEFT JOIN', checked: false }],
+      exits: [{ id: 'demo-x1', title: REACT_TARGETS.timing.label, predicted: 0, n: 3, step: 'asked Claude first', askedFirst: true, stepOf: '', startStep: 'Answer it', scenario: this.REACT }],
+    };
+  }
   componentDidMount() {
     const saved = this.loadProgress();
-    if (saved) this.setState(saved); else if (!this.state.ledger.length) this.setState({ ledger: this.seedLedger() });
+    if (saved) this.setState(saved); else if (this.isDemo) this.setState(this.demoState()); else if (!this.state.ledger.length) this.setState({ ledger: this.seedLedger() });
     this._onDown = e => { if (this.state.sel && !(e.target.closest && e.target.closest('#own-sel'))) this.setState({ sel: null }); };
     this._onSelChange = () => { const s = window.getSelection(); if (this.state.sel && (!s || !s.toString().trim())) this.setState({ sel: null }); };
     document.addEventListener('mousedown', this._onDown);
@@ -1042,7 +1071,7 @@ export default class App extends React.Component {
       .map(chip => ({ label: chip.split(' · ')[1], parent: items.find(it => it.newLabel === chip).id }));
     const sorted = S.learnSort === 'due' ? items.slice().sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)) : items;
     return {
-      untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => this.setState(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
+      isDemo: this.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => this.setState(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
       recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
       calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
       askedAbout: S.asked.filter(a => !a.checked).map(a => ({ ...a, when: rel(a.at, now), onCheck: () => this.checkLanded(a.id) })),

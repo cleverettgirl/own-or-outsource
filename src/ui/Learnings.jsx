@@ -8,7 +8,9 @@ import { ChoiceQuestions } from './parts.jsx';
 const INK = '#1F1E1B', MUTE = '#6B665C', FAINT = '#8A8477', LINE = '#E2DCD0', ORANGE = '#C4613C', GREEN = '#7FA394';
 const SERIF = 'Newsreader,Georgia,serif';
 const pill = { pred: 'background:#FBEDE4;color:#A85331', act: 'background:#E3EFEA;color:#3D6B5A', mute: 'background:#EFEAE0;color:#6B665C', next: `border:1px dashed #B8B1A3;color:${MUTE}` };
-const Pill = ({ st }) => <span style={css(`padding:4px 9px;border-radius:99px;font-size:12px;${pill[st.tone]}`)}>{st.label} {st.v}</span>;
+// "Predicted 3 of 3", "Real work · let Claude answer", "Recall 3 days ago: 3 of 3".
+const pillText = st => /^Recall · /.test(st.label) ? `Recall ${st.label.slice(9)}: ${st.v}` : /^\d/.test(st.v) ? `${st.label} ${st.v}` : `${st.label} · ${st.v}`;
+const Pill = ({ st }) => <span style={css(`padding:4px 9px;border-radius:99px;font-size:12px;${pill[st.tone]}`)}>{pillText(st)}</span>;
 const shortTitle = t => { const s = String(t).split(/:\s|,\s/)[0]; return s.length > 34 ? s.slice(0, 32) + '…' : s; };
 const shortFrom = f => String(f || '').split(/ · |, /)[0];
 const inDays = d => (d <= 0 ? 'Recall due now' : `Recall in ${Math.max(1, Math.round(d))} day${Math.round(d) === 1 ? '' : 's'}`);
@@ -29,10 +31,13 @@ function Cover({ it, height = 120 }) {
 // related questions you haven't tried yet dashed beyond their concept.
 function Map({ L }) {
   const W = 768, H = 440, cx = W / 2, cy = 235, rIn = 95, rOut = 165;
-  const ring = it => (it.due || (it.daysToDue != null && it.daysToDue <= 7) ? rIn : rOut);
-  const n = L.items.length, pos = {};
-  L.items.forEach((it, i) => { const a = -Math.PI * 0.82 + (i / Math.max(1, n)) * Math.PI * 2, r = ring(it); pos[it.id] = { x: cx + Math.cos(a) * r * 1.55, y: cy + Math.sin(a) * r * 0.92, a }; });
-  const kids = L.untried.filter(u => pos[u.parent]).map(u => { const p = pos[u.parent]; return { ...u, x: cx + Math.cos(p.a + 0.18) * 205 * 1.55, y: Math.min(H - 30, cy + Math.sin(p.a + 0.18) * 205 * 0.92), px: p.x, py: p.y }; });
+  // The sooner it comes back, the closer to you: due now sits just inside the inner ring, two weeks out on the
+  // outer ring. Items are spread evenly around you, soonest first, so labels don't pile up.
+  const r = it => (it.due ? 78 : Math.min(rOut, 82 + (Math.max(0, it.daysToDue || 14) / 14) * (rOut - 82)));
+  const order = L.items.slice().sort((a, b) => (a.due ? -1 : a.daysToDue ?? 99) - (b.due ? -1 : b.daysToDue ?? 99));
+  const n = order.length, pos = {};
+  order.forEach((it, i) => { const a = -Math.PI * 0.75 + (i / Math.max(1, n)) * Math.PI * 2, rr = r(it); pos[it.id] = { x: cx + Math.cos(a) * rr * 1.75, y: cy + Math.sin(a) * rr * 0.98, a }; });
+  const kids = L.untried.filter(u => pos[u.parent]).map(u => { const p = pos[u.parent]; return { ...u, x: Math.max(70, Math.min(W - 70, cx + Math.cos(p.a) * 200 * 1.75)), y: Math.max(60, Math.min(H - 40, cy + Math.sin(p.a) * 200 * 0.98)), px: p.x, py: p.y }; });
   const at = (x, y) => `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px`;
   const chats = new Set(L.items.map(it => shortFrom(it.from))).size;
   return (
@@ -46,8 +51,8 @@ function Map({ L }) {
         </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={css(`position:absolute;inset:0;width:100%;height:100%`)} fill="none" stroke="#DDD6C8" strokeWidth="1.5">
-        <ellipse cx={cx} cy={cy} rx={rIn * 1.55} ry={rIn * 0.92} />
-        <ellipse cx={cx} cy={cy} rx={rOut * 1.55} ry={rOut * 0.92} />
+        <ellipse cx={cx} cy={cy} rx={rIn * 1.75} ry={rIn * 0.98} />
+        <ellipse cx={cx} cy={cy} rx={rOut * 1.75} ry={rOut * 0.98} />
         {L.items.map(it => <line key={it.id} x1={cx} y1={cy} x2={pos[it.id].x} y2={pos[it.id].y} />)}
         {kids.map((k, i) => <line key={'k' + i} x1={k.px} y1={k.py} x2={k.x} y2={k.y} strokeDasharray="4 5" />)}
       </svg>
@@ -55,7 +60,7 @@ function Map({ L }) {
       {L.items.map(it => (
         <button key={it.id} onClick={it.due && !it.recall ? it.onRecall : undefined} title={it.title} style={css(at(pos[it.id].x, pos[it.id].y) + `;background:none;border:none;padding:0;cursor:${it.due ? 'pointer' : 'default'}`)}>
           <span style={css(`width:${it.due ? 30 : 22}px;height:${it.due ? 30 : 22}px;border-radius:50%;background:${it.due ? ORANGE : GREEN};${it.due ? 'animation:mappulse 1.8s ease-out infinite' : ''}`)}></span>
-          <span style={css(`font-size:13px;font-weight:500;text-align:center;max-width:160px;line-height:1.3;color:${INK}`)}>{shortTitle(it.title)}</span>
+          <span style={css(`font-size:12.5px;font-weight:500;text-align:center;max-width:150px;line-height:1.3;color:${INK}`)}>{shortTitle(it.title)}</span>
           <span style={css(`font-size:11px;color:${FAINT}`)}>{shortFrom(it.from)}</span>
         </button>
       ))}
@@ -91,7 +96,7 @@ export default function Learnings({ V }) {
           </div>
           <div style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:${FAINT};flex-wrap:wrap`)}>
             <button onClick={L.skipAhead} data-role="skip-ahead" style={css(`background:none;border:1px dashed #B8B1A3;border-radius:8px;padding:7px 12px;color:#3A3732;font-size:13px;white-space:nowrap`)} className="hv2">⏩ Skip ahead 3 days</button>
-            <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · saved in this browser</span>
+            <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · {L.isDemo ? 'sample data' : 'saved in this browser'}</span>
             <button onClick={L.resetDemo} data-role="reset-demo" style={css(`background:none;border:none;padding:0;font-size:13px;color:${FAINT};text-decoration:underline;text-underline-offset:2px`)}>Reset demo</button>
           </div>
         </div>

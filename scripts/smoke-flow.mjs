@@ -604,6 +604,23 @@ step('not ready: Learnings keeps it as a choice you can pick back up', text().in
   step('markdown: emphasis closing with *** leaves no stray asterisks', ['**Brown: *trust (psychological safety).***', '*Grant: **change your mind.***', '***Sinek:** start with why.*'].every(t => !plain(t).includes('*')));
 }
 
+// ---- ?demo: a realistic sample for recording, under its own key; the normal state is never touched.
+{
+  const realBefore = window.localStorage.getItem('own-it:v1');
+  dom.reconfigure({ url: 'http://localhost/?demo' });
+  const box = document.createElement('div'); document.body.appendChild(box);
+  const demoRoot = createRoot(box);
+  await act(async () => { demoRoot.render(React.createElement(App)); });
+  await wait(50);
+  await act(async () => { box.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  await wait(50);
+  const t = box.textContent, cards = box.querySelectorAll('[data-role=learning], [data-role=due-item]');
+  step('demo: ?demo loads the sample (6 owned, one due, an open gap, asked-about, a went-to-Claude-first exit), labelled', cards.length === 6 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('sample data') && t.includes('Open gaps') && t.includes('Why COUNT(*) counts the empty row') && t.includes('went to Claude first') && t.includes('Calibration, across'), `${cards.length} cards`);
+  await act(async () => { demoRoot.unmount(); }); box.remove();
+  dom.reconfigure({ url: 'http://localhost/' });
+  step('demo: the real saved progress is untouched by ?demo', window.localStorage.getItem('own-it:v1') === realBefore && !!window.localStorage.getItem('own-it:demo:v1'));
+}
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));
 console.error = origError;
