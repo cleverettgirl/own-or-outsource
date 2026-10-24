@@ -132,9 +132,21 @@ function nearest(row, candidates) {
 // matter: a row is tested by the values in it). The prediction counts the same items, so "you said 3, you got 2
 // of 4" compares like with like, and the item the learner came to own is marked (owned: true).
 // check.items: [{ short, owned?, test(rows) }]. Without items, the whole result is one item.
+// rows null means the query didn't run: nothing could be checked, which isn't the same as getting it wrong.
 function itemsFor(check, rows) {
   const spec = check.items && check.items.length ? check.items : [{ short: 'Returns the right rows', test: () => false }];
-  return spec.map(it => ({ short: it.short, owned: !!it.owned, ok: !!rows && !!it.test(rows) }));
+  return spec.map(it => ({ short: it.short, owned: !!it.owned, ok: !!rows && !!it.test(rows), unchecked: !rows }));
+}
+
+// SQLite's messages ("near "on": syntax error") point at where it gave up, not at the slip. The common slips,
+// named in plain words; SQLite's own message is the fallback.
+function explainError(message, text) {
+  const t = text.replace(/\s+/g, ' ');
+  if (/\bjoin\s+on\b/i.test(t)) return 'Your JOIN is missing the table it joins: the table name goes between JOIN and ON, e.g. “LEFT JOIN orders o ON …”.';
+  if (/\bfrom\s+(left|right|inner|join|on|where)\b/i.test(t)) return 'FROM is missing its table: write the table name (and alias) right after FROM.';
+  if (/\bon\b[^;]*\bwhere\s*(;|$)/i.test(t) || /\b(and|or|where|on)\s*;?\s*$/i.test(t)) return 'The query ends in the middle of a condition: finish the last AND / WHERE / ON.';
+  if (/incomplete input/i.test(message)) return 'The query stops before it’s finished. Check the last line.';
+  return '';
 }
 
 // check: { expected, orderMatters?, items?, diagnoses?: [{ sql, gap, byText?: [{ re, gap }] }] }; before/after wrap the learner's part.
@@ -156,7 +168,8 @@ export async function checkSql(check, attempt, before = '', after = '') {
       const alias = (run.error.match(/no such column: (\w+)\.\w+/) || [])[1];
       const aliasGap = alias && new RegExp(`\\b${alias}\\.`).test(before + after) && !new RegExp(`\\b\\w+\\s+(AS\\s+)?${alias}\\b`, 'i').test(run.text)
         ? `The given lines use the alias “${alias}.”, but no table in your part is called ${alias}. Give that table the alias ${alias}, as the task says, and it will run.` : '';
-      return { score: 2, why: WHY[2], worked: '', gap: aliasGap || `SQLite says: “${run.error}”. Fix that and it will run.`, corrections, items: itemsFor(check, null) };
+      const plain = explainError(run.error, run.text);
+      return { score: 2, why: WHY[2], worked: '', gap: aliasGap || (plain ? `${plain} (SQLite says: “${run.error}”.)` : `SQLite says: “${run.error}”. Fix that and it will run.`), corrections, items: itemsFor(check, null), didntRun: true };
     }
     const lined = lineUp(run.res, expected), got = lined.got;
     const extraCols = lined.dropped.length ? ` You also returned ${lined.dropped.join(', ')}; extra columns don't affect the score.` : '';

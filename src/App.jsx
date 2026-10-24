@@ -555,6 +555,18 @@ export default class App extends React.Component {
     const exit = { id: o.id, title: o.focus ? o.focus.label : o.lang, predicted: o.prediction, n, step: at, stepOf: `${L.indexOf(o.step) + 1} of ${L.length}`, startStep: stepLabel(o, o.startStep), scenario: o.scenario };
     this.setState({ own: null, exits: this.state.exits.concat([exit]), messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Outsourced', summary } : m) });
   };
+  // Predicting under half says "not ready yet": that's a moment for explanation, which is the chat's job. The try
+  // offers the way back to Claude with what you're owning quoted, and the question left to you. Going to Claude
+  // first is kept as a choice on Learnings (where you can pick it back up), not counted as a miss.
+  askClaudeFirst = () => {
+    const o = this.state.own, n = this.plannedItems(o).length, label = o.focus ? o.focus.label : o.lang;
+    const part = o.code !== o.fullCode && o.code.length <= 400 ? o.code : '';
+    const text = part ? `About this part of your answer:\n${part.split('\n').map(l => '> ' + l).join('\n')}\n\n` : `About “${label}”:\n\n`;
+    const exit = { id: o.id, title: label, predicted: o.prediction, n, step: 'asked Claude first', askedFirst: true, stepOf: '', startStep: stepLabel(o, o.startStep), scenario: o.scenario };
+    this.setState({ own: null, composer: text, exits: this.state.exits.concat([exit]),
+      messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Asked Claude first', summary: `${label} · predicted ${o.prediction} of ${n}` } : m) },
+      () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
+  };
   // What the try will check, known before you try it: the prediction is "how many of these N will you get right?".
   // Only N is shown when you predict; the items themselves would give the answer away.
   plannedItems(o = this.state.own) {
@@ -794,8 +806,9 @@ export default class App extends React.Component {
     {
       const { right, n } = tally(g), d = right - o.prediction;
       // The item you came to own leads: missing it matters more than missing a side detail.
-      const ownedMiss = (g.items || []).find(i => i.owned && !i.ok);
-      g.revealLine = (d === 0 ? `You said ${o.prediction} of ${n}, and got ${right}. Your sense of what you know is accurate here.` : d > 0 ? `You said ${o.prediction} of ${n}, and got ${right}. You own more of this than you thought.` : `You said ${o.prediction} of ${n}, and got ${right}. Reading it felt clearer than doing it turned out to be, which is normal, and now you know exactly where.`)
+      const ownedMiss = (g.items || []).find(i => i.owned && !i.ok && !i.unchecked);
+      if (g.didntRun) g.revealLine = `You said ${o.prediction} of ${n}. It didn't run, so none of the ${n} could be checked yet: fix what's below and check again. The check counts this try as ${right} of ${n}, since it didn't work on its own.`;
+      else g.revealLine = (d === 0 ? `You said ${o.prediction} of ${n}, and got ${right}. Your sense of what you know is accurate here.` : d > 0 ? `You said ${o.prediction} of ${n}, and got ${right}. You own more of this than you thought.` : `You said ${o.prediction} of ${n}, and got ${right}. Reading it felt clearer than doing it turned out to be, which is normal, and now you know exactly where.`)
         + (ownedMiss ? ` The one you missed is the idea you came to own: ${ownedMiss.short.charAt(0).toLowerCase() + ownedMiss.short.slice(1)}.` : '');
     }
     // The first try is what you could do on your own, so it stays the "actual" that the prediction is measured against.
@@ -1187,6 +1200,7 @@ export default class App extends React.Component {
     const w = o.write;
     Object.assign(V, {
       writeFixing: !!w.firstGrade && !w.grade, writeTry: w.attempts + 1, writeLastGap: w.firstGrade ? (w.lastGap || w.firstGrade.gap || '') : '',
+      notReady: o.prediction != null && !w.firstGrade && o.prediction / Math.max(1, this.plannedItems(o).length) < 0.5, askClaudeFirst: this.askClaudeFirst,
       writeIsChoice: !!(w.check && w.check.type === 'choice'), writeIsSteps: !!(w.check && w.check.type === 'steps'), writeSteps: w.check && w.check.steps ? w.check.steps : [], writeQs: w.check && w.check.questions ? w.check.questions : [], writePicked: w.picked,
       onWritePick: (id, v) => this.setOwn(cur => ({ write: { ...cur.write, picked: { ...cur.write.picked, [id]: v } } })),
       writeBefore: w.before, writeAfter: w.after, writePlaceholder: w.placeholder || 'Write it here. Ask for a hint any time; hints are part of learning, not cheating.',
@@ -1203,7 +1217,7 @@ export default class App extends React.Component {
     const pct = k => (N ? k / N * 100 : 0) + '%';
     const lo = Math.min(o.prediction, t1.right), hi = Math.max(o.prediction, t1.right);
     Object.assign(V, {
-      revealHeadline: t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
+      revealHeadline: g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
       // What was checked, item by item, on your first try. The idea you came to own is marked.
       revealItems: (g1.items || []).map(i => ({ ...i, mark: i.ok ? '✓' : '✗' })), revealOwnedNote: (g1.items || []).some(i => i.owned) ? 'the idea you came to own' : '',
       canFix: !!w.grade && !allRight(g), fixWrite: this.fixWrite,
@@ -1215,7 +1229,7 @@ export default class App extends React.Component {
       }),
       revealCols: `repeat(${order.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
-      revealWhy: w.check && ['choice', 'steps'].includes(w.check.type) && (g1.items || []).length ? '' : g.why || RUBRIC_WHY[g.score] || '',
+      revealWhy: g.didntRun || (w.check && ['choice', 'steps'].includes(w.check.type) && (g1.items || []).length) ? '' : g.why || RUBRIC_WHY[g.score] || '',
       revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
       revealScale: w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),

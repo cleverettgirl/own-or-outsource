@@ -90,7 +90,7 @@ export default function Learnings({ V }) {
             <div style={css(`font-size:13px;font-weight:600;color:#514C44`)}>You wanted to learn, then stepped away</div>
             {L.exits.map((x, i) => (
               <div key={i} style={css(card + `;flex-direction:row;justify-content:space-between;align-items:center`)}>
-                <div style={css(`display:flex;flex-direction:column;gap:3px`)}><div style={css(`font-size:14.5px`)}>{x.title}</div><div style={css(`font-size:12.5px;color:#8A847A`)}>predicted {x.predicted} of {x.n} · left at {x.step} ({x.stepOf})</div></div>
+                <div style={css(`display:flex;flex-direction:column;gap:3px`)}><div style={css(`font-size:14.5px`)}>{x.title}</div><div style={css(`font-size:12.5px;color:#8A847A`)}>predicted {x.predicted} of {x.n} · {x.askedFirst ? 'went to Claude first' : `left at ${x.step} (${x.stepOf})`}</div></div>
                 {!!x.onReopen && <button onClick={x.onReopen} style={css(link)} className="hv4">Pick it back up</button>}
               </div>
             ))}

@@ -569,6 +569,24 @@ step('steps: the reveal names the try "Work it out"', text().includes('Work it o
 globalThis.fetch = offline;
 await click('Back to chat');
 
+// ---- Not ready yet: a low prediction offers the way back to Claude, with the highlight quoted.
+await click('New chat');
+await click('SQL · revenue per customer');
+await wait(900);
+const hl = "The key detail is putting the status filter in the LEFT JOIN's ON clause rather than in WHERE";
+window.getSelection = () => ({ toString: () => hl, removeAllRanges() {} });
+await act(async () => { document.querySelector('main [data-msg-id] > div').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 100, clientY: 100 })); });
+await click('Own it');
+window.getSelection = realGetSelection;
+await click("Why status = 'paid' goes in ON");
+await predict(0);
+step('not ready: predicting under half offers "Ask Claude first" next to the try', !!document.querySelector('[data-role=not-ready]') && !!document.querySelector('textarea[data-role=write]'));
+await act(async () => { document.querySelector('[data-role=ask-first]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+await wait(30);
+step('not ready: the panel closes and your highlight is quoted in the chat box, question left to you', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '') === `About this part of your answer:\n> ${hl}\n\n` && text().includes('Asked Claude first'));
+await openLearnings();
+step('not ready: Learnings keeps it as a choice you can pick back up', text().includes('went to Claude first'));
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));
 console.error = origError;

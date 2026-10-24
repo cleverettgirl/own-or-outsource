@@ -257,6 +257,13 @@ export default function OwnPanel({ V }) {
                     <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9E4B2A`)}>{V.writeFixing ? `Fixing it · try ${V.writeTry}` : 'Your turn'}</div>
                     {!!(V.writeFixing) && <div style={css(`font-size:13px;color:#514C44;background:#F4F1EA;border-radius:8px;padding:7px 11px;line-height:1.45`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {V.writeLastGap}</div>}
                     {!!(V.writeLoading) && (<><div style={css(`font-size:13px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>Picking a variant for you…</div></>)}
+                    {!!V.notReady && (
+                      <div data-role="not-ready" style={css(`font-size:13px;color:#514C44;background:#F4F1EA;border-radius:8px;padding:8px 11px;line-height:1.45;display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>
+                        <span>Not ready yet? Ask Claude about it first, then come back.</span>
+                        <button onClick={V.askClaudeFirst} data-role="ask-first" style={css(`background:none;border:none;padding:0;font-size:13px;color:#9E4B2A;text-decoration:underline;text-underline-offset:2px`)}>Ask Claude first</button>
+                        <span style={css(`color:#8A847A`)}>or give it a go: a wrong first try still teaches.</span>
+                      </div>
+                    )}
                     <div style={css(`font-size:15px;line-height:1.5`)}>{V.writeTask}</div>
                     {V.writeRefresher.length > 0 && (
                       <div data-role="refresher" style={css(`font-size:12.5px;color:#8A847A;display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>

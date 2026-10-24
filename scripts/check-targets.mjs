@@ -58,6 +58,15 @@ for (const [q, want] of [["FROM customers c LEFT JOIN orders o ON o.customer_id 
   const g = await checkSql(ow.check, q, ow.before, ow.after);
   console.log(`${want.test(g.gap) && !/Either/.test(g.gap) ? 'ok      ' : 'MISMATCH'} ${g.gap.slice(0, 90)}…`);
 }
+console.log('--- syntax slips are named in plain words, and nothing is marked wrong when the query did not run (onwhere.write)');
+for (const [q, want] of [
+  ["from customers as c\nleft join on o.customer_id = c.id\nand o.status = 'refunded'", /JOIN is missing the table/], // Christine's real try
+  ["FROM LEFT JOIN orders o ON o.customer_id = c.id", /FROM is missing its table/],
+  ["FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND", /ends in the middle of a condition/],
+]) {
+  const g = await checkSql(ow.check, q, ow.before, ow.after);
+  console.log(`${want.test(g.gap) && g.didntRun && g.items.every(i => i.unchecked && !i.ok) ? 'ok      ' : 'MISMATCH'} ${g.gap.slice(0, 100)}`);
+}
 console.log('--- go first (SQL): items');
 const gf = (await vite.ssrLoadModule('/src/goFirst.js')).GO_FIRST.sql.check;
 for (const q of [gf.expected, ...gf.diagnoses.map(d => d.sql)]) { const g = await checkSql(gf, q); console.log(`${g.score}/5  ${g.items.map(i => (i.ok ? '✓ ' : '✗ ') + i.short).join(' · ')}`); }
