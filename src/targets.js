@@ -67,6 +67,15 @@ const SOURCE = {
 };
 const kept = t => ({ t, strong: true }); // emphasised grid cell
 
+// ---- items: what each SQL try asks for, tested on the rows the learner's query returns ----------------
+// Rows are tested by the values in them, so column order and aliases don't matter. owned marks the item that
+// is the idea the learner came to own; the reveal leads with it (sqlCheck.js).
+export const has = (rows, v) => rows.some(r => r.includes(v));
+export const rowWith = (rows, v) => rows.find(r => r.includes(v));
+const num = r => { const c = r.find(x => /^-?\d+(\.\d+)?$/.test(x)); return c == null ? -Infinity : Number(c); };
+// Sorted biggest first by the row's number (NULL counts as smallest, as SQLite sorts it with DESC).
+export const descending = rows => rows.every((r, i) => i === 0 || num(rows[i - 1]) >= num(r));
+
 // ---- the targets ------------------------------------------------------------------------------
 export const SQL_TARGETS = {
   joins: {
@@ -101,7 +110,10 @@ export const SQL_TARGETS = {
       schema: SHOP_SCHEMA + '\nUse the aliases o and c.',
       before: 'SELECT o.id, o.total, c.name', after: ';', placeholder: 'FROM …\n… JOIN … ON …',
       hints: ['This time, which table has to keep every one of its rows?', 'Put that table right after FROM.', 'Which join keeps every row of the first table, even when nothing matches?'],
-      check: { type: 'sql', expected: 'SELECT o.id, o.total, c.name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id', diagnoses: [
+      check: { type: 'sql', expected: 'SELECT o.id, o.total, c.name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id', items: [
+        { short: 'Every order is listed, even 5 and 6 (customer deleted)', owned: true, test: rows => has(rows, '5') && has(rows, '6') },
+        { short: 'No rows for customers without an order (no Dee)', test: rows => !has(rows, 'Dee') },
+      ], diagnoses: [
         { sql: 'SELECT o.id, o.total, c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id',
           gap: 'You kept every customer, but this time every order has to stay. Orders 5 and 6 (deleted customer) are missing, and Dee shows up with no order. Which table must keep every row here?' },
         { sql: 'SELECT o.id, o.total, c.name FROM orders o JOIN customers c ON c.id = o.customer_id',
@@ -111,7 +123,10 @@ export const SQL_TARGETS = {
     delayed: {
       task: 'From memory: the names of customers who have never placed an order. Write the FROM and JOIN.',
       schema: SHOP_SCHEMA, before: 'SELECT c.name', after: 'WHERE o.id IS NULL;', placeholder: 'FROM …\n… JOIN … ON …',
-      check: { type: 'sql', expected: 'SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.id IS NULL', diagnoses: [
+      check: { type: 'sql', expected: 'SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.id IS NULL', items: [
+        { short: 'Finds Dee, who has never ordered', owned: true, test: rows => has(rows, 'Dee') },
+        { short: 'Lists no one who has ordered', test: rows => rows.length > 0 && rows.every(r => r.includes('Dee')) },
+      ], diagnoses: [
         { sql: 'SELECT c.name FROM customers c JOIN orders o ON o.customer_id = c.id WHERE o.id IS NULL',
           gap: "No rows: this join only ever produces customers who have an order, so o.id is never NULL. Start from the table that must keep every row." },
       ] },
@@ -148,9 +163,16 @@ export const SQL_TARGETS = {
       schema: SHOP_SCHEMA + '\nUse the aliases c and o.',
       before: 'SELECT c.name, o.id, o.total', after: ';', placeholder: 'FROM …\n… JOIN … ON …',
       hints: ['Which customers must survive even though they have no refunded order?', 'Where does a filter go if it should only decide what counts as a match?', 'Add the status check to the ON clause with AND.'],
-      check: { type: 'sql', expected: "SELECT c.name, o.id, o.total FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'refunded'", diagnoses: [
+      check: { type: 'sql', expected: "SELECT c.name, o.id, o.total FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'refunded'", items: [
+        { short: 'Customers with no refunded order still appear (Bo, Dee)', owned: true, test: rows => has(rows, 'Bo') && has(rows, 'Dee') },
+        { short: 'Only refunded orders are listed', test: rows => !has(rows, '1') && !has(rows, '3') },
+      ], diagnoses: [
         { sql: "SELECT c.name, o.id, o.total FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.status = 'refunded'",
-          gap: 'Bo and Dee are missing. Either the join is INNER, or the refunded filter is in WHERE, which runs after the join and throws out their NULL rows.' },
+          gap: 'Bo and Dee are missing. Either the join is INNER, or the refunded filter is in WHERE, which runs after the join and throws out their NULL rows.',
+          byText: [
+            { re: /\bwhere\b[^;]*refunded/i, gap: "Bo and Dee are missing. The refunded filter is in WHERE, which runs after the join: their rows have status NULL there, NULL = 'refunded' isn't true, so WHERE throws them out. In ON, it would only decide what counts as a match." },
+            { re: /^(?![\s\S]*\bleft\b)[\s\S]*\bjoin\b/i, gap: 'Bo and Dee are missing. A plain (inner) JOIN keeps only customers with a matching refunded order, so they drop out. A LEFT JOIN keeps every customer.' },
+          ] },
         { sql: 'SELECT c.name, o.id, o.total FROM customers c LEFT JOIN orders o ON o.customer_id = c.id',
           gap: "Paid orders are in the result too: the refunded-only filter is missing." },
       ] },
@@ -158,7 +180,10 @@ export const SQL_TARGETS = {
     delayed: {
       task: 'From memory: every customer with their paid orders only. Customers with no paid order should still be listed. Write the FROM, JOIN and filter.',
       schema: SHOP_SCHEMA, before: 'SELECT c.name, o.id', after: ';', placeholder: 'FROM …\n… JOIN … ON …',
-      check: { type: 'sql', expected: "SELECT c.name, o.id FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid'", diagnoses: [
+      check: { type: 'sql', expected: "SELECT c.name, o.id FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid'", items: [
+        { short: 'Customers with no paid order still appear (Cy, Dee)', owned: true, test: rows => has(rows, 'Cy') && has(rows, 'Dee') },
+        { short: 'Only paid orders are listed', test: rows => !has(rows, '2') && !has(rows, '4') },
+      ], diagnoses: [
         { sql: "SELECT c.name, o.id FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.status = 'paid'",
           gap: "Cy and Dee are missing: with the paid filter in WHERE (or an inner join), their NULL rows are thrown out after the join." },
       ] },
@@ -177,7 +202,12 @@ export const SQL_TARGETS = {
       schema: "authors(id, name)\nbooks(id, author_id, pages, status)   -- status is 'published' or 'draft'",
       before: '', after: '', placeholder: 'SELECT …',
       hints: ['Which table do you start FROM if every author has to appear?', "Where does status = 'published' have to go so authors with no published books survive?", 'An author with no match gets a NULL sum. What turned NULL into 0 in the original?', 'Most pages first: which direction is the sort?'],
-      check: { type: 'sql', orderMatters: true, expected: "SELECT a.name, COALESCE(SUM(b.pages), 0) AS pages FROM authors a LEFT JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.name ORDER BY pages DESC", diagnoses: [
+      check: { type: 'sql', orderMatters: true, expected: "SELECT a.name, COALESCE(SUM(b.pages), 0) AS pages FROM authors a LEFT JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.name ORDER BY pages DESC", items: [
+        { short: 'Every author appears, even Cal (no published books)', owned: true, test: rows => ['Ann', 'Ben', 'Cal', 'Dot'].every(n => has(rows, n)) },
+        { short: 'An empty total shows 0, not NULL', test: rows => !has(rows, 'NULL') },
+        { short: "Only published pages count (Ben's is 240)", test: rows => !!rowWith(rows, 'Ben') && rowWith(rows, 'Ben').includes('240') },
+        { short: 'Most pages first', test: descending },
+      ], diagnoses: [
         { sql: "SELECT a.name, SUM(b.pages) FROM authors a JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.name ORDER BY 2 DESC",
           gap: 'Cal is missing. He has no published books, so a plain JOIN (or the published filter in WHERE) drops him.' },
         { sql: "SELECT a.name, SUM(b.pages) AS pages FROM authors a LEFT JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.name ORDER BY pages DESC",
@@ -189,7 +219,10 @@ export const SQL_TARGETS = {
     delayed: {
       task: 'From memory: the names of customers who have no paid orders at all.',
       schema: SHOP_SCHEMA, before: '', after: '', placeholder: 'SELECT …',
-      check: { type: 'sql', expected: "SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid' WHERE o.id IS NULL", diagnoses: [
+      check: { type: 'sql', expected: "SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid' WHERE o.id IS NULL", items: [
+        { short: 'Cy counts as no paid orders (only a refunded one)', owned: true, test: rows => has(rows, 'Cy') },
+        { short: 'Dee (no orders at all) is listed', test: rows => has(rows, 'Dee') },
+      ], diagnoses: [
         { sql: 'SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.id IS NULL',
           gap: "Only Dee: Cy has an order, but it's refunded. The paid filter belongs in ON, so Cy's refunded order doesn't count as a match." },
       ] },

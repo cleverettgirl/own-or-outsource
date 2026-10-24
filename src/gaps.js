@@ -6,31 +6,7 @@
 // not when they repeat what they already know ("knowledge-telling") — Roscoe & Chi 2007. The gap loop turns
 // the moment Sam exposes a gap into that rebuilding, with Claude as the help and a check as the finish line.
 
-// What Claude is told in a gap chat: start from their guess, explain the missing idea concretely, end with
-// one question that makes them apply it. The app does the formal check, so Claude doesn't quiz.
-export function gapSystem(g) {
-  return [
-    `You are Claude. The person you're talking with found a gap in their own understanding and wants to close it: "${g.topic}".`,
-    g.origin ? `It came up ${g.origin}.` : '',
-    g.question ? `They were asked: "${g.question}"` : '',
-    g.quote ? `Their best guess was: "${g.quote}"` : '',
-    `Help them close it. Start from their guess: say what's right in it, then explain the missing idea concretely, with one or two real examples, in under 200 words of markdown.`,
-    `End with ONE short question that asks them to apply the idea${g.context ? ` to ${g.context}` : ' to their own situation'}.`,
-    `In later turns, respond to what they actually say, briefly; don't lecture. Don't quiz them formally: the app checks their understanding when they say they're ready.`,
-  ].filter(Boolean).join('\n');
-}
-
-// The check that closes a gap: explain and apply, not recite. Claude writes it; the cold-start gap from the
-// Juno chat has a hand-written one so the demo is reliable.
-export const checkPrompt = g => `Write one question that checks whether someone now understands: "${g.topic}".${g.context ? ` Context: ${g.context}.` : ''} It must ask them to explain the idea in their own words AND apply it to a concrete case, not recall a definition. Also list 2 or 3 key points a good answer must contain, each a short phrase. Return ONLY JSON {"question": string, "keyPoints": [string]}`;
-
-export const judgePrompt = (g, check, answer) => `Someone is closing a gap in their understanding: "${g.topic}".
-Question they answered: ${check.question}
-Key points a good answer contains: ${check.keyPoints.map((p, i) => `${i + 1}. ${p}`).join(' ')}
-Their answer: ${answer}
-
-For each key point, quote the EXACT words of their answer that show it (any wording is fine if the idea is there), or null.
-Return ONLY JSON {"points":[{"point": string, "evidence": string|null}], "feedback": one or two warm, specific sentences to them; if a point is missing, ask about it as a question to think about, without giving the answer}`;
+// The prompts for the loop (the gap chat, the check, the judge) are in prompts.js, with the rest.
 
 // ---- the cold-start gap (from teaching Sam about Juno), hand-written ----
 const COLD = /cold.?start|get(s|ting)? started|first (writers|readers|users|ones)|chicken|day one|neither side|loop (gets )?start/i;

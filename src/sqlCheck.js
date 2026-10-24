@@ -128,11 +128,22 @@ function nearest(row, candidates) {
   return best && best.same >= row.length - 1 ? { row: best.row, diffs: row.map((v, j) => (v === best.row[j] ? -1 : j)).filter(j => j >= 0) } : null;
 }
 
-// check: { expected, orderMatters?, diagnoses?: [{ sql, gap }] }; before/after wrap the learner's part.
+// What the task asks for, as separate items, each tested on the rows your query returns (column order doesn't
+// matter: a row is tested by the values in it). The prediction counts the same items, so "you said 3, you got 2
+// of 4" compares like with like, and the item the learner came to own is marked (owned: true).
+// check.items: [{ short, owned?, test(rows) }]. Without items, the whole result is one item.
+function itemsFor(check, rows) {
+  const spec = check.items && check.items.length ? check.items : [{ short: 'Returns the right rows', test: () => false }];
+  return spec.map(it => ({ short: it.short, owned: !!it.owned, ok: !!rows && !!it.test(rows) }));
+}
+
+// check: { expected, orderMatters?, items?, diagnoses?: [{ sql, gap, byText?: [{ re, gap }] }] }; before/after wrap the learner's part.
+// A diagnosis matches by result rows; byText then picks the wording for HOW they wrote it, when two different
+// mistakes give the same rows (an inner join and a filter in WHERE both drop the same customers).
 // Returns { score 1–5, why, worked, gap, corrections, table } — same core shape as the model grader,
 // plus `table`: the learner's rows next to the expected rows, with the differences marked.
 export async function checkSql(check, attempt, before = '', after = '') {
-  if (attempt.trim().length < 4) return { score: 1, why: WHY[1], worked: '', gap: 'Write the missing part, then check it.', corrections: [] };
+  if (attempt.trim().length < 4) return { score: 1, why: WHY[1], worked: '', gap: 'Write the missing part, then check it.', corrections: [], items: itemsFor(check, null) };
   const SQL = await loadSql();
   const db = new SQL.Database();
   try {
@@ -145,7 +156,7 @@ export async function checkSql(check, attempt, before = '', after = '') {
       const alias = (run.error.match(/no such column: (\w+)\.\w+/) || [])[1];
       const aliasGap = alias && new RegExp(`\\b${alias}\\.`).test(before + after) && !new RegExp(`\\b\\w+\\s+(AS\\s+)?${alias}\\b`, 'i').test(run.text)
         ? `The given lines use the alias “${alias}.”, but no table in your part is called ${alias}. Give that table the alias ${alias}, as the task says, and it will run.` : '';
-      return { score: 2, why: WHY[2], worked: '', gap: aliasGap || `SQLite says: “${run.error}”. Fix that and it will run.`, corrections };
+      return { score: 2, why: WHY[2], worked: '', gap: aliasGap || `SQLite says: “${run.error}”. Fix that and it will run.`, corrections, items: itemsFor(check, null) };
     }
     const lined = lineUp(run.res, expected), got = lined.got;
     const extraCols = lined.dropped.length ? ` You also returned ${lined.dropped.join(', ')}; extra columns don't affect the score.` : '';
@@ -160,10 +171,12 @@ export async function checkSql(check, attempt, before = '', after = '') {
       expected: { cols: expected.cols, rows: expected.rows.map(r => ({ cells: r, mark: have.has(key(r)) ? '' : nearFor.has(r) ? 'near' : 'missing', diffs: nearFor.get(r) || [] })) },
       dropped: lined.dropped,
     };
-    const base = { corrections, table };
+    const exactly = check.orderMatters ? sameSeq(got.rows, expected.rows) : sameBag(got.rows, expected.rows);
+    const items = itemsFor(check, got.rows).map(it => exactly ? { ...it, ok: true } : it);
+    const base = { corrections, table, items };
     // "Cal shows NULL where it should be 0": the plainest description of an almost-right row.
     const almost = near.map((x, i) => x && `${got.rows[i].find((v, j) => !x.diffs.includes(j))} shows ${x.diffs.map(j => got.rows[i][j]).join(', ')} where it should be ${x.diffs.map(j => x.row[j]).join(', ')}`).filter(Boolean);
-    if (check.orderMatters ? sameSeq(got.rows, expected.rows) : sameBag(got.rows, expected.rows))
+    if (exactly)
       return { ...base, score: 5, why: WHY[5], worked: `It returns exactly the right ${plural(expected.rows.length, 'row')}.${extraCols}`, gap: '' };
     const ran = `It runs and returns ${plural(got.rows.length, 'row')}`;
     const rightRows = got.rows.filter(r => exp.has(key(r))).length;
@@ -171,7 +184,10 @@ export async function checkSql(check, attempt, before = '', after = '') {
     if (check.orderMatters && sameBag(got.rows, expected.rows))
       return { ...base, score: 3, why: 'It runs and returns the right rows, but in the wrong order.', worked: `${ran}, all the right ones.${extraCols}`, gap: 'Check the sort direction.' };
     for (const d of check.diagnoses || [])
-      if (sameBag(got.rows, result(db, d.sql).rows)) return { ...base, score: 3, why: WHY[3], worked: held, gap: d.gap };
+      if (sameBag(got.rows, result(db, d.sql).rows)) {
+        const said = (d.byText || []).find(b => b.re.test(run.text));
+        return { ...base, score: 3, why: WHY[3], worked: held, gap: said ? said.gap : d.gap };
+      }
     const missing = expected.rows.filter(r => !have.has(key(r))).length, extra = got.rows.filter(r => !exp.has(key(r))).length;
     const gap = [missing && `${plural(missing, 'expected row')} missing`, extra && `${plural(extra, 'row')} that shouldn't be there`].filter(Boolean).join(' and ');
     const overlap = got.rows.some(r => exp.has(key(r))) || almost.length > 0;

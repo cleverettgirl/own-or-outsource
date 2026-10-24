@@ -9,13 +9,19 @@
 //   question  what "you" ask Claude
 //   check     how your first try is scored; answer is what Claude shows after
 
+import { has, rowWith } from './targets.js';
+
 export const GO_FIRST = {
   sql: {
     targets: ['joins', 'onwhere', 'whole'],
     chip: 'SQL · orders per customer',
     question: 'Write me a SQL query: the number of orders per customer, including customers with no orders (they should show 0).',
     lang: 'sql', schema: "customers(id, name)\norders(id, customer_id, total, status)", placeholder: 'SELECT …',
-    check: { type: 'sql', expected: 'SELECT c.name, COUNT(o.id) FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.name', diagnoses: [
+    check: { type: 'sql', expected: 'SELECT c.name, COUNT(o.id) FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.name', items: [
+      { short: 'Every customer appears, even Dee', owned: true, test: rows => has(rows, 'Dee') },
+      { short: 'A customer with no orders counts 0, not 1', test: rows => !rows.some(r => r.includes('Dee') && !r.includes('0')) },
+      { short: "Each customer's orders are counted (Ada has 2)", test: rows => !!rowWith(rows, 'Ada') && rowWith(rows, 'Ada').includes('2') },
+    ], diagnoses: [
       { sql: 'SELECT c.name, COUNT(*) FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.name',
         gap: 'So close: Dee shows 1 instead of 0. The LEFT JOIN gives Dee one row of NULLs, and COUNT(*) counts rows, so it counts that one. Count a column from orders instead, like COUNT(o.id): it skips NULLs.' },
       { sql: 'SELECT c.name, COUNT(o.id) FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.name',

@@ -1,0 +1,97 @@
+// Evaluates the generated try: the path every question without a hand-written target takes, so the one scale
+// depends on. 20 realistic questions → Claude's answer → what to own (focusOptions) → the try (writeTask), made
+// with the previous prompt and the current one. Each try is reviewed two ways:
+//   in code:   for multiple choice, is the right option the longest one? (a giveaway; chance is about 1 in 3)
+//   by Claude: a rubric, with a reason for each judgement (does it test the goal, is it a new case, are the wrong
+//              options real misconceptions, is the answer given away, does the label match what was highlighted)
+// Calls Claude directly (the server's key, from .env.local); about $2 in total. Run:
+//   node --env-file=.env.local scripts/eval-generated.mjs
+import Anthropic from '@anthropic-ai/sdk';
+import { writeFileSync } from 'node:fs';
+import { TASKS } from '../src/prompts.js';
+
+const client = new Anthropic();
+const MODEL = 'claude-opus-5-5';
+const EFFORT = { tutor: 'low', json: 'medium', grade: 'high' };
+let cost = 0;
+async function call(system, messages, effort, max_tokens = 4000) {
+  const r = await client.messages.create({ model: MODEL, max_tokens, output_config: { effort }, system, messages });
+  cost += ((r.usage.input_tokens || 0) * 4 + (r.usage.output_tokens || 0) * 20) / 1e6;
+  return r.content.filter(b => b.type === 'text').map(b => b.text).join('');
+}
+// The first complete JSON object in a reply (the app's firstJson): trailing text no longer breaks parsing.
+const json = t => { t = String(t); const a = t.indexOf('{'); let d = 0, q = false, e = false; for (let i = a; i < t.length; i++) { const c = t[i]; if (q) { if (e) e = false; else if (c === '\\') e = true; else if (c === '"') q = false; continue; } if (c === '"') q = true; else if (c === '{') d++; else if (c === '}' && --d === 0) return JSON.parse(t.slice(a, i + 1)); } throw new Error('unfinished JSON'); };
+const task = (name, input) => call(TASKS[name].system, [{ role: 'user', content: TASKS[name].user(input) }], EFFORT[TASKS[name].kind]);
+
+// The prompt before this change: no rule against length giveaways, no preference for recall formats, no short labels.
+const OLD = i => TASKS.writeTask.user(i)
+  .replace(/ Every question must test the learning goal itself, not a side detail\. Make it impossible to pass without the idea:[^\n]*?from the example in Claude's answer\./, '')
+  .replace('\nPrefer "explain" or "code" when recalling the idea in your own words is the skill; use "choice" when the point is telling apart ideas people commonly confuse.', '')
+  .replace(', "requirements": [2-4 short phrases, each one thing a correct answer must do, the first being the learning goal itself] (code only)', '')
+  .replace(/, "short": the topic it checks[\s\S]*?\(e\.g\. "what runs first"\)/, '');
+
+const QUESTIONS = [
+  'Why does my Python program with 8 threads counting primes run no faster than with 1 thread?',
+  'What is the difference between git rebase and git merge, and when should I use each?',
+  'When should I use CSS grid instead of flexbox?',
+  'How do Cache-Control max-age and ETag work together for HTTP caching?',
+  'How do I get a running total per customer in SQL, ordered by date?',
+  'Why does my JavaScript loop with setTimeout print 5 five times instead of 0 to 4?',
+  'Why is looking up a key in a hash map O(1) on average but O(n) in the worst case?',
+  'When would I choose UDP over TCP?',
+  'A test for a disease is 99% accurate and 1 in 1000 people have it. If I test positive, how likely is it that I have it?',
+  'Why do React lists need a key prop, and why is the array index a bad key?',
+  'Why does changing one line in my Dockerfile make the whole build slow again?',
+  'What is the difference between greedy and lazy quantifiers in regex?',
+  'How do I handle errors with async/await so one failed request does not crash the others?',
+  'When does adding a database index make a query slower?',
+  'What is the difference between authenticating with OAuth and with an API key?',
+  'What does a p-value of 0.03 actually mean?',
+  'What is the difference between unit tests and integration tests, and how many of each should I write?',
+  'What does the CAP theorem say, in practice, for choosing a database?',
+  'In pandas, when should I use groupby().agg() versus pivot_table()?',
+  'Why does compound interest grow so much faster than simple interest over 30 years?',
+];
+
+// Is the correct option the strictly longest in its question?
+const longestIsRight = q => { const opts = q.options || []; const right = opts.find(o => o.correct); if (!right || opts.length < 2) return null; return opts.every(o => o === right || o.label.length < right.label.length); };
+
+const REVIEW_SYS = 'You review practice questions for a learning product. Be strict and specific. Strict JSON only.';
+const review = (q, answer, label, practice) => call(REVIEW_SYS, [{ role: 'user', content: `A learner asked: "${q}"\nThey got this answer:\n${answer.slice(0, 2500)}\n\nThey chose to own: "${label}"\nThe practice generated to check that:\n${JSON.stringify(practice, null, 1).slice(0, 4000)}\n\nJudge each, with a one-sentence reason:\n1. testsGoal: does every part test "${label}" itself, not a side detail?\n2. newCase: is it a new case, not the answer's own example?\n3. distractors (multiple choice only, else null): are the wrong options misconceptions a real learner would hold?\n4. givenAway: could someone who doesn't know the idea pick or write the right answer from the wording alone (length, hedging, echoing the question)?\n5. labelMatches: does the label "${label}" describe what the answer actually says?\nReturn ONLY JSON {"testsGoal": boolean, "newCase": boolean, "distractors": boolean|null, "givenAway": boolean, "labelMatches": boolean, "reasons": {"testsGoal": string, "newCase": string, "distractors": string|null, "givenAway": string, "labelMatches": string}}` }], 'high', 6000).then(json);
+
+const rows = [];
+await Promise.all(QUESTIONS.map(async (q, i) => {
+  try {
+    const answer = await call(TASKS.chat.system({ mode: 'answer' }), [{ role: 'user', content: q }], 'low', 2000);
+    const focus = json(await task('focusOptions', { lang: 'text', fullCode: answer, code: answer }));
+    const label = focus.options[0].label;
+    const input = { label, code: answer, fullCode: answer };
+    const [oldT, newT] = await Promise.all([
+      call(TASKS.writeTask.system, [{ role: 'user', content: OLD(input) }], 'medium').then(json),
+      task('writeTask', input).then(json),
+    ]);
+    const [oldR, newR] = await Promise.all([review(q, answer, label, oldT), review(q, answer, label, newT)]);
+    rows[i] = { q, label, old: { practice: oldT, review: oldR }, new: { practice: newT, review: newR } };
+    process.stdout.write('.');
+  } catch (e) { rows[i] = { q, error: e.message }; process.stdout.write('x'); }
+}));
+console.log();
+
+const ok = rows.filter(r => r && !r.error);
+const summary = which => {
+  const P = ok.map(r => r[which]);
+  const choiceQs = P.filter(p => p.practice.format === 'choice').flatMap(p => p.practice.questions || []);
+  const longest = choiceQs.map(longestIsRight).filter(v => v != null);
+  const rate = k => `${P.filter(p => p.review[k] === true).length}/${P.length}`;
+  return {
+    formats: ['choice', 'explain', 'code'].map(f => `${f} ${P.filter(p => p.practice.format === f).length}`).join(', '),
+    longestIsRight: `${longest.filter(Boolean).length}/${longest.length} choice questions`,
+    testsGoal: rate('testsGoal'), newCase: rate('newCase'), givenAway: rate('givenAway'), labelMatches: rate('labelMatches'),
+    distractorsReal: `${P.filter(p => p.review.distractors === true).length}/${P.filter(p => p.review.distractors != null).length}`,
+  };
+};
+const result = { when: new Date().toISOString(), n: ok.length, errors: rows.filter(r => r && r.error).length, cost: `$${cost.toFixed(2)}`, old: summary('old'), new: summary('new') };
+console.log(JSON.stringify(result, null, 2));
+const out = process.argv[2] || 'eval-generated.json';
+writeFileSync(out, JSON.stringify({ result, rows }, null, 2));
+console.log('Details (every try and every reason):', out);

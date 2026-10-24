@@ -1,5 +1,5 @@
-// Checks every hand-written target: the expected answer must score 5/5, and each diagnosed mistake
-// must be recognised by its own gap. Run: npm run test:targets
+// Checks every hand-written target: the expected answer must score 5/5 and pass every item, and each diagnosed
+// mistake must be recognised by its own gap and fail at least one item. Run: npm run test:targets
 import { createServer } from 'vite';
 const app = process.cwd();
 globalThis.__SQL_WASM_PATH = app + '/node_modules/sql.js/dist/sql-wasm.wasm';
@@ -12,10 +12,13 @@ for (const [id, t] of Object.entries(SQL_TARGETS)) {
   for (const part of ['write', 'delayed']) {
     const w = t[part]; const c = w.check;
     const right = await checkSql(c, strip(c.expected, w.before, w.after), w.before, w.after);
-    console.log(`${id}.${part}  expected → ${right.score}/5  ${right.worked}`);
+    const tally = r => `${r.items.filter(i => i.ok).length} of ${r.items.length} items`;
+    console.log(`${right.items.every(i => i.ok) && right.items.length >= 2 ? 'ok      ' : 'MISMATCH'} ${id}.${part}  expected → ${right.score}/5, ${tally(right)}`);
     for (const d of c.diagnoses || []) {
       const g = await checkSql(c, strip(d.sql, w.before, w.after), w.before, w.after);
-      console.log(`   diagnosis → ${g.score}/5  ${g.gap === d.gap ? 'matched its own gap' : 'MISMATCH: ' + g.gap}`);
+      const own = g.gap === d.gap || (d.byText || []).some(b => b.gap === g.gap);
+      const missed = g.items.filter(i => !i.ok).map(i => i.short);
+      console.log(`${own && missed.length ? 'ok      ' : 'MISMATCH'}    diagnosis → ${g.score}/5, ${tally(g)} (missed: ${missed.join('; ') || 'none'})${own ? '' : ' · gap: ' + g.gap}`);
     }
   }
 }
@@ -49,6 +52,15 @@ for (const q of [
   "SELECT a.id, a.name, COALESCE(SUM(b.pages), 0) AS total_pages FROM authors a LEFT JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.id, a.name ORDER BY total_pages DESC",
   "SELECT a.name, SUM(b.pages) AS total_pages, COUNT(b.id) AS n FROM authors a LEFT JOIN books b ON b.author_id = a.id AND b.status = 'published' GROUP BY a.name ORDER BY total_pages DESC",
 ]) { const g = await checkSql(ww.check, q); console.log(`${g.score}/5  ${g.worked}  ${g.gap}`); }
+console.log('--- the WHERE mistake is named as itself, the inner join as itself (onwhere.write)');
+const ow = SQL_TARGETS.onwhere.write;
+for (const [q, want] of [["FROM customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.status = 'refunded'", /in WHERE/], ["FROM customers c JOIN orders o ON o.customer_id = c.id AND o.status = 'refunded'", /plain \(inner\) JOIN/]]) {
+  const g = await checkSql(ow.check, q, ow.before, ow.after);
+  console.log(`${want.test(g.gap) && !/Either/.test(g.gap) ? 'ok      ' : 'MISMATCH'} ${g.gap.slice(0, 90)}…`);
+}
+console.log('--- go first (SQL): items');
+const gf = (await vite.ssrLoadModule('/src/goFirst.js')).GO_FIRST.sql.check;
+for (const q of [gf.expected, ...gf.diagnoses.map(d => d.sql)]) { const g = await checkSql(gf, q); console.log(`${g.score}/5  ${g.items.map(i => (i.ok ? '✓ ' : '✗ ') + i.short).join(' · ')}`); }
 console.log('--- framework: every target declares its three answers (research §8f)');
 const all = { ...(await vite.ssrLoadModule('/src/targets.js')).SQL_TARGETS, ...(await vite.ssrLoadModule('/src/bookTargets.js')).BOOK_TARGETS, ...(await vite.ssrLoadModule('/src/junoTargets.js')).JUNO_TARGETS, ...(await vite.ssrLoadModule('/src/reactTargets.js')).REACT_TARGETS };
 for (const [id, t] of Object.entries(all)) {

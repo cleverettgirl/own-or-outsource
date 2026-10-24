@@ -30,6 +30,13 @@ async function click(label) {
   await act(async () => { b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await wait(30);
 }
+// The prediction is "how many of N will you get right?": one button per count.
+async function predict(k) {
+  const b = document.querySelector(`[data-role=predict-option][data-n="${k}"]`);
+  if (!b) throw new Error(`No prediction button for ${k}`);
+  await act(async () => { b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  await wait(30);
+}
 async function type(el, value) {
   const proto = el.tagName === 'TEXTAREA' ? dom.window.HTMLTextAreaElement.prototype : dom.window.HTMLInputElement.prototype;
   await act(async () => {
@@ -54,7 +61,7 @@ const root = createRoot(document.getElementById('root'));
 await act(async () => root.render(React.createElement(App)));
 step('home: greeting, composer without an upfront toggle, typed starters as chips', text().includes('Back at it') && !buttons().some(b => /Learn this too|Just the answer/.test(b.textContent)) && buttons().some(b => b.textContent === 'SQL · revenue per customer'));
 step('home: seeded chats are past chats in the sidebar', document.querySelectorAll('[data-role=past-chat]').length === 2);
-step('recall: an item from a few days ago is ready, shown on Learnings & insights', document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') === '1 to recall');
+step('recall: an item from a few days ago is ready, shown on Learnings', document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') === '1 to recall');
 
 await click('SQL · revenue per customer');
 await wait(50);
@@ -68,13 +75,13 @@ step('tip goes away once you own something', !document.querySelector('[data-role
 step('panel: no copy of Claude\'s text; the whole reply is marked as being owned in the chat', document.querySelectorAll('[data-msg-id][data-owning=whole]').length === 1 && !document.querySelector('[data-role=own-panel] pre') && text().includes('Reread it in your chat'));
 step('panel: Own it opens on the side, chat stays visible, chip marks it', !!document.querySelector('[data-role=own-panel]') && !!document.querySelector('[data-role=own-chip]') && !!document.querySelector('main pre'));
 await click('The whole query');
-step('predict: names the focus, and says the try comes next (no studying first)', text().includes('Owning: The whole query') && text().includes('Could you write this yourself') && text().includes('Next: write it for a new case') && text().includes("Claude's answer is your material") && (document.querySelector('[data-role=stepper]')?.textContent || '').includes('✓ What to ownPredictTry itReveal'));
+step('predict: names the focus, and asks how many of N you will get right', text().includes('Owning: The whole query') && text().includes('How many of these 4 will you get right on your own?') && text().includes('Next: a new query, checked for 4 things') && document.querySelectorAll('[data-role=predict-option]').length === 5);
 await act(async () => { document.querySelector('button[data-role=change-focus]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(50);
 step('"change" reopens the focus question', text().includes('What do you want to own here?') && text().includes('When to use LEFT vs INNER'));
 await click('The whole query');
 
-await click('Not at all'); // 1/5 on a focus where the written order is the insight → Arrange warm-up first
+await predict(0); // 0 of 4 on a focus where the written order is the insight → Arrange warm-up first
 await wait(50);
 step('framework: whole query + low prediction → Arrange warm-up first, with the decoy', text().includes('A warm-up, not scored') && text().includes('warming up with the pieces') && buttons().some(b => b.textContent.trim() === "WHERE o.status = 'paid'"));
 await click("WHERE o.status = 'paid'");
@@ -107,10 +114,10 @@ const attempt = "SELECT a.name, COALESCE(SUM(b.pages), 0) AS pages\nFROM autors 
 await type(document.querySelector('textarea[data-role=write]'), attempt);
 await click('Check my version');
 await wait(400);
-step('whole query: executed, correct answer scores 5/5', text().includes('Actual 5/5') && text().includes('exactly the right 4 rows'));
+step('whole query: executed, correct answer gets 4 of 4', text().includes('You got 4') && text().includes('exactly the right 4 rows') && document.querySelectorAll('[data-role=items] > div').length === 4);
 step('typo forgiven with a note', text().includes('Read “autors” as “authors”. Typos don') );
-step('reveal shows predicted vs actual', text().includes('Predicted 1/5') && /Actual \d\/5/.test(text()), (text().match(/Actual \d\/5/) || [''])[0]);
-step('ledger got an entry', text().includes("The whole query: each part and why it's in that order") && text().includes('Predicted 1/5'));
+step('reveal shows predicted vs actual, in the same units', text().includes('You said 0 of 4') && text().includes('You said 0 of 4, and got 4'));
+step('ledger got an entry', text().includes("The whole query: each part and why it's in that order") && text().includes('You said 0 of 4'));
 step('reveal: says it was saved and when it comes back', !!document.querySelector('[data-role=saved-line]') && text().includes('It comes back for a quick recall in 3 days'));
 step('on your version: notes on how you wrote it, quoting your query', !!document.querySelector('[data-role=notes]') && text().includes('Grouping by name alone would merge two people') && text().includes('COALESCE turns the NULL') && !text().includes('Reading how you wrote it'));
 
@@ -137,7 +144,7 @@ window.getSelection = realGetSelection;
 step('panel: owning a highlight marks that part in the chat, no copy in the panel', document.querySelectorAll('[data-msg-id][data-owning=part]').length === 1 && text().includes('See the highlighted part in your chat'));
 step('fragment: focus offers concept options first', text().includes('What do you want to own here?') && buttons().findIndex(b => b.textContent.includes('LEFT vs INNER')) < buttons().findIndex(b => b.textContent.includes("goes in ON")));
 await click('When to use LEFT vs INNER');
-await click('Not at all');
+await predict(0);
 await wait(50);
 step('fragment: straight to the try, with the comparison as an optional visual', text().includes("list every order with its customer's name") && text().includes('See it visually'));
 await click('See it visually');
@@ -161,8 +168,8 @@ step('fragment write: authored hint', text().includes('This time, which table ha
 await type(document.querySelector('textarea[data-role=write]'), 'FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id');
 await click('Check my version');
 await wait(400);
-step('fragment write: copy mistake diagnosed, 3/5', text().includes('Actual 3/5') && text().includes('this time every order has to stay'));
-step('reveal explains the score', text().includes("Why 3/5: It runs, but the rows it returns aren't the ones the task asks for.") && !!document.querySelector('[title^="Scale: 5 right rows"]'));
+step('fragment write: copy mistake diagnosed, 0 of 2, the owned idea named', text().includes('You got 0') && text().includes('this time every order has to stay') && text().includes('the idea you came to own'));
+step('reveal explains the result and how it was checked', text().includes("It runs, but the rows it returns aren't the ones the task asks for.") && !!document.querySelector('[title^="Checked by running your query"]'));
 step('reveal shows your rows vs expected, marked', text().includes('What yours returns') && text().includes('What it should return') && text().includes('highlighted rows: yours is missing them'));
 step('fragment: reveal credits compare guesses', text().includes('2 of 3 guesses right'));
 step('fragment: ledger names the focus', text().includes('When to use LEFT vs INNER vs RIGHT JOIN'));
@@ -179,25 +186,25 @@ step('fix: your attempt is still there to edit', kept && kept.value === 'FROM cu
 await type(kept, 'FROM orders o\nLEFT JOIN customers c ON c.id = o.customer_id');
 await click('Check my version');
 await wait(400);
-step('fix: try 2 passes, prediction still measured against try 1', text().includes('Try 2: 5/5, fixed') && text().includes('measured against your first try (3/5)') && text().includes('Actual 3/5') && !buttons().some(b => b.textContent === 'Fix it'));
+step('fix: try 2 passes, prediction still measured against try 1', text().includes('Try 2: 2 of 2, fixed') && text().includes('measured against your first try (0 of 2)') && text().includes('You got 0') && !buttons().some(b => b.textContent === 'Fix it'));
 await click('Back to chat');
 
 // ---- You go first: a new question that needs what you owned. Claude offers you the first try.
 await click('New chat');
-step('sidebar has no ledger; home has no go-first chips (Learnings & insights holds it all)', !text().includes('what you chose to own') && !text().includes('New questions that use what you own'));
+step('sidebar has no ledger; home has no go-first chips (Learnings holds it all)', !text().includes('what you chose to own') && !text().includes('New questions that use what you own'));
 await openLearnings();
-step('learnings: a fix shows next to the first try', (document.querySelector('[data-role=learnings]')?.textContent || '').includes('Fixed5/5'));
+step('learnings: a fix shows next to the first try', (document.querySelector('[data-role=learnings]')?.textContent || '').includes('Fixed2 of 2'));
 await click('Try a new question · orders per customer');
 step('go first: Claude offers the first try instead of answering', !!document.querySelector('[data-role=go-first]') && text().includes("Want to go first? I'll check yours") && !text().includes('COUNT(o.id) AS orders'));
 await click("I'll go first");
-await click('Mostly'); // predicted 4
+await click('2'); // predicted 2 of 3
 await type(document.querySelector('textarea[data-role=go-text]'), 'SELECT c.name, COUNT(*)\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;');
 await click('Check mine');
 await wait(400);
-step('go first: checked by running it, classic COUNT(*) slip explained', text().includes('You predicted 4/5 and got 3/5') && text().includes('Dee shows 1 instead of 0'));
+step('go first: checked by running it, classic COUNT(*) slip explained', text().includes('You said 2 of 3 and got 2. Spot on.') && text().includes('Dee shows 1 instead of 0'));
 step("go first: then Claude shows its answer", text().includes('COUNT(o.id) AS orders'));
 await openLearnings();
-step('go first: Learnings records it as real work', text().includes('went first, 3/5'));
+step('go first: Learnings records it as real work', text().includes('went first, 2 of 3'));
 
 // ---- Third run: leave halfway. "Back to chat" must be on every screen of the card.
 await click('New chat');
@@ -209,13 +216,13 @@ await click('Own it');
 window.getSelection = realGetSelection;
 step('leave: exit offered on focus screen', !!document.querySelector('button[data-role=leave]'));
 await click('When to use LEFT vs INNER');
-await click('Not at all');
+await predict(0);
 step('leave: exit offered mid-ladder', !!document.querySelector('button[data-role=leave]'));
 await act(async () => { document.querySelector('button[data-role=leave]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
 step('leave: card closes, chat notes where you stopped', !document.querySelector('button[data-role=leave]') && text().includes('Outsourced') && text().includes('stopped at Write it'));
 await openLearnings();
-step('leave: exit kept as data on Learnings, not scored', text().includes('You wanted to learn, then stepped away') && text().includes('predicted 1/5 · left at Write it (2 of 2)'));
+step('leave: exit kept as data on Learnings, not scored', text().includes('You wanted to learn, then stepped away') && text().includes('predicted 0 of 2 · left at Write it (2 of 2)'));
 
 // ---- Fourth run: a part with no hand-written target (ORDER BY) must get options about itself.
 await click('New chat');
@@ -230,8 +237,8 @@ const focusLabels = buttons().map(b => b.textContent.trim()).filter(t => /concep
 step('unmatched part: options name it, no unrelated join options', focusLabels[0]?.includes('ORDER BY revenue DESC') && !focusLabels.some(t => /JOIN|ON, not WHERE/.test(t)), focusLabels.join(' | '));
 await click('What ORDER BY');
 await wait(50);
-step('unmatched part: the prediction names the try it fits (explain, not "write code")', text().includes('Could you explain this and apply it to a new case') && text().includes('Next: one question, answered in your own words'));
-await click('Not at all');
+step('unmatched part: the prediction names the try it fits (explain, not "write code")', text().includes('Will you get it right on your own?') && text().includes('Next: one question in your own words'));
+await predict(0);
 await wait(200);
 step('unmatched part: straight to the try (no hand-written visual for it)', !!document.querySelector('button[data-role=leave]') && !!document.querySelector('textarea[data-role=write]') && !text().includes('See it visually'));
 
@@ -257,9 +264,9 @@ step('book: owning a whole long answer asks what to own', text().includes('What 
 await click('The Rule of Five: why a few random samples usually catch the median');
 step('book: focus picked', text().includes('Owning: The Rule of Five: why a few random samples usually catch the median'));
 step('book: predict says the try comes next', text().includes("Claude's answer is your material"));
-await click('Not at all');
+await predict(0);
 await wait(50);
-step('book: starts at the test even at 1/5, refresher offered', text().includes('4 random support calls') && !!document.querySelector('[data-role=refresher]'));
+step('book: starts at the test even at 0, refresher offered', text().includes('4 random support calls') && !!document.querySelector('[data-role=refresher]'));
 await click('See it visually');
 step('book: the visual sits inside "Try it", no extra step pills', !buttons().some(b => /^(Read|See|Assemble|Compare|Write) it$/.test(b.textContent.trim())) && text().includes('seeing it visually'));
 step('book: idea card as refresher, no line-by-line', text().includes('The true median is a hidden line') && text().includes('In your question') && !text().includes('Line by line'));
@@ -281,7 +288,7 @@ await click('A little less likely to catch it');
 await click('All 4 calls could happen to be longer');
 await click('Check my version');
 await wait(100);
-step('book: her original confusion is recognised and explained, 3/5', text().includes('Actual 3/5') && text().includes("That's true of your 4 calls' own median") && !!document.querySelector('[title^="Scale: 5 every pick right"]'));
+step('book: her original confusion is recognised and explained, 2 of 3', text().includes('You got 2') && text().includes("That's true of your 4 calls' own median") && !!document.querySelector('[title^="Checked against the answer key"]'));
 step('book: compare guesses credited', text().includes('3 of 4 guesses right'));
 await click('Optional: explain it to Sam');
 step('book: Sam asks your own question', text().includes("Isn't the median always between the smallest and the biggest number?"));
@@ -298,7 +305,7 @@ step('juno: every answer has the own icon', document.querySelectorAll('button[da
 await ownAll();
 await click('Which side an aggregator owns');
 step('juno: focus picked', text().includes('Owning: Which side an aggregator owns, and why not both'));
-await click('Not at all');
+await predict(0);
 await wait(50);
 step('juno: starts at the test', text().includes('Vela (made up)') && !!document.querySelector('[data-role=refresher]'));
 await click('See it visually');
@@ -318,7 +325,7 @@ await click('Stay on Vela and train with someone else');
 await click('Vela, because any one trainer is replaceable');
 await click('Check my version');
 await wait(50);
-step('juno: "own both" diagnosed with the Airbnb test, 3/5', text().includes('Actual 3/5') && text().includes('Test it like Airbnb: if one trainer left') && text().includes('2 of 3 right') && !!document.querySelector('[title^="Scale: 5 every pick right"]'));
+step('juno: "own both" diagnosed with the Airbnb test, 2 of 3', text().includes('You got 2') && text().includes('Test it like Airbnb: if one trainer left') && !!document.querySelector('[title^="Checked against the answer key"]'));
 await click('Optional: explain it to Sam');
 step('juno: Sam asks your question', text().includes("wouldn't it want both of them to love it?"));
 // Christine's real explanation, including the moment she wasn't sure.
@@ -332,9 +339,9 @@ await click('Send'); await wait(80);
 step('teach: ends with what teaching showed, not just thanks', !!document.querySelector('[data-role=teach-debrief]') && text().includes('What teaching Sam showed') && text().includes('You explained clearly'));
 step('teach: the hedge becomes a gap you didn\'t know you had', !!document.querySelector('[data-role=teach-gap]') && text().includes("You weren't sure") && text().includes("i would guess we'd need writers first") && text().includes("a gap you didn't know you had"));
 await click('Save for later');
-step('teach: the gap can be saved', text().includes('✓ Saved to Learnings & insights'));
+step('teach: the gap can be saved', text().includes('✓ Saved to Learnings'));
 await openLearnings();
-step('gaps: an open gap waits on Learnings & insights, with where it came from and your words', !!document.querySelector('[data-role=open-gap]') && text().includes('while you were explaining') && text().includes("i would guess we'd need writers first"));
+step('gaps: an open gap waits on Learnings, with where it came from and your words', !!document.querySelector('[data-role=open-gap]') && text().includes('while you were explaining') && text().includes("i would guess we'd need writers first"));
 await click('Explore it with Claude');
 await wait(80);
 step('gaps: exploring opens a new chat about just that gap, with the goal in view', !!document.querySelector('[data-role=gap-banner]') && text().includes('Closing a gap') && text().includes('I want to close a gap:'));
@@ -400,7 +407,7 @@ step('check it landed: saved under "You asked about" on Learnings', !!document.q
 await click('Own it');
 await wait(50);
 step('one action, one name: the chip is "Own it" too, and the owned answer\'s icon shows it', [...document.querySelectorAll('button[data-role=own-all]')].some(b => b.getAttribute('aria-pressed') === 'true') && text().includes('Own it · When the cleanup runs'));
-step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && text().includes('Owning: When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('Could you answer 3 questions about this without help?'));
+step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && text().includes('Owning: When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of these 3 will you get right on your own?'));
 await act(async () => { document.querySelector('button[data-role=leave]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(20);
 step('check it landed: once checked, it leaves "You asked about" and the chip goes', !document.querySelector('button[data-role=own-all][data-expanded]'));
@@ -412,7 +419,7 @@ window.getSelection = realGetSelection;
 await wait(100);
 step('react: highlighting the cleanup offers "when the cleanup runs" first', (buttons().map(b => b.textContent.trim()).filter(t => /concept|structure$/.test(t))[0] || '').startsWith('When the cleanup runs'));
 await click('When the cleanup runs');
-await click('Not at all');
+await predict(0);
 await wait(50);
 step('react: straight to the try — reasoning about timing on a new case, not writing a component', text().includes('SearchResults') && text().includes('what happens first?') && text().includes('See it visually') && !document.querySelector('textarea[data-role=write]'));
 await click('See it visually');
@@ -447,7 +454,7 @@ await click('Only if all 6 houses are above it');
 await click('You only looked at houses at the expensive end');
 await click('Check it');
 await wait(50);
-step('recall: then vs now, and when it comes back', text().includes('First try, 3 days ago: 3/5 → today: 5/5') && text().includes('It stuck.') && text().includes('Next recall in 7 days'));
+step('recall: then vs now, and when it comes back', text().includes('First try, 3 days ago: 2 of 3 → today: 3 of 3') && text().includes('It stuck.') && text().includes('Next recall in 7 days'));
 await click('Done');
 step('recall: nothing else due yet, so the indicator goes', !document.querySelector('[data-role=recall-badge]'));
 await click('⏩ Skip ahead 3 days');
@@ -459,7 +466,7 @@ step('recall: SQL recall keeps the scaffold', text().includes('customers who hav
 await type(document.querySelector('textarea[data-role=recall-text]'), 'FROM customers c JOIN orders o ON o.customer_id = c.id');
 await click('Check it');
 await wait(400);
-step('recall: a slip brings it back sooner, run and explained', text().includes('→ today: 3/5') && text().includes('come back sooner') && text().includes('Next recall in 1 day'));
+step('recall: a slip brings it back sooner, run and explained', text().includes('→ today: 0 of 2') && text().includes('come back sooner') && text().includes('Next recall in 1 day'));
 await click('Done');
 const gapDue = [...document.querySelectorAll('[data-role=due-item]')].find(d => d.textContent.includes('cold start'));
 step('recall: the closed gap comes back too', !!gapDue);
@@ -474,13 +481,71 @@ step('recall: still closed', text().includes('Still closed.'));
 // ---- Learnings page: everything you chose to own, from the sidebar.
 await act(async () => { document.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
-step('learnings: opens from the sidebar, lists what you own with its history', !!document.querySelector('[data-role=learnings]') && document.querySelectorAll('[data-role=learning], [data-role=due-item]').length >= 4 && text().includes('First try') && text().includes('went first, 3/5'));
+step('learnings: opens from the sidebar, lists what you own with its history', !!document.querySelector('[data-role=learnings]') && document.querySelectorAll('[data-role=learning], [data-role=due-item]').length >= 4 && text().includes('First try') && text().includes('went first, 2 of 3'));
 step('learnings: shows what you stepped away from, and a labeled sample history', text().includes('You wanted to learn, then stepped away') && text().includes('sample history, mocked'));
 await click('Try a new question · 6 timed checkouts');
 step('learnings: revisit by trying a new question', !document.querySelector('[data-role=learnings]') && text().includes('I timed 6 random checkout transactions'));
 
+// ---- Calibration counts the same things it predicts; a blank answer is never right.
+await click('New chat');
+await click('aggregation theory');
+await wait(50);
+await ownAll();
+await click('Which side an aggregator owns');
+step('calibration: the prediction is how many of the 3 questions you will get right', text().includes('How many of these 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-option]').length === 4);
+await predict(3);
+await click('Stay on Vela and train with someone else'); // one right answer; the other two left blank
+await click('Check my version');
+await wait(50);
+step('calibration: 1 right and 2 blank is 1 of 3, never "line up" with a prediction of 3', text().includes('You said 3 of 3, and got 1') && (text().match(/\(left blank\)/g) || []).length === 2 && !text().includes('accurate here'));
+await click('Back to chat');
+
+// ---- Saved in this browser: a refresh keeps what you own and when it comes back.
+await openLearnings();
+const ownedBefore = document.querySelectorAll('[data-role=learning], [data-role=due-item]').length;
+const calBefore = document.querySelector('[data-role=calibration]')?.textContent || '';
+await act(async () => root.unmount());
+const root2 = createRoot(document.getElementById('root'));
+await act(async () => { root2.render(React.createElement(App)); });
+await wait(50);
+await openLearnings();
+step('saved: after a reload, Learnings still has everything you own, with calibration', ownedBefore > 1 && document.querySelectorAll('[data-role=learning], [data-role=due-item]').length === ownedBefore && (document.querySelector('[data-role=calibration]')?.textContent || '') === calBefore && calBefore.includes('Calibration, across'), `${ownedBefore} → ${document.querySelectorAll('[data-role=learning], [data-role=due-item]').length} · ${calBefore.slice(0, 60)}`);
+step('saved: the demo clock survives a reload too', /it's \d+ days later/.test(text()));
+window.confirm = () => true;
+await act(async () => { document.querySelector('[data-role=reset-demo]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+await wait(30);
+await openLearnings();
+step('saved: Reset demo goes back to the starting state', document.querySelectorAll('[data-role=learning], [data-role=due-item]').length === 1 && !/it's \d+ days later/.test(text()), `${document.querySelectorAll('[data-role=learning], [data-role=due-item]').length} items`);
+
+// ---- You go first, when you ask again: a new chat's question that needs something you own.
+await click('New chat');
+await click('SQL · revenue per customer');
+await wait(900);
+await ownAll();
+await click('The whole query: each part');
+await predict(4);
+await type(document.querySelector('textarea[data-role=write]'), "SELECT a.name, COALESCE(SUM(b.pages), 0) AS pages\nFROM authors a\nLEFT JOIN books b ON b.author_id = a.id AND b.status = 'published'\nGROUP BY a.name\nORDER BY pages DESC;");
+await click('Check my version');
+await wait(500);
+await click('Back to chat');
+await click('New chat');
+const asked = [];
+globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); asked.push(b.task); const text = b.task === 'goFirstMatch' ? '{"match": 1}' : b.task === 'goFirstCompare' ? 'You started from **products**, which keeps every one.' : 'Start FROM products and LEFT JOIN the reviews.'; return { ok: true, status: 200, json: async () => ({ text }) }; };
+await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, 'Write me SQL: every product with its number of reviews, including products with none.'); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
+await click('↑');
+await wait(120);
+step('go first on ask: Claude offers the first try, with its answer held back', !!document.querySelector('[data-role=go-ask]') && text().includes('This one uses something you own') && !text().includes('Start FROM products') && asked.includes('goFirstMatch') && asked.includes('chat'));
+await click("I'll go first");
+await type(document.querySelector('textarea[data-role=go-ask-text]'), 'SELECT p.name, COUNT(r.id) FROM products p LEFT JOIN reviews r ON r.product_id = p.id GROUP BY p.name');
+await click('Show me yours');
+await wait(400);
+step('go first on ask: Claude compares, then shows its answer', !!document.querySelector('[data-role=go-ask-note]') && text().includes('You started from products') && text().includes('Start FROM products'));
+globalThis.fetch = offline;
+await openLearnings();
+step('go first on ask: Learnings records that you went first', text().includes('went first'));
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));
 console.error = origError;
-await act(async () => root.unmount());
+await act(async () => root2.unmount());
 await vite.close();

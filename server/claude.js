@@ -1,6 +1,7 @@
-// Server-side Claude proxy. The browser never sees the API key, never picks the
-// model, and can only ask for one of a few named "kinds" of call.
+// Server-side Claude proxy. The browser never sees the API key, never picks the model, and never writes a prompt:
+// it names one of the app's tasks (src/prompts.js) and sends that task's inputs. The server builds the request.
 import Anthropic from '@anthropic-ai/sdk';
+import { TASKS } from '../src/prompts.js';
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY from the server env
 
@@ -14,7 +15,7 @@ const KINDS = {
   grade: { effort: 'high', max_tokens: 8000 },
 };
 
-const MAX_INPUT_CHARS = 12000;
+const MAX_INPUT_CHARS = 14000; // the longest legitimate request (a long chat, or a try built from a long answer) is about 12k
 
 // Cost logging: one line per call in the server terminal, plus a running total, so real usage
 // replaces estimates. Opus 5.5 list prices per million tokens; thinking counts as output.
@@ -28,7 +29,7 @@ function logUsage(kind, response) {
   const k = (totals.byKind[kind] ||= { calls: 0, cost: 0 }); k.calls += 1; k.cost += cost;
   // A fallback model may answer; its price differs, so the cost is marked as an Opus-price estimate.
   const note = response.model && response.model !== MODEL ? ` (answered by ${response.model}; cost at Opus prices)` : '';
-  console.log(`[claude] ${kind.padEnd(5)} in ${u.input_tokens} · out ${u.output_tokens} → $${cost.toFixed(4)}${note} | total $${totals.cost.toFixed(3)} over ${totals.calls} calls`);
+  console.log(`[claude] ${kind.padEnd(13)} in ${u.input_tokens} · out ${u.output_tokens} → $${cost.toFixed(4)}${note} | total $${totals.cost.toFixed(3)} over ${totals.calls} calls`);
 }
 
 // How much one visitor can spend: a sliding window per IP.
@@ -49,13 +50,22 @@ export function isAllowed(ip, now = Date.now()) {
 export async function handleClaude({ ip, body }) {
   if (!isAllowed(ip)) return { status: 429, json: { error: 'Too many requests. Try again in a few minutes.' } };
 
-  const { kind = 'tutor', system = '', messages } = body || {};
-  const cfg = KINDS[kind];
-  if (!cfg) return { status: 400, json: { error: 'Unknown kind' } };
-  if (!Array.isArray(messages) || !messages.length) return { status: 400, json: { error: 'messages required' } };
+  const { task: name, input = {}, messages = [] } = body || {};
+  const task = Object.hasOwn(TASKS, name) ? TASKS[name] : null;
+  if (!task) return { status: 400, json: { error: 'Unknown task' } };
+  if (typeof input !== 'object' || Array.isArray(input) || !Array.isArray(messages)) return { status: 400, json: { error: 'Bad request' } };
+  const kind = task.kind, cfg = KINDS[kind];
 
-  const clean = messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content ?? '') }));
-  const size = String(system).length + clean.reduce((n, m) => n + m.content.length, 0);
+  // Conversations bring their turns; every other task is one user message built from its template.
+  let system, clean;
+  try {
+    system = typeof task.system === 'function' ? task.system(input) : task.system;
+    clean = task.chat
+      ? messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content ?? '') }))
+      : [{ role: 'user', content: task.user(input) }];
+  } catch { return { status: 400, json: { error: 'Bad input' } }; }
+  if (!clean.length || clean[0].role !== 'user') return { status: 400, json: { error: 'messages required' } };
+  const size = system.length + clean.reduce((n, m) => n + m.content.length, 0);
   if (size > MAX_INPUT_CHARS) return { status: 413, json: { error: 'Input too long for this prototype.' } };
 
   try {
@@ -65,10 +75,10 @@ export async function handleClaude({ ip, body }) {
       output_config: { effort: cfg.effort },
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      system: String(system),
+      system,
       messages: clean,
     });
-    logUsage(kind, response);
+    logUsage(name, response);
     if (response.stop_reason === 'refusal') return { status: 422, json: { error: 'The model declined this request.' } };
     const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
     return { status: 200, json: { text } };
