@@ -200,8 +200,9 @@ step('sidebar has no ledger; home has no go-first chips (Learnings holds it all)
 await openLearnings();
 step('learnings: a fix shows next to the first try', (document.querySelector('[data-role=learnings]')?.textContent || '').includes('Fixed 2 of 2'));
 await click('Try a new question · orders per customer');
-step('go first: Claude offers the first try instead of answering', !!document.querySelector('[data-role=go-first]') && text().includes("Want to go first? I'll check yours") && !text().includes('COUNT(o.id) AS orders'));
+step('go first: Claude offers the first try instead of answering', !!document.querySelector('[data-role=go-first]') && text().includes("Want to answer it yourself first? I'll check yours") && !text().includes('COUNT(o.id) AS orders'));
 await click("I'll go first");
+step('go first: before predicting, it shows what the try is checked on', [...document.querySelectorAll('[data-role=go-topics] li')].map(li => li.textContent).join(' | ') === "who appears | what a customer with no orders counts | how each customer's orders are counted" && text().includes('How many of the 3 will you get right on your own?') && !text().includes('This one needs it'));
 await click('2'); // predicted 2 of 3
 await type(document.querySelector('textarea[data-role=go-text]'), 'SELECT c.name, COUNT(*)\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;');
 await click('Check mine');
@@ -460,6 +461,7 @@ await click('You only looked at houses at the expensive end');
 await click('Check it');
 await wait(50);
 step('recall: then vs now, and when it comes back', text().includes('First try, 3 days ago: 2 of 3 → today: 3 of 3') && text().includes('It stuck.') && text().includes('Next recall in 7 days'));
+step('recall: after checking, "Ask Claude about this" is offered (never before you answer)', !!document.querySelector('[data-role=recall-ask]'));
 await click('Done');
 step('recall: nothing else due yet, so the indicator goes', !document.querySelector('[data-role=recall-badge]'));
 await click('⏩ Skip ahead 3 days');
@@ -616,6 +618,20 @@ step('not ready: Learnings keeps it as a choice you can pick back up', text().in
   await wait(50);
   const t = box.textContent, cards = box.querySelectorAll('[data-role=learning], [data-role=due-item]');
   step('demo: ?demo loads the sample (6 owned, one due, an open gap, asked-about, a went-to-Claude-first exit), labelled', cards.length === 6 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('sample data') && t.includes('Open gaps') && t.includes('Why COUNT(*) counts the empty row') && t.includes('went to Claude first') && t.includes('Calibration, across'), `${cards.length} cards`);
+  // Recall in the sample, then a question about it: quoted into a new chat, the question left to you, no go-first offer.
+  const bclick = label => act(async () => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.trim() === label) || [...box.querySelectorAll('button')].find(x => x.textContent.includes(label)); b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  await bclick('Recall now · about a minute'); await wait(30);
+  step('demo: no "Ask Claude about this" on a recall before you answer', !box.querySelector('[data-role=recall-ask]'));
+  await bclick('More likely'); await bclick('Only if all 6 houses'); await bclick('You only looked at houses'); await bclick('Check it'); await wait(50);
+  await act(async () => { box.querySelector('[data-role=recall-ask]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
+  const draft = box.querySelector('main textarea')?.value || '';
+  step('recall ask: the recall is quoted into a new chat, the question left to you', draft.startsWith('About my recall on “The Rule of Five') && draft.includes('> Question: ') && draft.includes('> My answer: ') && draft.endsWith('\n\n'));
+  const tasks = [];
+  globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); tasks.push(b.task); return { ok: true, status: 200, json: async () => ({ text: b.task === 'inferLearning' ? '{"learning": true, "topic": "Why the range only misses when all land on one side"}' : 'Because missing needs every house on the same side of the median.' }) }; };
+  await act(async () => { const el = box.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, draft + 'why does it only miss when all six are on one side?'); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
+  await bclick('↑'); await wait(120);
+  globalThis.fetch = offline;
+  step('recall ask: Claude answers it (no go-first offer for a question you bring)', tasks.includes('chat') && !tasks.includes('goFirstMatch') && box.textContent.includes('Because missing needs every house'));
   await act(async () => { demoRoot.unmount(); }); box.remove();
   dom.reconfigure({ url: 'http://localhost/' });
   step('demo: the real saved progress is untouched by ?demo', window.localStorage.getItem('own-it:v1') === realBefore && !!window.localStorage.getItem('own-it:demo:v1'));

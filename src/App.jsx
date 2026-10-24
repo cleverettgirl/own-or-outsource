@@ -311,7 +311,8 @@ export default class App extends React.Component {
   sendText(text, scenario, followUp = false) {
     const learn = true;
     const m = { id: this.nid(), scenario, question: text, followUp };
-    const firstOfChat = !this.state.messages.length && !this.state.activeGap && !scenario;
+    // A question you bring from a try or a recall ("About my…") is asking, not outsourcing: no go-first offer.
+    const firstOfChat = !this.state.messages.length && !this.state.activeGap && !scenario && !/^About (my|this)/.test(text);
     const msgs = this.state.messages.concat([{ id: this.nid(), type: 'user', text }, { id: this.nid(), type: 'thinking' }]);
     this.setState({ messages: msgs, composer: '', chatTitle: this.state.messages.length ? this.state.chatTitle : (scenario ? scenario.title : text.slice(0, 40)) },
       () => (firstOfChat && this.ownedTitles().length ? this.answerOrGoFirst(m, learn) : this.answer(m, learn)));
@@ -1006,6 +1007,17 @@ export default class App extends React.Component {
       .then(x => this.setState(s => ({ recall: s.recall && s.recall.entryId === e.id ? { ...s.recall, task: x.question } : s.recall })))
       .catch(() => this.setState(s => ({ recall: s.recall && s.recall.entryId === e.id ? { ...s.recall, task: `From memory, in your own words and with a new example: ${g.topic}?` } : s.recall })));
   }
+  // A question you noticed while recalling: after you've checked (so it never becomes a lookup), quote the recall
+  // into a new chat and leave the question to you, the same "Ask Claude about this" as on the reveal. If it's about
+  // understanding, it lands under "You asked about", ready to own; the loop starts again from recall.
+  askAboutRecall = () => {
+    const r = this.state.recall, e = this.state.ledger.find(x => x.id === r.entryId); if (!r || !r.grade) return;
+    const answer = r.check && r.check.type === 'choice' ? r.check.questions.map(q => `${q.prompt} → ${(q.options.find(x => x.v === r.picked[q.id]) || {}).l || '(no answer)'}`).join('\n') : r.text;
+    const q = t => String(t).split('\n').map(l => '> ' + l).join('\n');
+    const text = `About my recall on “${e.title}”:\n${q('Question: ' + r.task)}\n${q('My answer: ' + (answer || '(nothing)'))}${r.grade.note ? '\n' + q('The check said: ' + r.grade.note) : ''}\n\n`;
+    this.setState({ recall: null, messages: [], own: null, sel: null, activeGap: null, chatTitle: 'New chat', view: 'chat', composer: text },
+      () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
+  };
   // A missed recall is a gap: keep it, and explore it in a chat.
   recallGap() {
     const r = this.state.recall, e = this.state.ledger.find(x => x.id === r.entryId);
@@ -1079,7 +1091,7 @@ export default class App extends React.Component {
       saveRecallGap: () => this.recallGap(), exploreRecallGap: () => this.exploreGap(this.recallGap()), gapTopics: S.gaps.map(g => g.topic),
       items, empty: !items.length, dueItems: items.filter(it => it.due), laterItems: items.filter(it => !it.due),
       onRecallText: e => this.setState(s => ({ recall: { ...s.recall, text: e.target.value } })), onRecallPick: (id, v) => this.setState(s => ({ recall: { ...s.recall, picked: { ...s.recall.picked, [id]: v } } })),
-      resetDemo: this.resetDemo, submitRecall: this.submitRecall, closeRecall: () => this.setState({ recall: null }), skipAhead: this.skipAhead, shifted: S.timeShift > 0, shiftDays: Math.round(S.timeShift / DAY),
+      askAboutRecall: this.askAboutRecall, resetDemo: this.resetDemo, submitRecall: this.submitRecall, closeRecall: () => this.setState({ recall: null }), skipAhead: this.skipAhead, shifted: S.timeShift > 0, shiftDays: Math.round(S.timeShift / DAY),
       exits: S.exits.map(x => ({ ...x, onReopen: reopen(x.scenario) })),
       stats: [
         { n: S.ledger.length, label: 'owned' },
@@ -1106,6 +1118,9 @@ export default class App extends React.Component {
       if (m.type === 'goFirst') {
         const g = GO_FIRST[m.key], e = this.ownedFor(m.key);
         Object.assign(v, { isGo: true, go: g, goOwned: e ? e.title : '', goWas: e ? `you predicted ${e.predicted} of ${e.n} and got ${e.actual}` : '', goN: g.check ? (g.check.type === 'choice' ? g.check.questions.length : g.check.type === 'number' ? g.check.expected.length : (g.check.items || [1]).length) : 1,
+          // What the go-first try is checked on, named as topics (as on the predict screen), so "how many" points at something.
+          goTopics: g.check.type === 'choice' ? g.check.questions.map(q => q.short || q.prompt) : g.check.type === 'sql' && (g.check.items || []).every(i => i.topic) ? g.check.items.map(i => i.topic) : [],
+          goKind: g.check.type === 'choice' ? 'question' : g.check.type === 'sql' ? 'thing it has to get right' : 'answer',
           goFirst: () => this.setGo(m.id, { phase: 'predict' }), goAnswer: () => this.goOutsource(m), goPredict: n => this.setGo(m.id, { prediction: n, phase: 'try' }),
           goText: e2 => this.setGo(m.id, { text: e2.target.value }), goPick: (id, val) => this.setGo(m.id, x => ({ picked: { ...x.picked, [id]: val } })), goCheck: () => this.goCheck(m),
           goResult: m.grade ? (() => { const t = tally(m.grade), said = `You said ${m.prediction} of ${t.n} and got ${t.right}.`; return t.right === m.prediction ? `${said} Spot on.` : t.right > m.prediction ? `${said} You own more than you thought.` : said; })() : '', goItems: m.grade && m.grade.items ? m.grade.items : [] });

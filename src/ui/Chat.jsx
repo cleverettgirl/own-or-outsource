@@ -105,7 +105,7 @@ export default function Chat({ V }) {
 
             {!!(m.isGo) && (
               <div data-role="go-first" style={css(`display:flex;flex-direction:column;gap:14px;animation:rise .3s ease`)}>
-                <div style={css(SERIF)}>You're owning <b>{m.goOwned}</b> ({m.goWas}). This one needs it. Want to go first? I'll check yours, then show you mine.</div>
+                <div style={css(SERIF)}>You own <b>{m.goOwned}</b>{m.goWas ? ` (${m.goWas})` : ''}. This new question uses the same idea. Want to answer it yourself first? I'll check yours, then show you mine.</div>
                 {m.phase === 'offer' && (
                   <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
                     <button onClick={m.goFirst} style={css(`background:#C4613A;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>I'll go first</button>
@@ -114,7 +114,13 @@ export default function Chat({ V }) {
                 )}
                 {m.phase === 'predict' && (
                   <div style={css(`display:flex;flex-direction:column;gap:8px`)}>
-                    <div style={css(`font-size:14px`)}>{m.goN === 1 ? 'Will you get it right?' : `How many of these ${m.goN} will you get right?`}</div>
+                    {m.goTopics.length > 0 && (
+                      <div data-role="go-topics" style={css(`font-size:13px;color:#514C44;display:flex;flex-direction:column;gap:4px`)}>
+                        <span>{m.goN} {m.goKind}{m.goN === 1 ? '' : 's'}, on:</span>
+                        <ul style={css(`margin:0;padding-left:18px;line-height:1.6`)}>{m.goTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>
+                      </div>
+                    )}
+                    <div style={css(`font-size:14px`)}>{m.goN === 1 ? 'Will you get it right on your own?' : `How many of the ${m.goN} will you get right on your own?`}</div>
                     <div style={css(`display:flex;gap:6px;max-width:460px`)}>
                       {Array.from({ length: m.goN + 1 }, (_, k) => <button key={k} onClick={() => m.goPredict(k)} style={css(`flex:1;border:1px solid #E3C9B8;background:#fff;border-radius:10px;padding:9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px`)} className="hv3"><span style={css(`font-family:Newsreader,serif;font-size:18px`)}>{k}</span><span style={css(`font-size:10.5px;color:#716C64`)}>{k === 0 ? 'none' : k === m.goN ? 'all' : ''}</span></button>)}
                     </div>

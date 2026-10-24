@@ -248,6 +248,7 @@ function Recall({ it, L }) {
             {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.exploreRecallGap} style={css(`background:${ORANGE};color:#fff;border:none;border-radius:99px;padding:7px 14px;font-size:12.5px`)}>Explore this gap with Claude</button>}
             {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.saveRecallGap} style={css(`background:none;border:1px solid #E3C9B8;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#A85331`)} className="hv4">Save as a gap</button>}
             {!r.full && L.gapTopics.includes(it.title) && <span style={css(`font-size:12.5px;color:#3D6B5A;align-self:center`)}>✓ Saved as an open gap</span>}
+            <button onClick={L.askAboutRecall} data-role="recall-ask" style={css(`background:none;border:1px solid #E3C9B8;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#A85331`)} className="hv4">Ask Claude about this</button>
             <button onClick={L.closeRecall} style={css(`background:none;border:1px solid #D9D4CA;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#514C44`)}>Done</button>
           </div>
         </div>
