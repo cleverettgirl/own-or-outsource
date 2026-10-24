@@ -66,7 +66,7 @@ export function ItemList({ items, ownedNote = '', title }) {
       {items.map((it, i) => (
         <div key={i} style={css(`display:flex;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.45;color:${it.ok ? '#1F1D1A' : it.unchecked ? '#8A847A' : '#9E4B2A'}`)}>
           <span style={css(`flex:none;width:14px;color:${it.ok ? '#2F8F86' : it.unchecked ? '#B5AFA4' : '#C4613A'}`)}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
-          <span>{it.short}{it.blank ? <span style={css(`color:#8A847A`)}> (left blank)</span> : null}{it.unchecked ? <span style={css(`color:#8A847A`)}> (not checked: it didn't run)</span> : null}{it.owned && ownedNote ? <span style={css(`font-size:12px;color:#8A847A`)}> · {ownedNote}</span> : null}</span>
+          <span>{it.short}{it.blank ? <span style={css(`color:#8A847A`)}> (left blank)</span> : null}{it.unchecked ? <span style={css(`color:#8A847A`)}> (not checked: it didn't run)</span> : null}{it.judged ? <span style={css(`color:#8A847A`)}> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span style={css(`font-size:12px;color:#8A847A`)}> · {ownedNote}</span> : null}</span>
         </div>
       ))}
     </div>

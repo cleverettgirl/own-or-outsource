@@ -642,6 +642,29 @@ step('not ready: Learnings keeps it as a choice you can pick back up', text().in
   step('demo: the real saved progress is untouched by ?demo', window.localStorage.getItem('own-it:v1') === realBefore && !!window.localStorage.getItem('own-it:demo:v1'));
 }
 
+// ---- Hybrid SQL check: a query that doesn't run is judged by Claude on the same items, and says so.
+await click('New chat');
+await click('SQL · revenue per customer');
+await wait(900);
+await ownAll();
+await click('The whole query: each part');
+await predict(2);
+const slipped = "SELECT a.name, COALESCE(SUM(b.pages), 0) AS pages\nFROM authors a\nLEFT JOIN ON b.author_id = a.id AND b.status = 'published'\nGROUP BY a.name\nORDER BY pages ASC;";
+await type(document.querySelector('textarea[data-role=write]'), slipped);
+globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); const text = b.task === 'grade' ? JSON.stringify({ checks: [
+  { requirement: b.input.requirements[0], quoted_evidence: 'LEFT JOIN ON b.author_id', met: true },
+  { requirement: b.input.requirements[1], quoted_evidence: 'COALESCE(SUM(b.pages), 0)', met: true },
+  { requirement: b.input.requirements[2], quoted_evidence: "AND b.status = 'published'", met: true },
+  { requirement: b.input.requirements[3], quoted_evidence: null, met: false }], score: 3, worked: 'x', gap: 'x' }) : '{}'; return { ok: true, status: 200, json: async () => ({ text }) }; };
+await click('Check my version');
+await wait(500);
+globalThis.fetch = offline;
+step('hybrid: a query that does not run is judged by Claude on the same 4 items, labelled', text().includes("It didn't run, so Claude judged it.") && (text().match(/\(judged by Claude\)/g) || []).length === 4 && text().includes('You said 2 of 4. It didn\'t run, so Claude judged it from your query: 3 of 4 would be right once it runs.'));
+step('hybrid: the plain-words syntax fix is still what to fix', text().includes('Your JOIN is missing the table it joins'));
+await click('Back to chat');
+await openLearnings();
+step('hybrid: the card says the first try was judged by Claude', text().includes('First try 3 of 4, judged by Claude'));
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));
 console.error = origError;

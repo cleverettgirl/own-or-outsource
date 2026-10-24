@@ -115,13 +115,7 @@ export default function OwnPanel({ V }) {
                           {!!(V.seeHasNext) && (<><button onClick={V.seeNext} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:8px;padding:7px 14px;font-size:13px`)}>Next step →</button></>)}
                         </div>
                         {!!(V.seeAtEnd) && (<><button onClick={V.goNext} style={css(`background:#C4613A;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>{V.seeNextLabel}</button></>)}
-                      </div>
-                      {!!(V.hasBridges) && (<>
-                        <div style={css(`border-top:1px dashed #E3C9B8;padding-top:10px;display:flex;flex-direction:column;gap:5px`)}>
-                          <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9E4B2A`)}>In terms you already know</div>
-                          {(V.bridges || []).map((b, _i) => (<React.Fragment key={_i}><div style={css(`font-size:13px;color:#514C44;line-height:1.45`)}>{b.t}</div></React.Fragment>))}
-                        </div>
-                      </>)}
+                  </div>
                     </>)}
                   </div>
                 </>)}

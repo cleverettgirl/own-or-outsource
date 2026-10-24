@@ -821,6 +821,17 @@ export default class App extends React.Component {
     return { items: checks.map(c => ({ short: c[1], ok: attempt.trim().length >= 10 && c[0].test(a) })), score, worked: hit.length ? 'Your version ' + hit.map(c => c[1]).join(', ') + '.' : 'A start, but not much of the structure is there yet.', gap: miss.length ? 'Missing: ' + miss.map(c => c[1]).join(', ') + '.' : 'Nothing structural. This holds.' };
   }
   // Shared grader: Sonnet, requirement checklist with quoted evidence, then deterministic clamps.
+  // A SQL try that didn't run: Claude checks each of the target's items against the query as written. Offline, or
+  // if Claude can't be reached, it stays "not checked".
+  async judgeSqlThatDidntRun(o, ran) {
+    const items = o.write.check.items || [];
+    if (!items.length) return ran;
+    try {
+      const attempt = [o.write.before, o.write.text, o.write.after].filter(Boolean).join('\n');
+      const j = await this.gradeAttempt(o.write.task, o.write.check.expected, attempt, 'sql', 'reveal', items.map(i => i.short));
+      return { ...ran, items: items.map((it, k) => ({ short: it.short, owned: !!it.owned, ok: !!(j.items[k] && j.items[k].ok), judged: true })), judgedByClaude: true, worked: '', score: j.score };
+    } catch (e) { return ran; }
+  }
   // requirements: when the try fixed them up front (so the prediction counted them), the grader checks exactly those.
   async gradeAttempt(task, ref, attempt, lang, variant = 'reveal', requirements = null) {
     const r = await this.ask('grade', { task, ref, attempt, variant, requirements });
@@ -857,6 +868,10 @@ export default class App extends React.Component {
           worked: '', gap: res.feedback, corrections: [] }; // what was covered is the ✓ list itself
       } else
       g = await runCheck(o.write.check, o.write.text, o.write.before, o.write.after, o.write.picked);
+      // Hybrid SQL check: if it runs, running it decides (exact, with the row tables). If it doesn't run, one slip
+      // shouldn't zero a query whose idea is right, so Claude judges the same items from the query itself, and
+      // the reveal says so. The plain-words syntax fix stays as "what to fix".
+      if (g.didntRun && o.write.check.type === 'sql') g = await this.judgeSqlThatDidntRun(o, g);
     } catch (_) { try {
       g = await this.gradeAttempt(o.write.task, o.write.ref, o.write.text, o.lang, 'reveal', o.write.requirements);
     } catch (e) { g = this.fallbackGrade(o, o.write.text, o.write.ref); } }
@@ -864,7 +879,8 @@ export default class App extends React.Component {
       const { right, n } = tally(g), d = right - o.prediction;
       // The item you came to own leads: missing it matters more than missing a side detail.
       const ownedMiss = (g.items || []).find(i => i.owned && !i.ok && !i.unchecked);
-      if (g.didntRun) g.revealLine = `You said ${o.prediction} of ${n}. It didn't run, so none of the ${n} could be checked yet: fix what's below and check again. The check counts this try as ${right} of ${n}, since it didn't work on its own.`;
+      if (g.judgedByClaude) g.revealLine = `You said ${o.prediction} of ${n}. It didn't run, so Claude judged it from your query: ${right} of ${n} would be right once it runs. Fix what's below and check again to have it run.`;
+      else if (g.didntRun) g.revealLine = `You said ${o.prediction} of ${n}. It didn't run, so none of the ${n} could be checked yet: fix what's below and check again. The check counts this try as ${right} of ${n}, since it didn't work on its own.`;
       else g.revealLine = (d === 0 ? `You said ${o.prediction} of ${n}, and got ${right}. Your sense of what you know is accurate here.` : d > 0 ? `You said ${o.prediction} of ${n}, and got ${right}. You own more of this than you thought.` : `You said ${o.prediction} of ${n}, and got ${right}. Reading it felt clearer than doing it turned out to be, which is normal, and now you know exactly where.`)
         + (ownedMiss ? ` The one you missed is the idea you came to own: ${ownedMiss.short.charAt(0).toLowerCase() + ownedMiss.short.slice(1)}.` : '');
     }
@@ -872,7 +888,7 @@ export default class App extends React.Component {
     // A fix is recorded next to it, never instead of it.
     const first = !o.write.firstGrade, attempts = o.write.attempts + 1;
     const t1 = tally(first ? g : o.write.firstGrade);
-    const entry = { id: o.id, title: o.focus ? o.focus.label : o.scenario ? o.scenario.title : (o.lang + ' · ' + o.code.split('\n')[0].slice(0, 30)), predicted: o.prediction, actual: t1.right, n: t1.n, ownedMissed: (first ? g : o.write.firstGrade).items ? (first ? g : o.write.firstGrade).items.some(i => i.owned && !i.ok) : false, fixed: first ? null : tally(g).right, hints: o.write.hints.length, own: o,
+    const entry = { id: o.id, title: o.focus ? o.focus.label : o.scenario ? o.scenario.title : (o.lang + ' · ' + o.code.split('\n')[0].slice(0, 30)), predicted: o.prediction, actual: t1.right, n: t1.n, judged: !!(first ? g : o.write.firstGrade).judgedByClaude, ownedMissed: (first ? g : o.write.firstGrade).items ? (first ? g : o.write.firstGrade).items.some(i => i.owned && !i.ok) : false, fixed: first ? null : tally(g).right, hints: o.write.hints.length, own: o,
       ownedAt: (this.state.ledger.find(e => e.id === o.id) || {}).ownedAt || this.now(), dueAt: (this.state.ledger.find(e => e.id === o.id) || {}).dueAt || this.now() + 3 * DAY, reviews: (this.state.ledger.find(e => e.id === o.id) || {}).reviews || [] };
     const notes = ruleNotes(o.lang, o.write.text, o.write.task);
     this.setState(s => ({ own: { ...s.own, write: { ...s.own.write, grade: g, gradeLoading: false, attempts, firstGrade: s.own.write.firstGrade || g, notes, notesLoading: true }, phase: 'reveal' }, ledger: foldRepeats(s.ledger.filter(e => e.id !== entry.id).concat([entry])) }), () => this.loadNotes(g, notes));
@@ -1081,7 +1097,7 @@ export default class App extends React.Component {
       const steps = (e.kind === 'gap'
         ? [{ label: 'Gap found', v: e.gap.source === 'recall' ? 'in a recall' : 'teaching Sam', tone: 'mute' }, { label: 'Closed', v: 'checked ✓', tone: 'act' }]
         : (e.earlier || []).map(x => ({ label: `Earlier, ${rel(x.at, now)}`, v: `predicted ${x.predicted}, got ${x.actual} of ${x.n}`, tone: 'mute' }))
-          .concat([{ label: 'Predicted', v: `${e.predicted} of ${e.n}`, tone: 'pred' }, { label: 'First try', v: `${e.actual} of ${e.n}`, tone: 'act' }]))
+          .concat([{ label: 'Predicted', v: `${e.predicted} of ${e.n}`, tone: 'pred' }, { label: 'First try', v: `${e.actual} of ${e.n}${e.judged ? ', judged by Claude' : ''}`, tone: 'act' }]))
         .concat(e.fixed != null && e.fixed !== e.actual ? [{ label: 'Fixed', v: `${e.fixed} of ${e.n}`, tone: 'mute' }] : [])
         .concat((e.reviews || []).map(rv => ({ label: `Recall · ${rel(rv.at, now)}`, v: `${rv.right} of ${rv.n}`, tone: 'act' })))
         .concat((e.realWork || []).map(r => r.outsourced ? { label: 'Real work', v: 'let Claude answer', tone: 'mute' } : r.n ? { label: 'Real work', v: `went first, ${r.actual} of ${r.n}`, tone: 'act' } : { label: 'Real work', v: 'went first', tone: 'act' }))
@@ -1300,7 +1316,7 @@ export default class App extends React.Component {
     const pct = k => (N ? k / N * 100 : 0) + '%';
     const lo = Math.min(o.prediction, t1.right), hi = Math.max(o.prediction, t1.right);
     Object.assign(V, {
-      revealHeadline: g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
+      revealHeadline: g1.judgedByClaude ? "It didn't run, so Claude judged it." : g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
       // What was checked, item by item, on your first try. The idea you came to own is marked.
       revealItems: (g1.items || []).map(i => ({ ...i, mark: i.ok ? '✓' : '✗' })), revealOwnedNote: (g1.items || []).some(i => i.owned) ? 'the idea you came to own' : '',
       canFix: !!w.grade && !allRight(g), fixWrite: this.fixWrite,
@@ -1314,7 +1330,7 @@ export default class App extends React.Component {
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
       revealWhy: g.didntRun || (w.check && ['choice', 'steps'].includes(w.check.type) && (g1.items || []).length) ? '' : g.why || RUBRIC_WHY[g.score] || '',
       revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
-      revealScale: w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
+      revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),
       revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', '#FBE9E1'], ['What it should return', g.table.expected, 'missing', '#E2F1EE']].map(([title, t, mark, bg]) => ({
         title, empty: !t.rows.length, cols: t.cols.map(() => 'minmax(0,1fr)').join(' ') || '1fr', headers: t.cols.map(c => ({ t: c })),
