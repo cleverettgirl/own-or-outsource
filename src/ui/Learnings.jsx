@@ -1,6 +1,6 @@
 // Learnings: what you own and how it went (design 3a). A map of what you own around you (inner ring: recall this
 // week), the next recall and the counts beside it, calibration, then a card per thing you own. Below: recall when
-// it's open, open gaps, what you asked about, what you stepped away from, and a labelled sample history.
+// it's open, open gaps, and a labelled sample history.
 import React from 'react';
 import { css } from '../css.js';
 import { ChoiceQuestions } from './parts.jsx';
@@ -185,29 +185,8 @@ export default function Learnings({ V }) {
           </section>
         )}
 
-        {L.askedAbout.length > 0 && (
-          <section data-role="asked-about" style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            {head('You asked about', 'things you asked Claude to explain. Own one to check it landed.')}
-            {L.askedAbout.map(a => (
-              <div key={a.id} style={css(card + `;flex-direction:row;justify-content:space-between;align-items:center;gap:14px`)}>
-                <div style={css(`display:flex;flex-direction:column;gap:3px;min-width:0`)}><span style={css(`font-size:15px;font-weight:500`)}>{a.label || 'Naming it…'}</span><span style={css(`font-size:12.5px;color:${FAINT};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>asked {a.when} in “{a.chatTitle}”{a.quote ? ` · “${a.quote.slice(0, 70)}${a.quote.length > 70 ? '…' : ''}”` : ''}</span></div>
-                <button onClick={a.onCheck} style={css(outline + ';flex:none')} className="hv4">Own it</button>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {L.exits.length > 0 && (
-          <section style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            {head('You wanted to learn, then stepped away')}
-            {L.exits.map((x, i) => (
-              <div key={i} style={css(card + `;flex-direction:row;justify-content:space-between;align-items:center;gap:14px`)}>
-                <div style={css(`display:flex;flex-direction:column;gap:3px`)}><span style={css(`font-size:15px;font-weight:500`)}>{x.title}</span><span style={css(`font-size:12.5px;color:${FAINT}`)}>predicted {x.predicted} of {x.n} · {x.askedFirst ? 'went to Claude first' : `left at ${x.step} (${x.stepOf})`}</span></div>
-                {!!x.onReopen && <button onClick={x.onReopen} style={css(outline + ';flex:none')} className="hv4">Pick it back up</button>}
-              </div>
-            ))}
-          </section>
-        )}
+        {/* "You asked about" and "stepped away" were cut for focus (process log 75): both are still recorded, and
+            listed in the doc as ways to extend this. Asking leads to owning from the chat's own Own it button. */}
 
         <section style={css(`display:flex;flex-direction:column;gap:12px;opacity:.75`)}>
           {head('Earlier', 'sample history, mocked to show what a few weeks of use looks like')}

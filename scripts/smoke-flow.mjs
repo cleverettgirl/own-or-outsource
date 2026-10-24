@@ -228,7 +228,7 @@ await act(async () => { document.querySelector('button[data-role=leave]').dispat
 await wait(30);
 step('leave: card closes, chat notes where you stopped', !document.querySelector('button[data-role=leave]') && text().includes('Outsourced') && text().includes('stopped at Write it'));
 await openLearnings();
-step('leave: exit kept as data on Learnings, not scored', text().includes('You wanted to learn, then stepped away') && text().includes('predicted 0 of 2 · left at Write it (2 of 2)'));
+step('leave: the exit is kept as data, not scored', (JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').exits || []).some(x => x.step === 'Write it' && x.predicted === 0));
 
 // ---- Fourth run: a part with no hand-written target (ORDER BY) must get options about itself.
 await click('New chat');
@@ -408,15 +408,14 @@ await click('↑');
 await wait(80);
 globalThis.fetch = offline;
 step('own it: a do-this request (not a learning one) keeps the quiet icon', (() => { const msg = [...document.querySelectorAll('main [data-msg-id]')].at(-1); return msg.textContent.includes('custom hook') && !msg.querySelector('button[data-role=own-all][data-expanded]'); })());
-await openLearnings();
-step('check it landed: saved under "You asked about" on Learnings', !!document.querySelector('[data-role=asked-about]') && text().includes('When the cleanup runs'));
-await click('Own it');
+step('check it landed: the explanation you asked for offers Own it right under it', !!document.querySelector('button[data-role=own-all][data-expanded]'));
+await act(async () => { document.querySelector('button[data-role=own-all][data-expanded]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(50);
 step('one action, one name: the chip is "Own it" too, and the owned answer\'s icon shows it', [...document.querySelectorAll('button[data-role=own-all]')].some(b => b.getAttribute('aria-pressed') === 'true') && text().includes('Own it · When the cleanup runs'));
 step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && ownTitle().includes('When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of the 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-topics] li').length === 3);
 await act(async () => { document.querySelector('button[data-role=leave]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(20);
-step('check it landed: once checked, it leaves "You asked about" and the chip goes', !document.querySelector('button[data-role=own-all][data-expanded]'));
+step('check it landed: once owned, the expanded button goes', !document.querySelector('button[data-role=own-all][data-expanded]'));
 // Highlight the cleanup line: the timing focus comes first.
 window.getSelection = () => ({ toString: () => 'return () => controller.abort();', removeAllRanges() {} });
 await act(async () => { document.querySelector('main [data-msg-id] > div').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 100, clientY: 100 })); });
@@ -494,7 +493,7 @@ step('recall: still closed', text().includes('Still closed.'));
 await act(async () => { document.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
 step('learnings: opens from the sidebar, lists what you own with its history', !!document.querySelector('[data-role=learnings]') && document.querySelectorAll('[data-role=learning], [data-role=due-item]').length >= 4 && text().includes('First try') && text().includes('went first, 2 of 3'));
-step('learnings: shows what you stepped away from, and a labeled sample history', text().includes('You wanted to learn, then stepped away') && text().includes('sample history, mocked'));
+step('learnings: no "You asked about" or "stepped away" sections (cut for focus), sample history labelled', !text().includes('You wanted to learn, then stepped away') && !document.querySelector('[data-role=asked-about]') && text().includes('sample history, mocked'));
 await click('Try a new question · 6 timed checkouts');
 step('learnings: revisit by trying a new question', !document.querySelector('[data-role=learnings]') && text().includes('I timed 6 random checkout transactions'));
 
@@ -597,7 +596,7 @@ await act(async () => { document.querySelector('[data-role=ask-first]').dispatch
 await wait(30);
 step('not ready: the panel closes and your highlight is quoted in the chat box, question left to you', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '') === `About this part of your answer:\n> ${hl}\n\n` && text().includes('Asked Claude first'));
 await openLearnings();
-step('not ready: Learnings keeps it as a choice you can pick back up', text().includes('went to Claude first'));
+step('not ready: going to Claude first is kept as data, not counted as a miss', (JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').exits || []).some(x => x.askedFirst));
 
 // ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).
 {
@@ -622,7 +621,7 @@ step('not ready: Learnings keeps it as a choice you can pick back up', text().in
   await act(async () => { box.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await wait(50);
   const t = box.textContent, cards = box.querySelectorAll('[data-role=learning], [data-role=due-item]');
-  step('demo: ?demo loads the sample (6 owned, one due, an open gap, asked-about, a went-to-Claude-first exit), labelled', cards.length === 6 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('sample data') && t.includes('Open gaps') && t.includes('Why COUNT(*) counts the empty row') && t.includes('went to Claude first') && t.includes('Calibration, across'), `${cards.length} cards`);
+  step('demo: ?demo loads the sample (6 owned, one due, an open gap), labelled', cards.length === 6 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('sample data') && t.includes('Open gaps') && t.includes('Calibration, across'), `${cards.length} cards`);
   // Recall in the sample, then a question about it: quoted into a new chat, the question left to you, no go-first offer.
   const bclick = label => act(async () => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.trim() === label) || [...box.querySelectorAll('button')].find(x => x.textContent.includes(label)); b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await bclick('Recall now · about a minute'); await wait(30);
