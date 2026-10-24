@@ -1,7 +1,7 @@
 // The Own it panel: what to own, predict, the try, the reveal, and teaching Sam.
 import React from 'react';
 import { css } from '../css.js';
-import { ItemList, ChoiceQuestions, OwnDiagram, CompareTable } from './parts.jsx';
+import { ItemList, ChoiceQuestions, StepInputs, OwnDiagram, CompareTable } from './parts.jsx';
 import EffectTimeline from '../EffectTimeline.jsx';
 
 export default function OwnPanel({ V }) {
@@ -272,7 +272,8 @@ export default function OwnPanel({ V }) {
                     </>)}
                     {!!(V.writeBefore) && (<><pre style={css(`margin:0;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.55;white-space:pre-wrap;color:#8A847A;background:#F4F1EA;border-radius:8px`)}>{V.writeBefore}</pre></>)}
                     {!!(V.writeIsChoice) && <ChoiceQuestions qs={V.writeQs} picked={V.writePicked} onPick={V.onWritePick} />}
-                    {!V.writeIsChoice && <textarea data-role="write" value={V.writeText} onChange={V.onWriteText} placeholder={V.writePlaceholder} style={css(`width:100%;min-height:${V.writeBefore ? '72px' : '120px'};resize:vertical;border:1px solid #E3C9B8;border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;background:#fff;outline:none;line-height:1.55`)}></textarea>}
+                    {!!(V.writeIsSteps) && <StepInputs steps={V.writeSteps} entered={V.writePicked} onEnter={V.onWritePick} />}
+                    {!V.writeIsChoice && !V.writeIsSteps && <textarea data-role="write" value={V.writeText} onChange={V.onWriteText} placeholder={V.writePlaceholder} style={css(`width:100%;min-height:${V.writeBefore ? '72px' : '120px'};resize:vertical;border:1px solid #E3C9B8;border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;background:#fff;outline:none;line-height:1.55`)}></textarea>}
                     {!!(V.writeAfter) && (<><pre style={css(`margin:0;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.55;white-space:pre-wrap;color:#8A847A;background:#F4F1EA;border-radius:8px`)}>{V.writeAfter}</pre></>)}
                     {!!(V.hasHints) && (<>
                       <div style={css(`display:flex;flex-direction:column;gap:5px`)}>

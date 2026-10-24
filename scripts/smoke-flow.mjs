@@ -98,7 +98,7 @@ step('then the try, the only part that is measured', text().includes('total page
 step('the warm-up and the visual stay available as optional links', !!document.querySelector('[data-role=refresher]') && text().includes('See it visually') && text().includes('Warm up with the pieces'));
 step('reread points back to the chat', !!document.querySelector('button[data-role=reread]'));
 await click('Stuck? Ask Claude in the chat');
-step('stuck: a follow-up to Claude is prefilled in the chat composer, not answered in the panel', (document.querySelector('main textarea')?.value || '').includes("I'm stuck. Can you give me a nudge") && (document.querySelector('main textarea')?.value || '').includes('total pages per author'));
+step('stuck: the chat composer gets your try as context, and the question is left to you', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.startsWith('About my try on') && v.includes('total pages per author') && !/stuck|Can you|nudge/i.test(v) && v.endsWith('\n\n'); })());
 await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, ''); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
 await click('See it visually');
 step('visual: the clause-by-clause run-through', text().includes('FROM customers c') && text().includes('6 rows'));
@@ -175,10 +175,10 @@ step('fragment: reveal credits compare guesses', text().includes('2 of 3 guesses
 step('fragment: ledger names the focus', text().includes('When to use LEFT vs INNER vs RIGHT JOIN'));
 step('own icon stays visible, shown active while its panel is open', (() => { const bs = [...document.querySelectorAll('button[data-role=own-all]')]; return bs.length > 0 && bs.at(-1).getAttribute('aria-pressed') === 'true'; })());
 await click('Ask Claude about this');
-step('reveal: "Ask Claude about this" prefills a chat follow-up with your attempt and the gap', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.includes('My attempt:') && v.includes('FROM customers c') && v.includes('The check says:') && v.includes('every order has to stay'); })());
+step('reveal: "Ask Claude about this" prefills a chat follow-up with your attempt and the gap', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.includes('> My answer: ') && v.includes('FROM customers c') && v.includes('> The check said: ') && v.includes('every order has to stay') && !/Can you help|Don't just give/.test(v); })());
 await click('↑'); // send it: it goes to the chat, not the panel
 await wait(50);
-step('the follow-up lands in the chat while the panel stays open', [...document.querySelectorAll('main div')].some(d => d.textContent.startsWith("I'm practising")) && !!document.querySelector('[data-role=own-panel]'));
+step('the follow-up lands in the chat while the panel stays open', [...document.querySelectorAll('main div')].some(d => d.textContent.startsWith('About my try on')) && !!document.querySelector('[data-role=own-panel]'));
 // Fix it: back to your own attempt, as you left it; the first try stays the measurement.
 await click('Fix it');
 const kept = document.querySelector('textarea[data-role=write]');
@@ -543,6 +543,31 @@ step('go first on ask: Claude compares, then shows its answer', !!document.query
 globalThis.fetch = offline;
 await openLearnings();
 step('go first on ask: Learnings records that you went first', text().includes('went first'));
+
+// ---- A calculation is worked out step by step, not picked from options (generated try, "steps" format).
+await click('New chat');
+const STEPS_TRY = { orderIsInsight: false, format: 'steps', task: 'Now a new situation: drug C raises a 4 in 1,000 risk by 50%; drug D raises a 30 in 100 risk by 10%.', context: '',
+  steps: [{ label: "D's baseline, per 1,000", answer: 300, unit: '', how: '30 in 100 is 300 in 1,000.' }, { label: 'Extra cases per 1,000 from C', answer: 2, unit: '', how: '50% of 4 is 2.' }, { label: 'Extra cases per 1,000 from D', answer: 30, unit: '', how: '10% of 300 is 30.' }] };
+globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); const text = b.task === 'chat' ? 'Put both baselines in the same units, find the extra cases, then compare the absolute numbers.' : b.task === 'focusOptions' ? '{"options":[{"label":"Converting baselines to the same units","mode":"concept"}]}' : b.task === 'writeTask' ? JSON.stringify(STEPS_TRY) : b.task === 'inferLearning' ? '{"learning": false, "topic": ""}' : '{}'; return { ok: true, status: 200, json: async () => ({ text }) }; };
+await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, 'How do I compare two risks given as percentages?'); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
+await click('↑');
+await wait(120);
+await ownAll();
+await wait(80);
+await click('Converting baselines to the same units');
+await wait(120);
+step('steps: a calculation is predicted step by step', text().includes('How many of these 3 will you get right on your own?') && text().includes('Next: a new case to work out, in 3 steps'));
+await predict(3);
+await wait(50);
+const stepInputs = () => [...document.querySelectorAll('input[data-role=step-input]')];
+step('steps: one number box per step, no multiple choice', stepInputs().length === 3 && !document.querySelector('[data-role=choice-q]'));
+await type(stepInputs()[0], '300'); await type(stepInputs()[1], '2'); await type(stepInputs()[2], '3');
+await click('Check my version');
+await wait(80);
+step('steps: each step checked by its number; the first slip is named with how to get it', text().includes('You said 3 of 3, and got 2') && text().includes('Step 3: the answer is 30, and you have 3. 10% of 300 is 30.') && document.querySelectorAll('[data-role=items] > div').length === 3);
+step('steps: the reveal names the try "Work it out"', text().includes('Work it out'));
+globalThis.fetch = offline;
+await click('Back to chat');
 
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step('no React/runtime errors', reactErrors.length === 0, reactErrors.slice(0, 3).join(' || '));

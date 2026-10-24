@@ -59,7 +59,7 @@ export const BOOK_TARGETS = {
           { v: 'certain', l: 'Certain: a median is always between the min and max', gap: "That's true of your 4 calls' own median. The median of all calls is the one you can't see, and your 4 could all land on one side of it. (Your original question in the chat.)" },
           { v: 'unlikely', l: 'Unlikely with only 4 calls', gap: "Even 4 is usually enough: the range only misses if all 4 land on the same side of the median, and that's rare." },
         ] },
-        { id: 'fewer', short: 'how sample size changes it', prompt: 'Compared with timing 5 calls, is your range with 4 calls…', answer: 'less', options: [
+        { id: 'fewer', short: 'how sample size changes it', prompt: 'Compared with timing 5 calls, is your range with 4 calls…', answer: 'less', ordered: true, options: [
           { v: 'less', l: 'A little less likely to catch it' },
           { v: 'same', l: 'Exactly as likely', gap: "Each call you add is another chance to land on both sides of the median. With one fewer, all of them landing on one side is a bit more likely." },
           { v: 'more', l: 'More likely to catch it', gap: 'Fewer samples make it easier for all of them to land on the same side of the median, so the range misses a bit more often.' },
@@ -75,10 +75,10 @@ export const BOOK_TARGETS = {
     delayed: {
       task: 'From memory, a new situation: you note the price of 6 random houses on a long street, to get a feel for the typical (median) price of the whole street.',
       check: { type: 'choice', questions: [
-        { id: 'more', short: 'how sample size changes it', prompt: "Compared with checking 5 houses, how likely is your cheapest-to-priciest range to catch the street's median?", answer: 'more', options: [
-          { v: 'more', l: 'More likely' },
-          { v: 'same', l: 'About the same', gap: "Each extra house is another chance for your samples to land on both sides of the median. Missing needs every one of them on the same side, which gets rarer with each house you add." },
+        { id: 'more', short: 'how sample size changes it', prompt: "Compared with checking 5 houses, how likely is your cheapest-to-priciest range to catch the street's median?", answer: 'more', ordered: true, options: [
           { v: 'less', l: 'Less likely', gap: "More houses can't hurt here: the range only misses if every house lands on the same side of the median, and that gets rarer with each extra house." },
+          { v: 'same', l: 'About the same', gap: "Each extra house is another chance for your samples to land on both sides of the median. Missing needs every one of them on the same side, which gets rarer with each house you add." },
+          { v: 'more', l: 'More likely' },
         ] },
         { id: 'miss', short: 'when the range misses', prompt: "When would your range miss the street's median?", answer: 'side', options: [
           { v: 'side', l: 'Only if all 6 houses are above it, or all 6 are below it' },

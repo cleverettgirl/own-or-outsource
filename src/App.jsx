@@ -13,6 +13,7 @@ import { BOOK_TURNS } from './bookTranscript.js';
 import { JUNO_TARGETS, junoFocusOptions } from './junoTargets.js';
 import { JUNO_TURNS } from './junoTranscript.js';
 import { checkChoice } from './choiceCheck.js';
+import { checkSteps } from './stepsCheck.js';
 import { GO_FIRST, goFirstFor } from './goFirst.js';
 import { ruleNotes, keepQuoted } from './notes.js';
 import { SCALES, RUBRIC_WHY, tally, allRight, calibration, correctionNote } from './scoring.js';
@@ -32,6 +33,7 @@ const TARGETS = { ...SQL_TARGETS, ...BOOK_TARGETS, ...JUNO_TARGETS, ...REACT_TAR
 async function runCheck(check, text, before, after, picked) {
   if (check.type === 'number') return checkNumber(check, text);
   if (check.type === 'choice') return checkChoice(check, picked || {});
+  if (check.type === 'steps') return checkSteps(check, picked || {});
   return checkSql(check, text, before, after);
 }
 
@@ -58,7 +60,7 @@ function firstJson(t) {
 const STEP_LABELS = { read: 'Read it', see: 'See it', assemble: 'Assemble it', compare: 'Compare it', write: 'Write it' };
 
 // The try's name follows what you do in it: picking answers isn't writing.
-const stepLabel = (o, step) => step !== 'write' ? STEP_LABELS[step] : (o && o.write && o.write.check ? { choice: 'Answer it', explain: 'Explain it', number: 'Work it out' }[o.write.check.type] : null) || 'Write it';
+const stepLabel = (o, step) => step !== 'write' ? STEP_LABELS[step] : (o && o.write && o.write.check ? { choice: 'Answer it', explain: 'Explain it', number: 'Work it out', steps: 'Work it out' }[o.write.check.type] : null) || 'Write it';
 
 export default class App extends React.Component {
   state = { messages: [], composer: '', own: null, ledger: [], exits: [], sel: null, chatTitle: 'New chat', tipDismissed: false, view: 'chat', timeShift: 0, recall: null, gaps: [], activeGap: null, asked: [] };
@@ -265,13 +267,15 @@ export default class App extends React.Component {
   send = () => { const t = this.state.composer.trim(); if (!t) return; this.sendText(t, null, !!this.state.own); };
   composerRef = React.createRef();
   // Own-it finds the gap; the chat explains it. These prefill a follow-up with your attempt and what the check said.
+  // The context goes in as a quote (the task, your answer, what the check said); the question is yours to write.
+  // Naming what confuses you is part of the learning, so the app doesn't put words in your mouth.
   askAboutIt = () => {
-    const o = this.state.own, w = o.write, g = w.grade;
-    const attempt = w.check && w.check.type === 'choice' ? w.check.questions.map(q => `${q.prompt} → ${(q.options.find(x => x.v === w.picked[q.id]) || {}).l || '(no answer)'}`).join('\n') : w.text;
-    const text = g
-      ? `I'm practising "${o.focus ? o.focus.label : 'this'}". The task was: ${w.task}\n\nMy attempt:\n${attempt}\n\nThe check says: ${g.gap || g.why}\n\nCan you help me understand what I got wrong? Don't just give me the full answer.`
-      : `I'm practising "${o.focus ? o.focus.label : 'this'}". The task is: ${w.task}\n\nWhat I have so far:\n${attempt || '(nothing yet)'}\n\nI'm stuck. Can you give me a nudge without writing it for me?`;
-    this.setState({ composer: text }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.style.height = 'auto'; } });
+    const o = this.state.own, w = o.write, g = w.grade, c = w.check;
+    const attempt = c && c.type === 'choice' ? c.questions.map(q => `${q.prompt} → ${(q.options.find(x => x.v === w.picked[q.id]) || {}).l || '(no answer)'}`).join('\n')
+      : c && c.type === 'steps' ? c.steps.map(st => `${st.label}: ${w.picked[st.id] || '(blank)'}`).join('\n') : w.text;
+    const q = t => String(t).split('\n').map(l => '> ' + l).join('\n');
+    const text = `About my try on “${o.focus ? o.focus.label : 'this'}”:\n${q('Task: ' + w.task)}\n${q('My answer: ' + (attempt || '(nothing yet)'))}${g ? '\n' + q('The check said: ' + (g.gap || g.why || '')) : ''}\n\n`;
+    this.setState({ composer: text }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
   };
   // No upfront "just the answer / learn this too" toggle: intent is declared by what you choose to own,
   // and confidence by what you predict. Every answer can be owned.
@@ -556,6 +560,7 @@ export default class App extends React.Component {
   plannedItems(o = this.state.own) {
     const w = o.write, c = w.check;
     if (c && c.type === 'choice') return c.questions.map(q => q.short || q.prompt);
+    if (c && c.type === 'steps') return c.steps.map(st => st.label);
     if (c && c.type === 'sql') return c.items && c.items.length ? c.items.map(i => i.short) : ['Returns the right rows'];
     if (c && c.type === 'number') return c.expected.map((v, i) => (c.labels ? c.labels[i] : 'The number'));
     if (c && c.type === 'explain') return c.keyPoints.length ? c.keyPoints : ['Explains the idea and applies it'];
@@ -704,7 +709,7 @@ export default class App extends React.Component {
     this.setOwn(cur => ({ write: { ...cur.write, loading: true } }));
     try {
       const r = await this.ask('writeTask', { label: o.focus ? o.focus.label : '', code: o.code, fullCode: o.fullCode });
-      const fmt = ['code', 'choice', 'explain'].includes(r.format) ? r.format : 'explain';
+      const fmt = ['code', 'choice', 'explain', 'steps'].includes(r.format) ? r.format : 'explain';
       let patch = { task: r.task, schema: String(r.context || '').replace(/```\w*\n?/g, '').trim(), format: fmt, loading: false, orderMatters: !!r.orderIsInsight };
       if (fmt === 'code') patch = { ...patch, ref: r.reference || '', requirements: (r.requirements || []).filter(Boolean).slice(0, 4) };
       if (fmt === 'choice') {
@@ -713,6 +718,10 @@ export default class App extends React.Component {
           return { id: 'q' + i, short: q.short || q.prompt.slice(0, 60), prompt: q.prompt, answer: (options.find(x => x.correct) || options[0] || {}).v, options };
         }).filter(q => q.options.length >= 2);
         patch = questions.length ? { ...patch, check: { type: 'choice', questions } } : { ...patch, format: 'explain', check: { type: 'explain', question: r.task, keyPoints: [] } };
+      }
+      if (fmt === 'steps') {
+        const steps = (r.steps || []).slice(0, 4).map((x, i) => ({ id: 's' + i, label: String(x.label || ''), answer: Number(x.answer), unit: x.unit === '%' ? '%' : '', how: x.how || '' })).filter(x => x.label && Number.isFinite(x.answer));
+        patch = steps.length ? { ...patch, ref: steps.map(x => `${x.label}: ${x.answer}${x.unit}`).join('\n'), check: { type: 'steps', steps } } : { ...patch, format: 'explain', check: { type: 'explain', question: r.task, keyPoints: [] } };
       }
       if (fmt === 'explain') patch = { ...patch, placeholder: 'Explain it in your own words, and apply it to the new case.', check: { type: 'explain', question: r.task, keyPoints: (r.keyPoints || []).slice(0, 3) } };
       this.setOwn(cur => ({ write: { ...cur.write, ...patch } }));
@@ -765,8 +774,8 @@ export default class App extends React.Component {
     return r;
   }
   submitWrite = async () => {
-    const o = this.state.own, isChoice = o.write.check && o.write.check.type === 'choice';
-    if ((isChoice ? !Object.keys(o.write.picked).length : !o.write.text.trim()) || o.write.gradeLoading) return;
+    const o = this.state.own, isChoice = o.write.check && ['choice', 'steps'].includes(o.write.check.type);
+    if ((isChoice ? !Object.values(o.write.picked).some(v => String(v).trim()) : !o.write.text.trim()) || o.write.gradeLoading) return;
     this.setOwn({ write: { ...o.write, gradeLoading: true } });
     let g;
     try {
@@ -803,7 +812,7 @@ export default class App extends React.Component {
   async loadNotes(g, have) {
     const o = this.state.own, w = o.write, text = w.text;
     const done = extra => this.setOwn(cur => ({ write: { ...cur.write, notes: (cur.write.notes || []).concat(extra).slice(0, 3), notesLoading: false } }));
-    if ((w.check && w.check.type === 'choice') || text.trim().length < 40) return done([]);
+    if ((w.check && ['choice', 'steps'].includes(w.check.type)) || text.trim().length < 40) return done([]);
     try {
       const r = await this.ask('notes', { gap: g.gap, task: w.task, lang: o.lang, text, have: have.map(n => n.text) });
       done(keepQuoted(r.notes, text).filter(n => !have.some(h => h.quote.toLowerCase() === n.quote.toLowerCase())).slice(0, 2));
@@ -1104,6 +1113,7 @@ export default class App extends React.Component {
         const what = chk && chk.type === 'choice' ? `${n} question${n > 1 ? 's' : ''} on “${label}”, on a new case`
           : chk && chk.type === 'explain' ? `one question in your own words, checked for ${n} key idea${n > 1 ? 's' : ''}`
           : chk && chk.type === 'number' ? 'a new case to work out'
+          : chk && chk.type === 'steps' ? `a new case to work out, in ${n} step${n > 1 ? 's' : ''}`
           : chk && chk.type === 'sql' ? `a new query, checked for ${n} thing${n > 1 ? 's' : ''} it has to get right`
           : `a new case to write, checked for ${n} requirement${n > 1 ? 's' : ''}`;
         return { predictReady: true, predictNext: `Next: ${what}.`,
@@ -1177,7 +1187,7 @@ export default class App extends React.Component {
     const w = o.write;
     Object.assign(V, {
       writeFixing: !!w.firstGrade && !w.grade, writeTry: w.attempts + 1, writeLastGap: w.firstGrade ? (w.lastGap || w.firstGrade.gap || '') : '',
-      writeIsChoice: !!(w.check && w.check.type === 'choice'), writeQs: w.check && w.check.questions ? w.check.questions : [], writePicked: w.picked,
+      writeIsChoice: !!(w.check && w.check.type === 'choice'), writeIsSteps: !!(w.check && w.check.type === 'steps'), writeSteps: w.check && w.check.steps ? w.check.steps : [], writeQs: w.check && w.check.questions ? w.check.questions : [], writePicked: w.picked,
       onWritePick: (id, v) => this.setOwn(cur => ({ write: { ...cur.write, picked: { ...cur.write.picked, [id]: v } } })),
       writeBefore: w.before, writeAfter: w.after, writePlaceholder: w.placeholder || 'Write it here. Ask for a hint any time; hints are part of learning, not cheating.',
       writeTask: w.task, writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => this.setOwn({ write: { ...this.state.own.write, text: e.target.value } }),
@@ -1205,8 +1215,8 @@ export default class App extends React.Component {
       }),
       revealCols: `repeat(${order.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
-      revealWhy: w.check && w.check.type === 'choice' && (g1.items || []).length ? '' : g.why || RUBRIC_WHY[g.score] || '',
-      revealNotes: [...(g.worked && !(w.check && w.check.type === 'choice') ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
+      revealWhy: w.check && ['choice', 'steps'].includes(w.check.type) && (g1.items || []).length ? '' : g.why || RUBRIC_WHY[g.score] || '',
+      revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
       revealScale: w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),
       revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', '#FBE9E1'], ['What it should return', g.table.expected, 'missing', '#E2F1EE']].map(([title, t, mark, bg]) => ({

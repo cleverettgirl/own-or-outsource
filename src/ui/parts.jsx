@@ -44,13 +44,28 @@ export function ItemList({ items, ownedNote = '', title }) {
 
 
 // Multiple-choice questions for a "chosen" check. Picks lock once checked.
+// Options are shown in a random order, so the right one isn't always first (it was, in every hand-written question
+// and most generated ones). The order is picked once per question per visit, so it stays put while you answer.
+// A question marked ordered (a scale like less / same / more) keeps its order.
+const orders = new Map();
+export function shuffled(q, rnd = Math.random) {
+  if (q.ordered) return q.options;
+  const key = q.id + '|' + q.prompt;
+  if (!orders.has(key)) {
+    const o = q.options.map(x => x.v);
+    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    orders.set(key, o);
+  }
+  const order = orders.get(key);
+  return order.map(v => q.options.find(x => x.v === v)).filter(Boolean);
+}
 export function ChoiceQuestions({ qs, picked, onPick, locked }) {
   return (
     <div style={css(`display:flex;flex-direction:column;gap:14px`)}>
       {qs.map((q, i) => (
         <div key={q.id} data-role="choice-q" style={css(`display:flex;flex-direction:column;gap:6px`)}>
           <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:#9E4B2A`)}>{i + 1}.</span> {q.prompt}</div>
-          {q.options.map(o => {
+          {shuffled(q).map(o => {
             const on = picked[q.id] === o.v;
             return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? '#C4613A' : '#E3C9B8'};background:${on ? '#FFF1E8' : '#fff'};color:#1F1D1A;border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{o.l}</button>;
           })}
@@ -123,6 +138,23 @@ export function CompareTable({ t }) {
         <div key={i} style={css(`display:grid;grid-template-columns:${t.cols};font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;gap:8px;background:${r.bg || 'transparent'}`)}>
           {r.cells.map((c, j) => <span key={j} style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.dim ? '#B58A74' : '#1F1D1A'};${c.hl ? `background:${c.hl};border-radius:4px;margin:-1px -4px;padding:1px 4px;font-weight:600` : ''}`)}>{c.t}</span>)}
         </div>
+      ))}
+    </div>
+  );
+}
+
+// A "work it out" try: one labelled box per step, a number in each.
+export function StepInputs({ steps, entered, onEnter, locked }) {
+  return (
+    <div data-role="steps" style={css(`display:flex;flex-direction:column;gap:10px`)}>
+      {steps.map((st, i) => (
+        <label key={st.id} style={css(`display:flex;flex-direction:column;gap:5px`)}>
+          <span style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:#9E4B2A`)}>Step {i + 1}.</span> {st.label}</span>
+          <span style={css(`display:flex;align-items:center;gap:6px`)}>
+            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" style={css(`width:160px;border:1px solid #E3C9B8;border-radius:8px;padding:8px 10px;font-size:14px;background:#fff;outline:none`)} />
+            {st.unit === '%' && <span style={css(`font-size:14px;color:#716C64`)}>%</span>}
+          </span>
+        </label>
       ))}
     </div>
   );

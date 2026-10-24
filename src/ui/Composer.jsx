@@ -4,11 +4,18 @@ import { css } from '../css.js';
 import { MicIcon } from './parts.jsx';
 
 // The composer, in the middle of the home screen or at the bottom of a chat.
+// It grows with what you type (up to max-height, then scrolls), including text filled in for you,
+// like a quote from "Ask Claude about this".
 export default function Composer({ V, home }) {
+  React.useLayoutEffect(() => {
+    const el = V.composerRef.current; if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [V.composer, V.composerRef]);
   return (
     <div style={css(`width:100%`)}>
       <div style={css(`background:#fff;border:1px solid ${V.composerBorder};border-radius:16px;padding:12px 12px 10px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.035)`)}>
-        <textarea ref={V.composerRef} value={V.composer} onChange={V.onComposer} onKeyDown={V.onComposerKey} placeholder={home ? 'How can I help you today?' : V.composerPlaceholder} rows="1" style={css(`border:none;background:none;resize:none;font-size:15px;line-height:1.5;outline:none;min-height:26px;max-height:160px;font-family:inherit`)}></textarea>
+        <textarea ref={V.composerRef} value={V.composer} onChange={V.onComposer} onKeyDown={V.onComposerKey} placeholder={home ? 'How can I help you today?' : V.composerPlaceholder} rows="1" style={css(`border:none;background:none;resize:none;font-size:15px;line-height:1.5;outline:none;min-height:26px;max-height:160px;overflow-y:auto;font-family:inherit`)}></textarea>
         <div style={css(`display:flex;align-items:center;gap:8px`)}>
           <button aria-disabled="true" title="Not in this prototype" style={css(`width:30px;height:30px;border:1px solid #E3DFD6;border-radius:8px;background:none;color:#514C44;font-size:16px;cursor:default`)}>+</button>
           <span style={css(`flex:1`)}></span>
