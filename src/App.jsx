@@ -38,6 +38,23 @@ async function runCheck(check, text, before, after, picked) {
 }
 
 const DAY = 24 * 60 * 60 * 1000;
+// Owning the same thing again is one thing you own, with a history: the latest attempt is the live entry (its
+// recall schedule, its card); earlier ones are folded into it as "Earlier" and leave the schedule. They stay in
+// the ledger, so calibration still counts every prediction. Idempotent, so it also cleans up saved progress.
+function foldRepeats(ledger) {
+  const live = ledger.filter(e => e.kind !== 'gap' && !e.merged);
+  const byTitle = {};
+  for (const e of live) (byTitle[e.title] ||= []).push(e);
+  const fold = {};
+  for (const group of Object.values(byTitle)) {
+    if (group.length < 2) continue;
+    const sorted = group.slice().sort((a, b) => (a.ownedAt || 0) - (b.ownedAt || 0)), latest = sorted[sorted.length - 1];
+    const earlier = sorted.slice(0, -1).flatMap(e => [...(e.earlier || []), { predicted: e.predicted, actual: e.actual, n: e.n, at: e.ownedAt }]);
+    fold[latest.id] = { earlier: [...(latest.earlier || []), ...earlier].sort((a, b) => a.at - b.at), realWork: sorted.flatMap(e => e.realWork || []), reviews: sorted.flatMap(e => e.reviews || []) };
+    for (const e of sorted.slice(0, -1)) fold[e.id] = { merged: true, dueAt: null };
+  }
+  return Object.keys(fold).length ? ledger.map(e => (fold[e.id] ? { ...e, ...fold[e.id] } : e)) : ledger;
+}
 
 // "3 days ago", "today", "in 7 days", relative to the (possibly simulated) now.
 const rel = (t, now) => { const d = Math.round((t - now) / DAY); return d === 0 ? 'today' : d < 0 ? `${-d} day${d === -1 ? '' : 's'} ago` : `in ${d} day${d === 1 ? '' : 's'}`; };
@@ -93,7 +110,7 @@ export default class App extends React.Component {
     if (!d || d.v !== 1) return null;
     const sc = x => ({ ...x, scenario: x.scenario ? this[x.scenario] : null });
     this.uid = Math.max(this.uid, d.uid || 0);
-    return { timeShift: d.timeShift || 0, tipDismissed: !!d.tipDismissed, gaps: d.gaps || [], asked: (d.asked || []).map(sc), exits: (d.exits || []).map(sc), ledger: (d.ledger || []).map(e => ({ ...e, own: sc(e.own) })) };
+    return { timeShift: d.timeShift || 0, tipDismissed: !!d.tipDismissed, gaps: d.gaps || [], asked: (d.asked || []).map(sc), exits: (d.exits || []).map(sc), ledger: foldRepeats((d.ledger || []).map(e => ({ ...e, own: sc(e.own) }))) };
   }
   resetDemo = () => {
     if (!window.confirm(this.isDemo ? 'Reset the sample data to how it started?' : 'Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
@@ -858,7 +875,7 @@ export default class App extends React.Component {
     const entry = { id: o.id, title: o.focus ? o.focus.label : o.scenario ? o.scenario.title : (o.lang + ' · ' + o.code.split('\n')[0].slice(0, 30)), predicted: o.prediction, actual: t1.right, n: t1.n, ownedMissed: (first ? g : o.write.firstGrade).items ? (first ? g : o.write.firstGrade).items.some(i => i.owned && !i.ok) : false, fixed: first ? null : tally(g).right, hints: o.write.hints.length, own: o,
       ownedAt: (this.state.ledger.find(e => e.id === o.id) || {}).ownedAt || this.now(), dueAt: (this.state.ledger.find(e => e.id === o.id) || {}).dueAt || this.now() + 3 * DAY, reviews: (this.state.ledger.find(e => e.id === o.id) || {}).reviews || [] };
     const notes = ruleNotes(o.lang, o.write.text, o.write.task);
-    this.setState(s => ({ own: { ...s.own, write: { ...s.own.write, grade: g, gradeLoading: false, attempts, firstGrade: s.own.write.firstGrade || g, notes, notesLoading: true }, phase: 'reveal' }, ledger: s.ledger.filter(e => e.id !== entry.id).concat([entry]) }), () => this.loadNotes(g, notes));
+    this.setState(s => ({ own: { ...s.own, write: { ...s.own.write, grade: g, gradeLoading: false, attempts, firstGrade: s.own.write.firstGrade || g, notes, notesLoading: true }, phase: 'reveal' }, ledger: foldRepeats(s.ledger.filter(e => e.id !== entry.id).concat([entry])) }), () => this.loadNotes(g, notes));
   };
 
   // "On your version": Claude adds up to 2 notes on HOW you wrote it, beyond the score (which is already decided).
@@ -1059,11 +1076,12 @@ export default class App extends React.Component {
     const S = this.state;
     const reopen = sc => sc === this.BOOK ? this.startBook : sc === this.JUNO ? this.startJuno : sc === this.SQL ? this.startSql : null;
     const now = this.now();
-    const items = S.ledger.slice().reverse().map(e => {
+    const items = S.ledger.filter(e => !e.merged).reverse().map(e => {
       const key = goFirstFor(e.own.focus && e.own.focus.target);
       const steps = (e.kind === 'gap'
         ? [{ label: 'Gap found', v: e.gap.source === 'recall' ? 'in a recall' : 'teaching Sam', tone: 'mute' }, { label: 'Closed', v: 'checked ✓', tone: 'act' }]
-        : [{ label: 'Predicted', v: `${e.predicted} of ${e.n}`, tone: 'pred' }, { label: 'First try', v: `${e.actual} of ${e.n}`, tone: 'act' }])
+        : (e.earlier || []).map(x => ({ label: `Earlier, ${rel(x.at, now)}`, v: `predicted ${x.predicted}, got ${x.actual} of ${x.n}`, tone: 'mute' }))
+          .concat([{ label: 'Predicted', v: `${e.predicted} of ${e.n}`, tone: 'pred' }, { label: 'First try', v: `${e.actual} of ${e.n}`, tone: 'act' }]))
         .concat(e.fixed != null && e.fixed !== e.actual ? [{ label: 'Fixed', v: `${e.fixed} of ${e.n}`, tone: 'mute' }] : [])
         .concat((e.reviews || []).map(rv => ({ label: `Recall · ${rel(rv.at, now)}`, v: `${rv.right} of ${rv.n}`, tone: 'act' })))
         .concat((e.realWork || []).map(r => r.outsourced ? { label: 'Real work', v: 'let Claude answer', tone: 'mute' } : r.n ? { label: 'Real work', v: `went first, ${r.actual} of ${r.n}`, tone: 'act' } : { label: 'Real work', v: 'went first', tone: 'act' }))
@@ -1094,7 +1112,7 @@ export default class App extends React.Component {
       askAboutRecall: this.askAboutRecall, resetDemo: this.resetDemo, submitRecall: this.submitRecall, closeRecall: () => this.setState({ recall: null }), skipAhead: this.skipAhead, shifted: S.timeShift > 0, shiftDays: Math.round(S.timeShift / DAY),
       exits: S.exits.map(x => ({ ...x, onReopen: reopen(x.scenario) })),
       stats: [
-        { n: S.ledger.length, label: 'owned' },
+        { n: S.ledger.filter(e => !e.merged).length, label: 'owned' },
         { n: S.gaps.length, label: 'gaps found by trying' },
         { n: S.gaps.filter(g => g.status === 'closed').length, label: 'gaps closed' },
         { n: real.filter(r => !r.outsourced).length, label: 'times you went first' },
@@ -1138,7 +1156,7 @@ export default class App extends React.Component {
     const V = {
       hasOwn: !!o, panelRef: this.panelRef, focusPanel: () => { const pn = this.panelRef.current; if (pn) pn.scrollTop = 0; },
       dismissTip: () => this.setState({ tipDismissed: true }),
-      isLearnings: S.view === 'learnings', openLearnings: this.openLearnings, ownedCount: S.ledger.length, dueCount: S.ledger.filter(e => e.dueAt != null && e.dueAt <= this.now()).length,
+      isLearnings: S.view === 'learnings', openLearnings: this.openLearnings, ownedCount: S.ledger.filter(e => !e.merged).length, dueCount: S.ledger.filter(e => e.dueAt != null && e.dueAt <= this.now()).length,
       learn: this.learningsVals(),
       // Seeded chats show up as past chats: you already talked with Claude, now see what stuck.
       chatList: [

@@ -451,8 +451,16 @@ await click('×');
 await act(async () => { document.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
 const dueTitles = () => [...document.querySelectorAll('[data-role=due-item]')].map(d => d.textContent);
-step('recall: the Rule of Five item from your book chat is ready, owned 3 days ago', dueTitles().length === 1 && dueTitles()[0].includes('The Rule of Five') && dueTitles()[0].includes('owned 3 days ago'));
-await click('Recall now');
+// The book run above owned the Rule of Five again: one card, with the seeded attempt folded in as "Earlier", and
+// today's attempt setting the schedule (just practised, so it comes back in 3 days, not now).
+const ruleCards = () => [...document.querySelectorAll('[data-role=learning], [data-role=due-item]')].filter(d => d.textContent.includes('The Rule of Five'));
+step('repeat: owning the same thing again is one card, with the earlier attempt on it', ruleCards().length === 1 && ruleCards()[0].textContent.includes('Earlier, 3 days ago · predicted 3, got 2 of 3') && ruleCards()[0].textContent.includes('owned today'));
+step('repeat: the map shows it once', [...document.querySelectorAll('[data-role=map] button')].filter(b => b.textContent.includes('The Rule of Five')).length === 1);
+step('repeat: nothing is due yet, so there is no indicator', !document.querySelector('[data-role=recall-badge]') && dueTitles().length === 0);
+await click('⏩ Skip ahead 3 days');
+step('recall: 3 days later, what you owned today comes due', dueTitles().length >= 3 && /to recall$/.test(document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') || ''));
+await act(async () => { [...ruleCards()[0].querySelectorAll('button')].find(b => b.textContent.includes('Recall now')).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+await wait(30);
 step('recall: a new case, from memory', text().includes('6 random houses'));
 step('recall: questions about the reasoning, not the arithmetic', text().includes('the range from the cheapest to the priciest of your 6 houses') && text().includes('When would your range miss') && text().includes('Which of these would break the rule?'));
 await click('More likely');
@@ -463,9 +471,6 @@ await wait(50);
 step('recall: then vs now, and when it comes back', text().includes('First try, 3 days ago: 2 of 3 → today: 3 of 3') && text().includes('It stuck.') && text().includes('Next recall in 7 days'));
 step('recall: after checking, "Ask Claude about this" is offered (never before you answer)', !!document.querySelector('[data-role=recall-ask]'));
 await click('Done');
-step('recall: nothing else due yet, so the indicator goes', !document.querySelector('[data-role=recall-badge]'));
-await click('⏩ Skip ahead 3 days');
-step('recall: 3 days later, what you owned today comes due', dueTitles().length >= 3 && /to recall$/.test(document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') || ''));
 const sqlDue = [...document.querySelectorAll('[data-role=due-item]')].find(d => d.textContent.includes('When to use LEFT vs INNER'));
 await act(async () => { [...sqlDue.querySelectorAll('button')].find(b => b.textContent.includes('Recall now')).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
