@@ -22,6 +22,7 @@ const { act } = React;
 
 const wait = ms => act(() => new Promise(r => setTimeout(r, ms)));
 const text = () => document.body.textContent;
+const ownTitle = () => document.querySelector('[data-role=own-title]')?.textContent || '';
 const buttons = () => [...document.querySelectorAll('button')];
 async function click(label) {
   // Exact label first ("4" must not hit "step 3 of 4"), then any button containing it.
@@ -35,6 +36,10 @@ async function predict(k) {
   const b = document.querySelector(`[data-role=predict-option][data-n="${k}"]`);
   if (!b) throw new Error(`No prediction button for ${k}`);
   await act(async () => { b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  // Pick, then lock it in (design 2a): nothing starts until you confirm.
+  const lock = document.querySelector('[data-role=predict-lock]');
+  if (!lock || lock.disabled || !lock.textContent.includes(`Lock in ${k}`)) throw new Error(`Lock-in button not ready for ${k}: ${lock && lock.textContent}`);
+  await act(async () => { lock.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await wait(30);
 }
 async function type(el, value) {
@@ -75,7 +80,7 @@ step('tip goes away once you own something', !document.querySelector('[data-role
 step('panel: no copy of Claude\'s text; the whole reply is marked as being owned in the chat', document.querySelectorAll('[data-msg-id][data-owning=whole]').length === 1 && !document.querySelector('[data-role=own-panel] pre') && text().includes('Reread it in your chat'));
 step('panel: Own it opens on the side, chat stays visible, chip marks it', !!document.querySelector('[data-role=own-panel]') && !!document.querySelector('[data-role=own-chip]') && !!document.querySelector('main pre'));
 await click('The whole query');
-step('predict: the try is shown with what it is checked on, named without giving answers away', text().includes('Owning: The whole query') && !!document.querySelector('[data-role=predict-try]') && text().includes('total pages per author') && [...document.querySelectorAll('[data-role=predict-topics] li')].map(li => li.textContent).join(' | ') === 'who appears | what an empty total shows | which pages count | the sort order' && !text().includes('even Cal') && text().includes('How many of the 4 will you get right on your own?') && text().includes("Under half? You'll start with a quick warm-up.") && document.querySelectorAll('[data-role=predict-option]').length === 5);
+step('predict: the try is shown with what it is checked on, named without giving answers away', ownTitle().includes('The whole query') && !!document.querySelector('[data-role=predict-try]') && text().includes('total pages per author') && [...document.querySelectorAll('[data-role=predict-topics] li')].map(li => li.textContent).join(' | ') === 'who appears | what an empty total shows | which pages count | the sort order' && !text().includes('even Cal') && text().includes('How many of the 4 will you get right on your own?') && text().includes("Under half? You'll start with a quick warm-up.") && document.querySelectorAll('[data-role=predict-option]').length === 5);
 await act(async () => { document.querySelector('button[data-role=change-focus]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(50);
 step('"change" reopens the focus question', text().includes('What do you want to own here?') && text().includes('When to use LEFT vs INNER'));
@@ -193,7 +198,7 @@ await click('Back to chat');
 await click('New chat');
 step('sidebar has no ledger; home has no go-first chips (Learnings holds it all)', !text().includes('what you chose to own') && !text().includes('New questions that use what you own'));
 await openLearnings();
-step('learnings: a fix shows next to the first try', (document.querySelector('[data-role=learnings]')?.textContent || '').includes('Fixed2 of 2'));
+step('learnings: a fix shows next to the first try', (document.querySelector('[data-role=learnings]')?.textContent || '').includes('Fixed 2 of 2'));
 await click('Try a new question · orders per customer');
 step('go first: Claude offers the first try instead of answering', !!document.querySelector('[data-role=go-first]') && text().includes("Want to go first? I'll check yours") && !text().includes('COUNT(o.id) AS orders'));
 await click("I'll go first");
@@ -262,7 +267,7 @@ await wait(30);
 await ownAll();
 step('book: owning a whole long answer asks what to own', text().includes('What do you want to own here?'));
 await click('The Rule of Five: why a few random samples usually catch the median');
-step('book: focus picked', text().includes('Owning: The Rule of Five: why a few random samples usually catch the median'));
+step('book: focus picked', ownTitle().includes('The Rule of Five: why a few random samples usually catch the median'));
 step('book: predict says the try comes next', text().includes("Claude's answer is your material"));
 await predict(0);
 await wait(50);
@@ -304,7 +309,7 @@ step('juno: each answer rendered once, as prose', document.querySelectorAll('mai
 step('juno: every answer has the own icon', document.querySelectorAll('button[data-role=own-all]').length === 8);
 await ownAll();
 await click('Which side an aggregator owns');
-step('juno: focus picked', text().includes('Owning: Which side an aggregator owns, and why not both'));
+step('juno: focus picked', ownTitle().includes('Which side an aggregator owns, and why not both'));
 await predict(0);
 await wait(50);
 step('juno: starts at the test', text().includes('Vela (made up)') && !!document.querySelector('[data-role=refresher]'));
@@ -407,7 +412,7 @@ step('check it landed: saved under "You asked about" on Learnings', !!document.q
 await click('Own it');
 await wait(50);
 step('one action, one name: the chip is "Own it" too, and the owned answer\'s icon shows it', [...document.querySelectorAll('button[data-role=own-all]')].some(b => b.getAttribute('aria-pressed') === 'true') && text().includes('Own it · When the cleanup runs'));
-step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && text().includes('Owning: When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of the 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-topics] li').length === 3);
+step('check it landed: Own-it on what you asked, no focus question, matched to the hand-written target', !!document.querySelector('[data-role=own-panel]') && ownTitle().includes('When the cleanup runs') && !text().includes('What do you want to own here?') && text().includes('How many of the 3 will you get right on your own?') && document.querySelectorAll('[data-role=predict-topics] li').length === 3);
 await act(async () => { document.querySelector('button[data-role=leave]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(20);
 step('check it landed: once checked, it leaves "You asked about" and the chip goes', !document.querySelector('button[data-role=own-all][data-expanded]'));

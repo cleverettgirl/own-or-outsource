@@ -6,26 +6,37 @@ import EffectTimeline from '../EffectTimeline.jsx';
 
 export default function OwnPanel({ V }) {
   return (
-    <aside data-role="own-panel" style={css(`width:46%;min-width:420px;max-width:760px;flex:none;border-left:1px solid #E3DFD6;background:#FBFAF7;display:flex;flex-direction:column;animation:slidein .25s ease`)}>
-      <div style={css(`display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 22px;border-bottom:1px solid #EEEAE2`)}>
-        <div style={css(`display:flex;align-items:baseline;gap:10px;min-width:0`)}><span style={css(`font-family:Newsreader,serif;font-size:19px;flex:none`)}>Own it</span><span style={css(`font-size:14px;color:#8A847A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>{V.ownTitle}</span></div>
-        <button onClick={V.leaveOwn} data-role="leave" aria-label="Close, back to chat" title="Close, back to chat" style={css(`background:none;border:none;font-size:18px;line-height:1;color:#716C64;padding:4px 6px;border-radius:6px`)} className="hv4">×</button>
+    <aside data-role="own-panel" style={css(`width:46%;min-width:420px;max-width:760px;flex:none;border-left:1px solid #E2DCD0;background:#F7F4EE;display:flex;flex-direction:column;animation:slidein .25s ease`)}>
+      {/* Design 2a: one focal title, big choices. "Own it" alone in the header; what you're owning is the title below. */}
+      <div style={css(`display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 28px;border-bottom:1px solid #E2DCD0;flex:none`)}>
+        <span style={css(`font-family:Newsreader,Georgia,serif;font-size:24px`)}>Own it</span>
+        <button onClick={V.leaveOwn} data-role="leave" aria-label="Close, back to chat" title="Close, back to chat" style={css(`background:none;border:none;font-size:20px;line-height:1;color:#8A8477;padding:4px 6px;border-radius:6px`)} className="hv4">×</button>
       </div>
-      <div ref={V.panelRef} style={css(`flex:1;overflow:auto;padding:20px 22px 28px`)}>
-            <div style={css(`display:flex;flex-direction:column;gap:16px`)}>
-              <div style={css(`display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap`)}>
-                <div data-role="stepper" style={css(`display:flex;align-items:center;gap:6px;flex-wrap:wrap`)}>
-                  {V.stepper.map((st, i) => <React.Fragment key={i}>{i > 0 && <span style={css(`width:14px;height:1px;background:#D9D4CA`)}></span>}<span style={css(`font-size:11.5px;padding:3px 9px;border-radius:99px;background:${st.cur ? '#C4613A' : st.done ? '#F1E3D8' : 'transparent'};color:${st.cur ? '#fff' : st.done ? '#9E4B2A' : '#9A948A'};border:1px solid ${st.cur ? '#C4613A' : st.done ? '#F1E3D8' : '#E3DFD6'}`)}>{st.done ? '✓ ' : ''}{st.label}</span></React.Fragment>)}
-                </div>
-                {V.ownPhaseLabel.startsWith('Try it · ') && <span style={css(`font-size:12px;color:#8A847A`)}>{V.ownPhaseLabel.slice(9)}</span>}
+      <div ref={V.panelRef} style={css(`flex:1;overflow:auto;padding:24px 28px 32px`)}>
+            <div style={css(`display:flex;flex-direction:column;gap:18px`)}>
+              <div data-role="stepper" style={css(`display:flex;align-items:center;font-size:13px`)}>
+                {V.stepper.map((st, i) => <React.Fragment key={i}>
+                  {i > 0 && <span style={css(`flex:1;min-width:12px;height:1px;background:${st.done || st.cur ? '#7FA394' : '#DDD6C8'};margin:0 10px`)}></span>}
+                  <span style={css(`display:flex;align-items:center;gap:6px;white-space:nowrap;color:${st.cur ? '#1F1E1B' : st.done ? '#7FA394' : '#8A8477'};font-weight:${st.cur ? 600 : st.done ? 500 : 400}`)}>
+                    <i style={css(`width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-style:normal;${st.done ? 'background:#7FA394;color:#fff' : st.cur ? 'background:#C4613C;color:#fff' : 'border:1px solid #C9C1B2'}`)}>{st.done ? '✓' : i + 1}</i>{st.label}
+                  </span>
+                </React.Fragment>)}
               </div>
+              {V.ownPhaseLabel.startsWith('Try it · ') && <span style={css(`font-size:12px;color:#8A8477;margin-top:-8px`)}>{V.ownPhaseLabel.slice(9)}</span>}
 
               {/* No copy of Claude's text here: the owned part stays highlighted in the chat itself. */}
-              <div style={css(`display:flex;justify-content:flex-end;margin-bottom:-6px`)}><button onClick={V.rereadChat} data-role="reread" style={css(`background:none;border:none;padding:0;font-size:12px;color:#9E4B2A`)}>← {V.ownWhole ? 'Reread it in your chat' : 'See the highlighted part in your chat'}</button></div>
+              <div style={css(`display:flex;flex-direction:column;gap:10px;padding-top:10px`)}>
+                {!V.phaseFocus && <span style={css(`font-size:12px;font-weight:600;letter-spacing:.06em;color:#8A8477`)}>OWNING</span>}
+                <span data-role="own-title" style={css(`font-family:Newsreader,Georgia,serif;font-size:28px;line-height:1.2;letter-spacing:-.01em`)}>{V.phaseFocus ? 'What do you want to own here?' : V.focusLabel || V.ownTitle}</span>
+                <span style={css(`display:flex;gap:16px;font-size:13px;color:#6B665C`)}>
+                  {!!V.phasePredict && <button onClick={V.changeFocus} data-role="change-focus" style={css(`background:none;border:none;padding:0;font-size:13px;color:#6B665C;text-decoration:underline;text-underline-offset:2px`)}>Change</button>}
+                  <button onClick={V.rereadChat} data-role="reread" style={css(`background:none;border:none;padding:0;font-size:13px;color:#6B665C;text-decoration:underline;text-underline-offset:2px`)}>{V.ownWhole ? 'Reread it in your chat' : 'See the highlighted part in your chat'}</button>
+                </span>
+              </div>
+              <div style={css(`border-top:1px solid #E2DCD0;margin:6px 0 4px`)}></div>
 
               {!!(V.phaseFocus) && (<>
                 <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
-                  <div style={css(`display:flex;justify-content:space-between;align-items:baseline;gap:12px`)}><div style={css(`font-size:14.5px`)}>What do you want to own here?</div></div>
                   {!!(V.focusLoading) && (<><div style={css(`font-size:13px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>Looking at what you highlighted…</div></>)}
                   <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
                     {V.focusOptions.map((f, _i) => (
@@ -43,25 +54,24 @@ export default function OwnPanel({ V }) {
               </>)}
 
               {!!(V.phasePredict) && (<>
-                <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
-                  <div style={css(`display:flex;justify-content:space-between;align-items:baseline;gap:12px`)}><div style={css(`display:flex;flex-direction:column;gap:4px`)}><div style={css(`font-size:12px;color:#9E4B2A`)}>Owning: {V.focusLabel} <button onClick={V.changeFocus} data-role="change-focus" style={css(`background:none;border:none;padding:0;font-size:12px;color:#8A847A;text-decoration:underline;text-underline-offset:2px`)}>change</button></div></div><button onClick={V.leaveOwn} style={css(`background:none;border:none;font-size:13px;color:#8A847A;flex:none`)}>Never mind</button></div>
+                <div style={css(`display:flex;flex-direction:column;gap:18px`)}>
                   {!!V.predictTask && (
-                    <div data-role="predict-try" style={css(`display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #E3DFD6;border-radius:10px;padding:12px 14px`)}>
-                      <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8A847A`)}>Your try</div>
-                      <div style={css(`font-size:14px;line-height:1.5`)}>{V.predictTask}</div>
+                    <div data-role="predict-try" style={css(`display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #E2DCD0;border-radius:12px;padding:16px 18px`)}>
+                      <div style={css(`font-size:11px;font-weight:600;letter-spacing:.06em;color:#8A8477`)}>YOUR TRY</div>
+                      <div style={css(`font-size:14.5px;line-height:1.5`)}>{V.predictTask}</div>
                       <div style={css(`font-size:13px;color:#514C44`)}>{V.predictWhat}</div>
                       {V.predictTopics.length > 0 && <ul data-role="predict-topics" style={css(`margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:#514C44`)}>{V.predictTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>}
                     </div>
                   )}
-                  <div style={css(`font-size:14.5px`)}>{V.predictQuestion}{!!V.predictLow && <span style={css(`font-size:12.5px;color:#8A847A`)}> {V.predictLow}</span>}</div>
-                  <div style={css(`display:flex;gap:6px;max-width:${V.predictOptions.length * 84}px`)}>
-                    {(V.predictOptions || []).map((p, _i) => (<React.Fragment key={_i}>
-                      <button onClick={p.onPick} data-role="predict-option" data-n={p.n} style={css(`flex:1;border:1px solid ${p.border};background:${p.bg};color:${p.fg};border-radius:10px;padding:12px 6px;display:flex;flex-direction:column;gap:3px;align-items:center`)} className="hv3">
-                        <span style={css(`font-family:Newsreader,serif;font-size:20px`)}>{p.n}</span><span style={css(`font-size:11px`)}>{p.label}</span>
+                  <div style={css(`font-size:20px;font-weight:500;line-height:1.3`)}>{V.predictQuestion}</div>
+                  <div style={css(`display:grid;grid-template-columns:repeat(${Math.max(2, V.predictOptions.length)},1fr);gap:10px`)}>
+                    {(V.predictOptions || []).map((p, _i) => (
+                      <button key={_i} onClick={p.onPick} data-role="predict-option" data-n={p.n} aria-pressed={p.selected} style={css(`background:#fff;border:${p.selected ? '2px solid #C4613C' : '1px solid #DDD6C8'};border-radius:12px;height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-sizing:border-box`)} className="hv3">
+                        <span style={css(`font-family:Newsreader,Georgia,serif;font-size:32px;color:${p.selected ? '#C4613C' : '#1F1E1B'}`)}>{p.n}</span><span style={css(`font-size:12px;color:${p.selected ? '#C4613C' : '#8A8477'}`)}>{p.label}</span>
                       </button>
-                    </React.Fragment>))}
+                    ))}
                   </div>
-                  <div style={css(`font-size:12.5px;color:#8A847A`)}>{V.predictHint}</div>
+                  <div style={css(`font-size:14px;line-height:1.55;color:#6B665C`)}>{V.predictHint}{!!V.predictLow && <> {V.predictLow}</>}</div>
                 </div>
               </>)}
 
@@ -435,6 +445,12 @@ export default function OwnPanel({ V }) {
 
             </div>
       </div>
+      {!!V.phasePredict && (
+        <div data-role="predict-footer" style={css(`flex:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 28px 22px;border-top:1px solid #E2DCD0`)}>
+          <button onClick={V.leaveOwn} style={css(`background:none;border:none;padding:0;font-size:14px;color:#8A8477`)}>Never mind</button>
+          <button onClick={V.lockPrediction} data-role="predict-lock" disabled={V.predSel == null} style={css(`background:${V.predSel == null ? '#E2DCD0' : '#C4613C'};color:${V.predSel == null ? '#8A8477' : '#fff'};border:none;border-radius:99px;padding:12px 22px;font-size:15px;font-weight:500;cursor:${V.predSel == null ? 'default' : 'pointer'}`)}>{V.predSel == null ? 'Pick a number to start' : `Lock in ${V.predSel} · start`}</button>
+        </div>
+      )}
     </aside>
   );
 }

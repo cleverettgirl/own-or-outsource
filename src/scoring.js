@@ -25,7 +25,7 @@ export function calibration(ledger) {
   const pc = x => Math.round(x * 100) + '%', d = exp - got;
   const text = `Calibration, across ${items} things you've predicted: you expected to get ${pc(exp)} right and got ${pc(got)}. `
     + (Math.abs(d) < 0.1 ? 'Your predictions track your results.' : d > 0 ? 'Reading feels like knowing; the ledger shows the difference.' : 'You know more than you give yourself credit for.');
-  return { items, text, title: `Brier score ${brier.toFixed(2)} (0 is perfect, 0.25 is a coin flip)` };
+  return { items, text, got: Math.round(got * 100), title: `Brier score ${brier.toFixed(2)} (0 is perfect, 0.25 is a coin flip)` };
 }
 
 export const correctionNote = cs => cs && cs.length ? `Read ${cs.map(c => `“${c.from}” as “${c.to}”`).join(', ')}. Typos don't count against you.` : '';

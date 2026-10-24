@@ -1028,13 +1028,23 @@ export default class App extends React.Component {
         .concat((e.realWork || []).map(r => r.outsourced ? { label: 'Real work', v: 'let Claude answer', tone: 'mute' } : r.n ? { label: 'Real work', v: `went first, ${r.actual} of ${r.n}`, tone: 'act' } : { label: 'Real work', v: 'went first', tone: 'act' }))
         .concat(e.dueAt != null && e.dueAt > now ? [{ label: 'Recall', v: rel(e.dueAt, now), tone: 'next' }] : []);
       const due = e.dueAt != null && e.dueAt <= now, r = S.recall && S.recall.entryId === e.id ? S.recall : null;
-      return { id: e.id, title: e.title, from: e.kind === 'gap' ? e.gap.from : e.own.scenario ? e.own.scenario.title : S.chatTitle, steps, due,
+      // For the map and the card covers: which chat it came from, what kind it is, how soon it comes back.
+      return { sc: e.kind === 'gap' ? 'GAP' : this.scKey(e.own.scenario), target: e.own.focus && e.own.focus.target, kind: e.kind, dueAt: e.dueAt, daysToDue: e.dueAt == null ? null : (e.dueAt - now) / DAY,
+        firstLine: e.kind === 'gap' ? '' : `predicted ${e.predicted} of ${e.n}, got ${e.actual} of ${e.n} on the first try`,
+        id: e.id, title: e.title, from: e.kind === 'gap' ? e.gap.from : e.own.scenario ? e.own.scenario.title : S.chatTitle, steps, due,
         owned: e.ownedAt != null ? `owned ${rel(e.ownedAt, now)}` : '', next: e.dueAt != null && !due ? `next recall ${rel(e.dueAt, now)}` : '',
         onRecall: () => this.startRecall(e), recall: r && r.grade ? { ...r, ...tally(r.grade), full: allRight(r.grade) } : r, then: r ? r.thenLabel : '',
         onNew: key ? () => this.startGoFirst(key) : null, newLabel: key ? GO_FIRST[key].chip : '' };
     });
     const real = S.ledger.flatMap(e => e.realWork || []);
+    // Related questions you haven't tried yet: the "go first" questions what you own unlocks, shown dashed on the map.
+    const untried = [...new Set(items.map(it => it.onNew && it.newLabel).filter(Boolean))].filter(chip => !S.ledger.some(e => (e.realWork || []).length && goFirstFor(e.own.focus && e.own.focus.target) && GO_FIRST[goFirstFor(e.own.focus && e.own.focus.target)].chip === chip))
+      .map(chip => ({ label: chip.split(' · ')[1], parent: items.find(it => it.newLabel === chip).id }));
+    const sorted = S.learnSort === 'due' ? items.slice().sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)) : items;
     return {
+      untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => this.setState(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
+      recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
+      calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
       askedAbout: S.asked.filter(a => !a.checked).map(a => ({ ...a, when: rel(a.at, now), onCheck: () => this.checkLanded(a.id) })),
       openGaps: S.gaps.filter(g => g.status === 'open').map(g => ({ ...g, when: rel(g.at, now), onExplore: () => this.exploreGap(g.id) })),
       saveRecallGap: () => this.recallGap(), exploreRecallGap: () => this.exploreGap(this.recallGap()), gapTopics: S.gaps.map(g => g.topic),
@@ -1140,7 +1150,9 @@ export default class App extends React.Component {
           predictWhat: chk && chk.type === 'choice' ? `${n} ${plural}, on:` : topics ? `It's checked on ${n} ${plural}:` : chk && chk.type === 'explain' ? `Your answer is checked for ${n} ${plural}.` : `It's checked on ${n} ${plural}.`,
           predictQuestion: n === 1 ? 'Will you get it right on your own?' : `How many of the ${n} will you get right on your own?`,
           predictLow: this.frame(o).orderMatters ? 'Under half? You\'ll start with a quick warm-up.' : '',
-          predictOptions: (n === 1 ? [[0, 'Not yet'], [1, 'Yes']] : Array.from({ length: n + 1 }, (_, k) => [k, k === 0 ? 'none' : k === n ? 'all' : ''])).map(([k, l]) => ({ n: k, label: l, onPick: () => this.pickPrediction(k), border: '#E3C9B8', bg: '#fff', fg: '#1F1D1A' })) };
+          predictOptions: (n === 1 ? [[0, 'Not yet'], [1, 'Yes']] : Array.from({ length: n + 1 }, (_, k) => [k, k === 0 ? 'none' : k === n ? 'all' : ''])).map(([k, l]) => ({ n: k, label: n === 1 ? l : k === 0 ? 'none' : k === n ? 'all' : `of ${n}`, selected: o.predSel === k, onPick: () => this.setOwn({ predSel: k }) })),
+          // Pick a number, then lock it in: the choice stays visible and changeable until you start.
+          predSel: o.predSel ?? null, lockPrediction: () => { const k = this.state.own.predSel; if (k != null) this.pickPrediction(k); } };
       })(),
       writeRefresher: o.write.grade ? [] : [...(this.frame(o).orderMatters ? [{ label: 'Warm up with the pieces', onClick: goStep('assemble') }] : []), ...(this.visualStep(o) ? [{ label: 'See it visually', onClick: goStep(this.visualStep(o)) }] : [])],
       askAboutIt: this.askAboutIt, revealVisual: this.visualStep(o) ? goStep(this.visualStep(o)) : null,
