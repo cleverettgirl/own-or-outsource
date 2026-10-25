@@ -23,8 +23,8 @@ export function learningsVals(app) {
       firstLine: e.kind === 'gap' ? '' : `predicted ${e.predicted} of ${e.n}, got ${e.actual} of ${e.n} on the first try`,
       id: e.id, title: e.title, from: e.kind === 'gap' ? e.gap.from : e.own.scenario ? e.own.scenario.title : S.chatTitle, steps, due,
       owned: e.ownedAt != null ? `owned ${rel(e.ownedAt, now)}` : '', next: e.dueAt != null && !due ? `next recall ${rel(e.dueAt, now)}` : '',
-      onRecall: () => app.startRecall(e), recall: r && r.grade ? { ...r, ...tally(r.grade), full: allRight(r.grade) } : r, then: r ? r.thenLabel : '',
-      onNew: key ? () => app.startGoFirst(key) : null, newLabel: key ? GO_FIRST[key].chip : '' };
+      onRecall: () => app.recall.startRecall(e), recall: r && r.grade ? { ...r, ...tally(r.grade), full: allRight(r.grade) } : r, then: r ? r.thenLabel : '',
+      onNew: key ? () => app.goFirst.startGoFirst(key) : null, newLabel: key ? GO_FIRST[key].chip : '' };
   });
   const real = S.ledger.flatMap(e => e.realWork || []);
   // Related questions you haven't tried yet: the "go first" questions what you own unlocks, shown dashed on the map.
@@ -32,15 +32,15 @@ export function learningsVals(app) {
     .map(chip => ({ label: chip.split(' · ')[1], parent: items.find(it => it.newLabel === chip).id }));
   const sorted = S.learnSort === 'due' ? items.slice().sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)) : items;
   return {
-    back: S.learnFrom ? app.backFromLearnings : null, backLabel: S.own ? 'Back to your try' : 'Back to the chat', justOwned: S.justOwned || null,
-    isDemo: app.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => app.setState(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
+    back: S.learnFrom ? app.chat.backFromLearnings : null, backLabel: S.own ? 'Back to your try' : 'Back to the chat', justOwned: S.justOwned || null,
+    isDemo: app.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => app.chat.set(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
     recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
     calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
-    openGaps: S.gaps.filter(g => g.status === 'open').map(g => ({ ...g, when: rel(g.at, now), onExplore: () => app.exploreGap(g.id) })),
-    saveRecallGap: () => app.recallGap(), exploreRecallGap: () => app.exploreGap(app.recallGap()), gapTopics: S.gaps.map(g => g.topic),
+    openGaps: S.gaps.filter(g => g.status === 'open').map(g => ({ ...g, when: rel(g.at, now), onExplore: () => app.gaps.exploreGap(g.id) })),
+    saveRecallGap: () => app.recall.recallGap(), exploreRecallGap: () => app.gaps.exploreGap(app.recall.recallGap()), gapTopics: S.gaps.map(g => g.topic),
     items, empty: !items.length, dueItems: items.filter(it => it.due),
-    onRecallText: e => app.setState(s => ({ recall: { ...s.recall, text: e.target.value } })), onRecallPick: (id, v) => app.setState(s => ({ recall: { ...s.recall, picked: { ...s.recall.picked, [id]: v } } })),
-    askAboutRecall: app.askAboutRecall, resetDemo: app.resetDemo, submitRecall: app.submitRecall, closeRecall: () => app.setState({ recall: null }), skipAhead: app.skipAhead, shifted: S.timeShift > 0, shiftDays: Math.round(S.timeShift / DAY),
+    onRecallText: e => app.recall.set(s => ({ recall: { ...s.recall, text: e.target.value } })), onRecallPick: (id, v) => app.recall.set(s => ({ recall: { ...s.recall, picked: { ...s.recall.picked, [id]: v } } })),
+    askAboutRecall: app.recall.askAboutRecall, resetDemo: app.progress.resetDemo, submitRecall: app.recall.submitRecall, closeRecall: () => app.recall.set({ recall: null }), skipAhead: app.progress.skipAhead, shifted: S.timeShift > 0, shiftDays: Math.round(S.timeShift / DAY),
     stats: [
       { n: S.ledger.filter(e => !e.merged).length, label: 'owned' },
       { n: S.gaps.length, label: 'gaps found by trying' },
