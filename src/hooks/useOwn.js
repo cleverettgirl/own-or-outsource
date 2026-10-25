@@ -56,7 +56,9 @@ export function useOwn(app) {
     // Offline fallback still names what was highlighted (its first words), so it never reads as unrelated.
     const part = o.code.trim().split('\n')[0].replace(/[;,]\s*$/, '').split(/\s+/).slice(0, 4).join(' ');
     const prose = !!(o.scenario && o.scenario.prose);
-    const fallback = prose ? [{ label: `What “${o.code.trim().split(/\s+/).slice(0, 6).join(' ')}…” means`, mode: 'concept' }] : [
+    // Prose is Claude's markdown: the label is plain text, so emphasis, inline code and heading/list/quote marks go.
+    const words = o.code.replace(/[*`]+|^\s*(#+|>|[-+]|\d+\.)\s+/gm, ' ').trim().split(/\s+/);
+    const fallback = prose ? [{ label: `What “${words.slice(0, 6).join(' ')}…” means`, mode: 'concept' }] : [
       { label: `What ${part} does and when to use it`, mode: 'concept' },
       ...(isMultiLine(o.code) ? [{ label: "The whole thing: each part and why it's in that order", mode: 'sequence', whole: true }] : []),
       ...(o.scenario === SQL ? [{ label: SQL_TARGETS.whole.label, mode: 'sequence', target: 'whole' }] : []),
@@ -92,7 +94,7 @@ export function useOwn(app) {
   // The try is prepared as soon as the focus is known, so the prediction can say what you'll be asked to do.
   function pickFocus(focus) {
     const changed = !app.state.own.focus || app.state.own.focus.label !== focus.label;
-    setOwn(cur => ({ focus, phase: 'predict', ...(changed ? { write: { ...cur.write, task: '', ref: '', schema: '', before: '', after: '', placeholder: '', check: null, authoredHints: null, format: null } } : {}) }), () => loadWriteTask());
+    setOwn(cur => ({ focus, phase: 'predict', ...(changed ? { write: { ...cur.write, task: '', ref: '', schema: '', before: '', after: '', placeholder: '', check: null, authoredHints: null, format: null, sample: '' } } : {}) }), () => loadWriteTask());
   }
   // The hand-written learning target for this focus, if there is one (see targets.js).
   const targetOf = (o = app.state.own) => o && o.focus && o.focus.target ? TARGETS[o.focus.target] || null : null;
@@ -241,7 +243,7 @@ export function useOwn(app) {
       // and keep whichever gives less away (a retry that fails or comes back worse leaves the first one).
       const tells = x => x.format === 'choice' ? longestIsRight(x.questions) : 0;
       if (tells(r) >= 2) { try { const again = await ask('writeTask', input); if (tells(again) < tells(r)) r = again; } catch (e) { /* keep the first */ } }
-      const fmt = ['code', 'choice', 'explain', 'steps'].includes(r.format) ? r.format : 'explain';
+      const fmt = ['code', 'choice', 'explain', 'steps'].includes(r.format) ? r.format : r.format === 'respond' ? 'respond' : 'explain';
       let patch = { task: r.task, schema: String(r.context || '').trim(), format: fmt, loading: false, orderMatters: !!r.orderIsInsight };
       if (fmt === 'code') patch = { ...patch, ref: r.reference || '', requirements: (r.requirements || []).filter(Boolean).slice(0, 4) };
       if (fmt === 'choice') {
@@ -255,6 +257,9 @@ export function useOwn(app) {
         const steps = (r.steps || []).slice(0, 4).map((x, i) => ({ id: 's' + i, label: String(x.label || ''), answer: Number(x.answer), unit: x.unit === '%' ? '%' : '', how: x.how || '' })).filter(x => x.label && Number.isFinite(x.answer));
         patch = steps.length ? { ...patch, ref: steps.map(x => `${x.label}: ${x.answer}${x.unit}`).join('\n'), check: { type: 'steps', steps } } : { ...patch, format: 'explain', check: { type: 'explain', question: r.task, keyPoints: [] } };
       }
+      // A people skill: you write what you'd say or do in the scenario. It's checked like an explanation (key moves,
+      // quoted from your words), and a sample is shown after as one way to say it, never as the answer.
+      if (fmt === 'respond') patch = { ...patch, format: 'explain', sample: String(r.sample || '').trim(), placeholder: "Write what you'd say or do next, the way you'd actually say it.", check: { type: 'explain', respond: true, question: r.task, keyPoints: (r.keyPoints || []).slice(0, 3), topics: (r.keyTopics || []).slice(0, 3).map(String) } };
       if (fmt === 'explain') patch = { ...patch, placeholder: 'Explain it in your own words, and apply it to the new case.', check: { type: 'explain', question: r.task, keyPoints: (r.keyPoints || []).slice(0, 3), topics: (r.keyTopics || []).slice(0, 3).map(String) } };
       setOwn(cur => ({ write: { ...cur.write, ...patch } }));
     } catch (e) {
@@ -285,7 +290,7 @@ export function useOwn(app) {
       if (o.write.check.type === 'explain') {
         const res = await judgeGap({ topic: o.focus ? o.focus.label : '' }, o.write.check, o.write.text);
         const ok = res.points.filter(p => p.ok);
-        const items = o.write.check.keyPoints.length ? o.write.check.keyPoints.map((p, i) => ({ short: p, ok: !!(res.points[i] && res.points[i].ok) })) : [{ short: 'Explains the idea and applies it', ok: res.closed }];
+        const items = o.write.check.keyPoints.length ? o.write.check.keyPoints.map((p, i) => ({ short: p, ok: !!(res.points[i] && res.points[i].ok), quote: (res.points[i] && res.points[i].evidence) || '' })) : [{ short: 'Explains the idea and applies it', ok: res.closed }];
         g = { items, score: !res.points.length ? 2 : res.closed ? 5 : ok.length ? 3 : 2, why: res.closed ? 'Your answer has every key idea.' : ok.length ? 'Some of the key ideas are there, not all.' : res.points.length ? "The key ideas aren't there yet." : "This couldn't be checked just now.",
           worked: '', gap: res.feedback, corrections: [] }; // what was covered is the ✓ list itself
       } else

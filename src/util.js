@@ -18,7 +18,7 @@ export const isPickCheck = c => !!c && ['choice', 'steps'].includes(c.type);
 const STEP_LABELS = { read: 'Read it', assemble: 'Assemble it', write: 'Write it' };
 
 // The try's name follows what you do in it: picking answers isn't writing.
-export const stepLabel = (o, step) => step !== 'write' ? STEP_LABELS[step] : (o && o.write && o.write.check ? { choice: 'Answer it', explain: 'Explain it', number: 'Work it out', steps: 'Work it out' }[o.write.check.type] : null) || 'Write it';
+export const stepLabel = (o, step) => step !== 'write' ? STEP_LABELS[step] : (o && o.write && o.write.check ? { choice: 'Answer it', explain: o.write.check.respond ? 'Handle it' : 'Explain it', number: 'Work it out', steps: 'Work it out' }[o.write.check.type] : null) || 'Write it';
 
 // Owning the same thing again is one thing you own, with a history: the latest attempt is the live entry (its
 // recall schedule, its card); earlier ones are folded into it as "Earlier" and leave the schedule. They stay in

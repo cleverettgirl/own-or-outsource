@@ -2,7 +2,7 @@
 // short explanations shown on the reveal. Pure functions, shared by the app and its views.
 
 // How each kind of try is checked, shown as a tooltip on the reveal's explanation.
-export const SCALES = { number: 'Checked by comparing your number with the answer', choice: 'Checked against the answer key; each wrong pick has its own explanation', explain: 'Checked by Claude for each key idea, quoting your own words as evidence', sql: 'Checked by running your query on sample data and testing the rows it returns', steps: 'Checked by comparing each step\'s number with the answer' };
+export const SCALES = { number: 'Checked by comparing your number with the answer', choice: 'Checked against the answer key; each wrong pick has its own explanation', explain: 'Checked by Claude for each key idea, quoting your own words as evidence', respond: 'Checked by Claude for each key move, in any wording, quoting your own words as evidence', sql: 'Checked by running your query on sample data and testing the rows it returns', steps: 'Checked by comparing each step\'s number with the answer' };
 
 
 // Rubric meanings for the model grader, so its scores come with a reason too.

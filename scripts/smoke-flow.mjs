@@ -798,6 +798,37 @@ for (const [chip, prompt] of [['Parenting · a meltdown leaving the park', "melt
   await click('×');
 }
 
+// ---- A people skill is done, not picked: you write what you'd say, it's checked for key moves quoted from your words,
+// and a sample is shown after as one way to say it.
+{
+  await click('New chat');
+  const reply = "Okay, let's go. I can see you're sad to leave. Do you want to race me to the gate or hop like a frog?";
+  globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body);
+    const text = b.task === 'chat' ? 'Connect first, then redirect: name the feeling in a few words, then offer a choice about how you leave.'
+      : b.task === 'focusOptions' ? JSON.stringify({ personal: false, spot: '', options: [{ label: 'Connecting before redirecting', mode: 'concept' }] })
+      : b.task === 'writeTask' ? JSON.stringify({ orderIsInsight: false, format: 'respond', task: 'Now a new situation: your 4-year-old is crying because the library is closing. What do you say next?', context: '',
+          keyPoints: ['Names the feeling briefly', 'Offers a choice about how to leave, not whether'], keyTopics: ['the feeling', 'what the child gets to choose'], sample: 'SAMPLE: You love it here. Shall we tiptoe out or walk like giants?' })
+      : b.task === 'gapJudge' ? JSON.stringify({ points: [{ point: 'Names the feeling briefly', evidence: "I can see you're sad to leave" }, { point: 'Offers a choice', evidence: null }], feedback: 'What could they choose about leaving?' })
+      : '{}';
+    return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ text }) }; };
+  await click('Parenting · a meltdown leaving the park'); await wait(150);
+  await ownAll(); await wait(100);
+  await click('Connecting before redirecting'); await wait(150);
+  const tryText = document.querySelector('[data-role=predict-try]')?.textContent || '';
+  step('respond: a people skill gets a scenario to act in, checked on key moves named by topic, without the moves or the sample', tryText.includes('library is closing') && text().includes('key moves') && tryText.includes('what the child gets to choose') && !text().includes('Offers a choice') && !text().includes('SAMPLE'));
+  await predict(1);
+  const box = document.querySelector('textarea[data-role=write]');
+  step("respond: you write it in your own words, in a prose box, not pick it", !!box && box.placeholder.includes("what you'd say or do") && !box.className.includes('font-mono') && !document.querySelector('[data-role=choice-q]'));
+  await type(box, reply);
+  await click('Check my version'); await wait(200);
+  globalThis.fetch = offline;
+  const quote = document.querySelector('[data-role=item-quote]');
+  step('respond: the reveal quotes your words for the move you made, and marks the one you missed', !!quote && quote.textContent.includes("sad to leave") && text().includes('✗') && document.querySelector('[data-role=items]')?.title.includes('key move'));
+  const sample = document.querySelector('[data-role=sample]');
+  step('respond: a sample is offered after, as one way to say it, closed until you open it', !!sample && !sample.open && sample.textContent.includes('One way to say it') && sample.textContent.includes('SAMPLE'));
+  await click('×');
+}
+
 // ---- A personal topic has no answer key: recognition practice on made-up people, nothing scored (research §13).
 {
   await click('New chat');

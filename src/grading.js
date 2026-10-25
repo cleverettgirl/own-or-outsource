@@ -62,7 +62,7 @@ export async function judgeGap(g, check, answer) {
   try {
     if (!check.keyPoints.length) throw new Error('no key points');
     const r = await ask('gapJudge', { topic: g.topic, question: check.question, keyPoints: check.keyPoints, answer });
-    const points = check.keyPoints.map((p, i) => { const x = (r.points || [])[i] || {}; return { point: p, ok: !!quoted(x.evidence) }; });
+    const points = check.keyPoints.map((p, i) => { const x = (r.points || [])[i] || {}; return { point: p, ok: !!quoted(x.evidence), evidence: quoted(x.evidence) ? String(x.evidence) : '' }; });
     return { points, closed: points.every(p => p.ok), feedback: r.feedback || '' };
   } catch (e) {
     if (isColdStart(g)) { const r = judgeColdStartOffline(answer); const points = r.points.map(p => ({ point: p.point, ok: !!p.evidence })); return { points, closed: points.every(p => p.ok), feedback: r.feedback }; }

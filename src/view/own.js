@@ -13,7 +13,7 @@ export function ownVals(app, o) {
 
   // Predict: you predict about the try itself. It's shown, with what it will be checked on, so "these" points at something.
   const n = app.own.plannedItems(o).length, topics = app.own.plannedTopics(o);
-  const thing = chk && chk.type === 'choice' ? 'question' : chk && chk.type === 'steps' ? 'step' : chk && chk.type === 'explain' ? 'key idea' : chk && chk.type === 'sql' ? 'thing' : 'requirement';
+  const thing = chk && chk.type === 'choice' ? 'question' : chk && chk.type === 'steps' ? 'step' : chk && chk.respond ? 'key move' : chk && chk.type === 'explain' ? 'key idea' : chk && chk.type === 'sql' ? 'thing' : 'requirement';
   const plural = n === 1 ? thing : thing + 's';
   const predict = w.loading || (!w.task && !chk) ? { predictQuestion: 'Preparing your try…', predictTask: '', predictTopics: [], predictWhat: '', predictOptions: [] } : {
     predictTask: w.task, predictTopics: topics || [],
@@ -74,7 +74,7 @@ export function ownVals(app, o) {
     writeIsChoice: !!(chk && chk.type === 'choice'), writeIsSteps: !!(chk && chk.type === 'steps'), writeSteps: chk && chk.steps ? chk.steps : [], writeQs: chk && chk.questions ? chk.questions : [], writePicked: w.picked,
     onWritePick: (id, val) => app.own.setOwn(cur => ({ write: { ...cur.write, picked: { ...cur.write.picked, [id]: val } } })),
     writeBefore: w.before, writeAfter: w.after, writePlaceholder: w.placeholder || 'Write it here. Ask for a hint any time; hints are part of learning, not cheating.',
-    writeTask: w.task, writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => app.own.setOwn(cur => ({ write: { ...cur.write, text: e.target.value } })),
+    writeTask: w.task, writeProse: !!(chk && chk.type === 'explain'), writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => app.own.setOwn(cur => ({ write: { ...cur.write, text: e.target.value } })),
     hasHints: w.hints.length > 0, hints: w.hints.map((h, i) => ({ t: h, n: i + 1 })), askHint: app.own.askHint, submitWrite: app.own.submitWrite,
     writeNotGraded: !w.grade, gradeLoading: w.gradeLoading || w.hintLoading, gradeLoadingText: w.hintLoading ? 'thinking of a hint…' : 'grading fairly…',
     revealHeadline: g1.judgedByClaude ? "It didn't run, so Claude judged it." : g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
@@ -86,8 +86,8 @@ export function ownVals(app, o) {
     // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
     revealWhy: g.didntRun || (picks && (g1.items || []).length) ? '' : g.why || RUBRIC_WHY[g.score] || '',
     revealNotes: [...(g.worked && !picks ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
-    revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : chk && SCALES[chk.type] ? SCALES[chk.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
-    revealCorrection: correctionNote(g.corrections), revealTables,
+    revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : chk && chk.respond ? SCALES.respond : chk && SCALES[chk.type] ? SCALES[chk.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
+    revealCorrection: correctionNote(g.corrections), revealTables, revealSample: chk && chk.respond ? w.sample || '' : '',
     revealLine: g1.revealLine, hasGap: !!g.gap, gradeGap: g.gap,
     // Feedback of any kind (a gap, or a note on how you wrote it) is worth following up, even on a full score.
     canAsk: !!g.gap || !allRight(g) || (w.notes || []).some(x => x.kind !== 'nice'), yourAnswer: app.own.attemptText(o) || '', yourAnswerMono: !(chk && ['choice', 'steps', 'explain', 'number'].includes(chk.type)) && app.own.isCodeOwn(o), finishOwn: app.own.finishOwn, goTeach: app.own.goTeach,

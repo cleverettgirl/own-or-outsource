@@ -75,7 +75,8 @@ export default function Chat({ V }) {
                 {!!m.showTip && (
                   <div data-role="own-tip" className="self-start flex items-center gap-2.5 text-[13px] leading-[1.45] text-accent-deep bg-accent-soft border border-accent-soft-2 rounded-[10px] py-2 pr-2.5 pl-3 -mt-1 animate-rise">
                     <span className="text-accent flex"><OwnIcon /></span>
-                    <span>Want to actually learn part of this? Highlight it, or use <span className="text-accent">this icon</span> to own the whole answer. You'll try it yourself and see what stuck.</span>
+                    {/* Highlighting to own needs a mouse, so touch screens only hear about the icon. */}
+                    <span>Want to actually learn <span className="pointer-coarse:hidden">part of this? Highlight it, or use</span><span className="hidden pointer-coarse:inline">this? Use</span> <span className="text-accent">this icon</span> to own the whole answer. You'll try it yourself and see what stuck.</span>
                     <button onClick={V.dismissTip} aria-label="Dismiss tip" className="bg-transparent border-none text-accent-mid text-[15px] py-0 px-0.5">×</button>
                   </div>
                 )}

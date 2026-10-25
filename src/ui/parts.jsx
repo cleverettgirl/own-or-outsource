@@ -145,7 +145,7 @@ export function ItemList({ items, ownedNote = '', title }) {
       {items.map((it, i) => (
         <div key={i} className={`flex gap-2 items-baseline text-[13.5px] leading-[1.45] ${it.ok ? 'text-ink' : it.unchecked ? 'text-muted' : 'text-accent-text'}`}>
           <span className={`flex-none w-3.5 ${it.ok ? 'text-good' : it.unchecked ? 'text-faint' : 'text-accent'}`}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
-          <span>{it.short}{it.blank ? <span className="text-muted"> (left blank)</span> : null}{it.unchecked ? <span className="text-muted"> (not checked: it didn't run)</span> : null}{it.judged ? <span className="text-muted"> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span className="text-[12px] text-muted"> · {ownedNote}</span> : null}</span>
+          <span>{it.short}{it.blank ? <span className="text-muted"> (left blank)</span> : null}{it.unchecked ? <span className="text-muted"> (not checked: it didn't run)</span> : null}{it.judged ? <span className="text-muted"> (judged by Claude)</span> : null}{it.ok && it.quote ? <span data-role="item-quote" className="text-muted"> · <i>“{it.quote}”</i></span> : null}{it.owned && ownedNote ? <span className="text-[12px] text-muted"> · {ownedNote}</span> : null}</span>
         </div>
       ))}
     </div>

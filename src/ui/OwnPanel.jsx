@@ -142,7 +142,7 @@ export default function OwnPanel({ V }) {
                     {!!V.writeBefore && <pre className={`${PRE} text-[13px] leading-[1.55] text-muted`}>{V.writeBefore}</pre>}
                     {!!V.writeIsChoice && <ChoiceQuestions qs={V.writeQs} picked={V.writePicked} onPick={V.onWritePick} />}
                     {!!V.writeIsSteps && <StepInputs steps={V.writeSteps} entered={V.writePicked} onEnter={V.onWritePick} />}
-                    {!V.writeIsChoice && !V.writeIsSteps && <textarea data-role="write" value={V.writeText} onChange={V.onWriteText} placeholder={V.writePlaceholder} className={`w-full resize-y border border-accent-border rounded-lg py-2.5 px-3 font-mono text-[13px] bg-surface outline-none leading-[1.55] ${V.writeBefore ? 'min-h-18' : 'min-h-30'}`}></textarea>}
+                    {!V.writeIsChoice && !V.writeIsSteps && <textarea data-role="write" value={V.writeText} onChange={V.onWriteText} placeholder={V.writePlaceholder} className={`w-full resize-y border border-accent-border rounded-lg py-2.5 px-3 ${V.writeProse ? 'text-[14px]' : 'font-mono text-[13px]'} bg-surface outline-none leading-[1.55] ${V.writeBefore ? 'min-h-18' : 'min-h-30'}`}></textarea>}
                     {!!V.writeAfter && <pre className={`${PRE} text-[13px] leading-[1.55] text-muted`}>{V.writeAfter}</pre>}
                     {!!V.hasHints && (
                       <div className="flex flex-col gap-[5px]">
@@ -197,6 +197,12 @@ export default function OwnPanel({ V }) {
                     <details data-role="your-answer" className="text-[13.5px] text-ink-2">
                       <summary className="cursor-pointer text-[13px] text-muted">Your answer</summary>
                       <div className={`mt-1.5 bg-sunken rounded-lg py-[9px] px-3 whitespace-pre-wrap leading-normal ${V.yourAnswerMono ? 'font-mono text-[12.5px]' : ''}`}>{V.yourAnswer}</div>
+                    </details>
+                  )}
+                  {!!V.revealSample && (
+                    <details data-role="sample" className="text-[13.5px] text-ink-2">
+                      <summary className="cursor-pointer text-[13px] text-muted">One way to say it (not the only right one)</summary>
+                      <div className="mt-1.5 bg-sunken rounded-lg py-[9px] px-3 whitespace-pre-wrap leading-normal">{V.revealSample}</div>
                     </details>
                   )}
                   {!!V.hasGap && <div className={BODY}><b className="text-accent-text">What to fix:</b> {inline(V.gradeGap || '')}</div>}
