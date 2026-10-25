@@ -4,11 +4,8 @@
 // Each step reads its own part of the spec, so no step has to guess what is being learned:
 //
 //   label     what the learner said they want to own
-//   kind      'concept'   choosing between alternatives  → read · compare · write
-//             'sequence'  composing parts in order        → read · see · assemble · write
-//   explain   Read it: mental model, the one dimension the alternatives differ on, why it fits
-//             the learner's own query, a rule of thumb. No results: Compare asks for those.
-//   compare   Compare it: the alternatives run on the same data; the learner predicts each first
+//   kind      'concept'   choosing between alternatives  → write
+//             'sequence'  composing parts in order        → assemble · write
 //   write     Write it: a NEW situation where the target decides the answer. Everything that
 //             isn't the target is given (before/after), so the reveal measures only the target.
 //   delayed   "3 days later": a second transfer task on the same target
@@ -16,16 +13,16 @@
 //             the classic wrong answers, recognised by their result rows, each with its own gap.
 //
 // The SQL starter's targets are written by hand, so they are reliably correct. For anything else
-// Claude fills the same fields (see App.jsx: loadConcept, loadCompare, loadWriteTask).
+// Claude fills the same fields (see App.jsx: loadWriteTask).
 
-// ---- data: one schema shared by Compare, Write it and the checker -------------------------
+// ---- data: one schema shared by Write it and the checker -------------------------
 // customers/orders: Ada has a paid and a refunded order, Bo one paid, Cy only a refunded one,
 // Dee none, and orders 5 and 6 belong to a deleted customer (id 9). Every join differs.
-export const CUSTOMERS = [[1, 'Ada'], [2, 'Bo'], [3, 'Cy'], [4, 'Dee']];
-export const ORDERS = [[1, 1, 320, 'paid'], [2, 1, 140, 'refunded'], [3, 2, 150, 'paid'], [4, 3, 90, 'refunded'], [5, 9, 80, 'paid'], [6, 9, 60, 'paid']];
+const CUSTOMERS = [[1, 'Ada'], [2, 'Bo'], [3, 'Cy'], [4, 'Dee']];
+const ORDERS = [[1, 1, 320, 'paid'], [2, 1, 140, 'refunded'], [3, 2, 150, 'paid'], [4, 3, 90, 'refunded'], [5, 9, 80, 'paid'], [6, 9, 60, 'paid']];
 // authors/books, for the whole-query task: Cal has only a draft, so he must show up with 0.
-export const AUTHORS = [[1, 'Ann'], [2, 'Ben'], [3, 'Cal'], [4, 'Dot']];
-export const BOOKS = [[1, 1, 320, 'published'], [2, 1, 180, 'published'], [3, 2, 240, 'published'], [4, 2, 90, 'draft'], [5, 3, 150, 'draft'], [6, 4, 60, 'published']];
+const AUTHORS = [[1, 'Ann'], [2, 'Ben'], [3, 'Cal'], [4, 'Dot']];
+const BOOKS = [[1, 1, 320, 'published'], [2, 1, 180, 'published'], [3, 2, 240, 'published'], [4, 2, 90, 'draft'], [5, 3, 150, 'draft'], [6, 4, 60, 'published']];
 
 const lit = v => typeof v === 'number' ? String(v) : `'${v}'`;
 const insert = (table, rows) => `INSERT INTO ${table} VALUES ${rows.map(r => `(${r.map(lit).join(', ')})`).join(', ')};`;
@@ -39,34 +36,6 @@ export const SCHEMA_SQL = [
 
 const SHOP_SCHEMA = 'customers(id, name)\norders(id, customer_id, total, status)   -- status is \'paid\' or \'refunded\'';
 
-// ---- compare: computed in JS so the visual never depends on the SQL engine loading ---------
-const NULL = 'NULL';
-const HEADERS = ['c.name', 'o.id', 'o.total', 'o.status'];
-function join(type, { onExtra = () => true, where = () => true } = {}) {
-  const custs = CUSTOMERS.map(([id, name]) => ({ id, name }));
-  const ords = ORDERS.map(([id, cid, total, status]) => ({ id, cid, total, status }));
-  const match = (c, o) => o.cid === c.id && onExtra(o);
-  const rows = [];
-  if (type === 'right') {
-    for (const o of ords) {
-      const cs = custs.filter(c => match(c, o));
-      if (cs.length) cs.forEach(c => rows.push({ c, o })); else rows.push({ c: null, o });
-    }
-  } else {
-    for (const c of custs) {
-      const os = ords.filter(o => match(c, o));
-      if (os.length) os.forEach(o => rows.push({ c, o }));
-      else if (type === 'left') rows.push({ c, o: null });
-    }
-  }
-  return rows.filter(r => where(r.o)).map(r => [r.c ? r.c.name : NULL, r.o ? r.o.id : NULL, r.o ? '$' + r.o.total : NULL, r.o ? r.o.status : NULL]);
-}
-const SOURCE = {
-  customers: { headers: ['id', 'name'], rows: CUSTOMERS.map(r => r.map(String)) },
-  orders: { headers: ['id', 'customer_id', 'total', 'status'], rows: ORDERS.map(([id, cid, total, status]) => [String(id), String(cid), '$' + total, status]) },
-};
-const kept = t => ({ t, strong: true }); // emphasised grid cell
-
 // ---- items: what each SQL try asks for, tested on the rows the learner's query returns ----------------
 // Rows are tested by the values in them, so column order and aliases don't matter. owned marks the item that
 // is the idea the learner came to own; the reveal leads with it (sqlCheck.js). topic names the item before the try
@@ -75,36 +44,13 @@ export const has = (rows, v) => rows.some(r => r.includes(v));
 export const rowWith = (rows, v) => rows.find(r => r.includes(v));
 const num = r => { const c = r.find(x => /^-?\d+(\.\d+)?$/.test(x)); return c == null ? -Infinity : Number(c); };
 // Sorted biggest first by the row's number (NULL counts as smallest, as SQLite sorts it with DESC).
-export const descending = rows => rows.every((r, i) => i === 0 || num(rows[i - 1]) >= num(r));
+const descending = rows => rows.every((r, i) => i === 0 || num(rows[i - 1]) >= num(r));
 
 // ---- the targets ------------------------------------------------------------------------------
 export const SQL_TARGETS = {
   joins: {
     label: 'When to use LEFT vs INNER vs RIGHT JOIN', kind: 'concept',
-    // The Own-it framework (research §8f): three answers decide the steps.
-    producingIsSkill: true, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: "A join pairs rows that match. The join type only decides what happens to the rows that don't match.",
-      grid: { headers: ['', 'unmatched customers', 'unmatched orders'], rows: [
-        ['INNER JOIN', 'dropped', 'dropped'],
-        ['LEFT JOIN', kept('kept, with NULLs'), 'dropped'],
-        ['RIGHT JOIN', 'dropped', kept('kept, with NULLs')],
-      ] },
-      inYourCode: "You asked for customers who haven't bought anything to still show up with $0. So customers is the table that must keep every row: it comes first, and the join is LEFT.",
-      rule: "Ask which table must keep every row. Put it first and use LEFT JOIN. RIGHT JOIN is the same thing with the tables swapped, which is why it's rarely written.",
-    },
-    compare: {
-      intro: 'Same two tables, three joins. Before each result appears, guess how many rows come back.',
-      source: SOURCE,
-      cases: [
-        { label: 'INNER JOIN', code: 'FROM customers c\nJOIN orders o ON o.customer_id = c.id', headers: HEADERS, rows: join('inner'),
-          note: 'Only pairs that match on both sides. Dee has no orders and orders 5 and 6 have no customer, so all three disappear.' },
-        { label: 'LEFT JOIN', code: 'FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id', headers: HEADERS, rows: join('left'),
-          note: 'Every customer stays, matched or not. Dee comes back with NULLs. The orphan orders are still gone: LEFT only protects the left table.' },
-        { label: 'RIGHT JOIN', code: 'FROM customers c\nRIGHT JOIN orders o ON o.customer_id = c.id', headers: HEADERS, rows: join('right'),
-          note: 'The mirror image: every order stays, so orders 5 and 6 appear with a NULL customer, and Dee is gone again. Most people write it as a LEFT JOIN with the tables swapped.' },
-      ],
-    },
+    writtenOrderMatters: false,
     // The transfer: this time ORDERS must keep every row. Copying "customers first" gets it wrong.
     write: {
       task: "Now a new situation: list every order with its customer's name, including orders whose customer was deleted. Write the FROM and JOIN.",
@@ -138,28 +84,7 @@ export const SQL_TARGETS = {
     label: "Why status = 'paid' goes in ON, not WHERE", kind: 'concept',
     // The label is tied to this example; a new question that needs it (You go first) names the idea in general.
     idea: 'Filtering in ON vs WHERE with a LEFT JOIN',
-    producingIsSkill: true, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: 'ON decides which rows count as a match. WHERE runs afterwards and filters the joined result, including the NULL rows a LEFT JOIN added.',
-      grid: { headers: ['', 'runs', "sees the LEFT JOIN's NULL rows?", "effect of status = 'paid'"], rows: [
-        ['in ON', 'during the join', "no, they don't exist yet", kept('unpaid orders stop matching; the customer stays')],
-        ['in WHERE', 'after the join', 'yes', "NULL = 'paid' is never true, so customers with no paid order are dropped"],
-      ] },
-      inYourCode: "You wanted customers with no paid orders to stay in the result at $0. With the filter in ON they stay; in WHERE they'd vanish.",
-      rule: 'Filtering the right-hand table of a LEFT JOIN? Put it in ON. In WHERE it quietly turns the LEFT JOIN into an INNER JOIN.',
-    },
-    compare: {
-      intro: 'The same LEFT JOIN with the paid filter in three places. Before each result appears, guess how many rows come back.',
-      source: SOURCE,
-      cases: [
-        { label: 'No filter', code: 'FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id', headers: HEADERS, rows: join('left'),
-          note: 'The baseline: every customer, with every order they have, refunded ones included.' },
-        { label: "'paid' in ON", code: "FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\n  AND o.status = 'paid'", headers: HEADERS, rows: join('left', { onExtra: o => o.status === 'paid' }),
-          note: "The filter decides what counts as a match. Refunded orders stop matching, but Cy and Dee still survive with NULLs because it's a LEFT JOIN." },
-        { label: "'paid' in WHERE", code: "FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.status = 'paid'", headers: HEADERS, rows: join('left', { where: o => !!o && o.status === 'paid' }),
-          note: "WHERE runs after the join, on every row. Cy and Dee's rows have status NULL, and NULL = 'paid' is never true, so they're thrown out. The LEFT JOIN quietly became an INNER JOIN." },
-      ],
-    },
+    writtenOrderMatters: false,
     // The transfer: a different status, so the learner has to place the filter, not copy it.
     write: {
       task: 'Now a new situation: list every customer with their refunded orders only. Customers with no refunded order should still appear, with NULLs. Write the FROM, JOIN and filter.',
@@ -193,11 +118,11 @@ export const SQL_TARGETS = {
     },
   },
 
-  // The whole query, as a sequence. No explain/compare: it uses the run-through and the puzzle.
+  // The whole query, as a sequence.
   whole: {
     label: "The whole query: each part and why it's in that order", kind: 'sequence',
     // Written order (SELECT first) differs from execution order (FROM first): rebuilding it is the warm-up.
-    producingIsSkill: true, writtenOrderMatters: true, visual: 'see',
+    writtenOrderMatters: true,
     // Arrange: the lines of Claude's real answer, plus one decoy that is the classic mistake.
     assemble: { lines: ['SELECT c.id, c.name, COALESCE(SUM(o.total), 0) AS revenue', 'FROM customers c', 'LEFT JOIN orders o ON o.customer_id = c.id', "  AND o.status = 'paid'", 'GROUP BY c.id, c.name', 'ORDER BY revenue DESC;'], distractor: "WHERE o.status = 'paid'", why: "In one line: why does status = 'paid' live in ON rather than WHERE?" },
     write: {

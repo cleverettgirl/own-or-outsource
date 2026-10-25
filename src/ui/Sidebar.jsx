@@ -1,6 +1,6 @@
 // The left sidebar: new chat, Learnings (with its recall badge), past chats.
-import React from 'react';
-import { NAV_ICONS, OwnIcon, NAV } from './parts.jsx';
+import { NAV_ICONS, OwnIcon } from './parts.jsx';
+import { NAV } from './styles.js';
 
 export default function Sidebar({ V }) {
   return (

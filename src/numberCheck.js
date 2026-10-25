@@ -1,7 +1,6 @@
 // Scores a numeric answer by comparing numbers, not by asking a model: the calculated sibling of
 // sqlCheck.js. Same result shape (score, why, worked, gap), so the reveal treats them alike.
 
-export const NUMBER_SCALE = '5 right number · 3 a number, but a different one · 2 no number to check · 1 nothing yet';
 const WHY = {
   5: 'Every number matches the answer.',
   3: "You gave a number, but it isn't the one the task asks for.",

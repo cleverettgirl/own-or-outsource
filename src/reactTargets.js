@@ -1,12 +1,12 @@
 // Learning target for the React starter: when the effect's cleanup runs, and why it aborts the request.
 // The try checks the timing in a new situation with reasoning questions, not "write a component": knowing
 // WHEN code runs is a different skill from producing it (process log 42). Wrong options are the classic
-// misconceptions, each with its own explanation. The visual for it is the timeline (EffectTimeline.jsx).
+// misconceptions, each with its own explanation.
 export const REACT_TARGETS = {
   timing: {
     label: 'When the cleanup runs, and why it aborts the request', kind: 'sequence',
-    // The Own-it framework (research §8f): the RUNTIME order is the insight, so it's a visual (the timeline), not Arrange.
-    producingIsSkill: false, writtenOrderMatters: false, visual: 'timeline',
+    // The Own-it framework (research §8f): the RUNTIME order is the insight, not the written order, so no Arrange.
+    writtenOrderMatters: false,
     write: {
       task: 'Now a new situation: a SearchResults component fetches results for a `query` prop with the same useEffect + AbortController pattern. You type "c", then quickly "ca", then "cat".',
       hints: ['When a dependency changes, React has two things to do: clean up the old run and start the new one. In which order?', "What does the cleanup do to a request that hasn't finished yet?", 'Cleanup also runs at one other moment. When?'],

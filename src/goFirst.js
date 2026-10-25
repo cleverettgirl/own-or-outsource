@@ -13,7 +13,7 @@ import { has, rowWith } from './targets.js';
 
 export const GO_FIRST = {
   sql: {
-    targets: ['joins', 'onwhere', 'whole'], producingIsSkill: true,
+    targets: ['joins', 'onwhere', 'whole'],
     chip: 'SQL · orders per customer',
     question: 'Write me a SQL query: the number of orders per customer, including customers with no orders (they should show 0).',
     lang: 'sql', schema: "customers(id, name)\norders(id, customer_id, total, status)", placeholder: 'SELECT …',
@@ -38,7 +38,7 @@ export const GO_FIRST = {
     targets: ['rule', 'population'],
     chip: 'Stats · 6 timed checkouts',
     question: 'I timed 6 random checkout transactions at our store. How likely is it that the median checkout time for all customers is between my fastest and slowest one?',
-    lang: 'statistics', prose: true, producingIsSkill: false,
+    lang: 'statistics', prose: true,
     // Reasoning picks, not the percentage: the idea is "it only misses if every timing lands on one side", and the
     // classic one-sided slip (98.4%) sits closer to 96.875% than an honest rounding does, so a number can't tell
     // them apart (research §8f, invariant 3; the Rule of Five try and recall made the same change, log 42).
@@ -67,7 +67,7 @@ export const GO_FIRST = {
   },
 
   juno: {
-    targets: ['ownside', 'mechanism'], producingIsSkill: false,
+    targets: ['ownside', 'mechanism'],
     chip: 'Strategy · a top writer wants a bigger cut',
     question: "One of our top writers says they'll leave Juno for Substack unless we raise their revenue share. How worried should we be?",
     lang: 'strategy', prose: true,

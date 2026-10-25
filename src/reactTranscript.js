@@ -1,7 +1,7 @@
 // Claude's real answer to the React starter question (Christine ran the same prompt in Claude, 2026-10-23).
 // Verbatim; only the markdown the paste dropped is restored: code fences, the two headings, bullet markers.
 // The React starter replays it; any part can be owned.
-export const REACT_QUESTION = 'How do I fetch a user by id in a React component when it mounts, and refetch when the id changes?';
+const REACT_QUESTION = 'How do I fetch a user by id in a React component when it mounts, and refetch when the id changes?';
 
 export const REACT_TURNS = [
   {

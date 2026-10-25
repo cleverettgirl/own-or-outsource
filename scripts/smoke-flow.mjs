@@ -4,9 +4,13 @@ import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 
 const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true, url: 'http://localhost/' });
-Object.assign(globalThis, { window: dom.window, document: dom.window.document,
-  HTMLElement: dom.window.HTMLElement, Node: dom.window.Node, getSelection: dom.window.getSelection.bind(dom.window),
-  requestAnimationFrame: dom.window.requestAnimationFrame.bind(dom.window), IS_REACT_ACT_ENVIRONMENT: true });
+globalThis.window = dom.window;
+globalThis.document = dom.window.document;
+globalThis.HTMLElement = dom.window.HTMLElement;
+globalThis.Node = dom.window.Node;
+globalThis.getSelection = dom.window.getSelection.bind(dom.window);
+globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.fetch = async () => { throw new Error('offline (smoke test)'); };
 globalThis.__SQL_WASM_PATH = new URL('../node_modules/sql.js/dist/sql-wasm.wasm', import.meta.url).pathname;
 

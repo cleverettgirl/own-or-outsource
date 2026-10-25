@@ -1,5 +1,6 @@
-// Shared pieces of the interface: markdown, item lists, choice questions, icons, small diagrams, style constants.
+// Shared pieces of the interface: markdown, item lists, choice questions, the stepper, icons.
 import React from 'react';
+import { SERIF, OPTION } from './styles.js';
 
 
 // Claude's answers as Claude renders them: paragraphs, ## headings, - bullets, `inline code`, fenced code blocks.
@@ -71,11 +72,12 @@ function Flip({ text, small }) {
   );
 }
 
-export function Md({ text, small }) {
+// Memoised: the chat re-renders on every keystroke in the composer, and the text of an answer doesn't change.
+export const Md = React.memo(function Md({ text, small }) {
   const parts = splitFlips(text);
   if (parts.length === 1 && parts[0].md != null) return <MdBlocks text={parts[0].md} small={small} />;
   return <div className="flex flex-col gap-3">{parts.map((p, i) => (p.flip != null ? <Flip key={i} text={p.flip} small={small} /> : <MdBlocks key={i} text={p.md} small={small} />))}</div>;
-}
+});
 
 // Markdown doesn't need blank lines between a heading, a list, a table and a paragraph, and Claude often leaves them
 // out ("## Where to start\n1. …\n2. …"). This puts a blank line wherever the kind of line changes, so each becomes
@@ -156,12 +158,12 @@ export function ItemList({ items, ownedNote = '', title }) {
 // and most generated ones). The order is picked once per question per visit, so it stays put while you answer.
 // A question marked ordered (a scale like less / same / more) keeps its order.
 const orders = new Map();
-export function shuffled(q, rnd = Math.random) {
+function shuffled(q) {
   if (q.ordered) return q.options;
   const key = q.id + '|' + q.prompt;
   if (!orders.has(key)) {
     const o = q.options.map(x => x.v);
-    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
     orders.set(key, o);
   }
   const order = orders.get(key);
@@ -175,7 +177,7 @@ export function ChoiceQuestions({ qs, picked, onPick, locked }) {
           <div className="text-[14px] leading-[1.45]"><span className="text-accent-text">{i + 1}.</span> {inline(q.prompt)}</div>
           {shuffled(q).map(o => {
             const on = picked[q.id] === o.v;
-            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} className={`text-left border text-ink rounded-[9px] py-2 px-3 text-[13.5px] leading-[1.4] ${on ? 'border-accent bg-accent-soft' : 'border-accent-border bg-surface'} ${locked ? '' : 'hover:border-accent'}`}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
+            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} className={`${OPTION} ${on ? 'border-accent bg-accent-soft' : 'border-accent-border bg-surface'} ${locked ? '' : 'hover:border-accent'}`}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
           })}
         </div>
       ))}
@@ -185,7 +187,7 @@ export function ChoiceQuestions({ qs, picked, onPick, locked }) {
 
 
 // Action-row icons, drawn to sit with Claude's copy / read aloud / retry row.
-export const ico = { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
+const ico = { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 export const CopyIcon = () => <svg {...ico}><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 5.5V3.8A1.3 1.3 0 0 0 9.2 2.5H3.8A1.3 1.3 0 0 0 2.5 3.8v5.4a1.3 1.3 0 0 0 1.3 1.3h1.7" /></svg>;
 
@@ -206,37 +208,23 @@ export const NAV_ICONS = {
 export const OwnIcon = () => <svg {...ico}><path d="M8 4.2C6.6 3.2 4.6 2.8 2.5 3v9.3c2.1-.2 4.1.2 5.5 1.2 1.4-1 3.4-1.4 5.5-1.2V3c-2.1-.2-4.1.2-5.5 1.2z" /><path d="M8 4.2v9.3" /></svg>;
 
 
-// Who holds the relationship: platform owns users (supply is replaceable), or supply and users bond directly.
-export function OwnDiagram({ d }) {
-  const direct = d.owned === 'direct';
-  const box = dim => `flex-none py-[7px] px-3 rounded-lg text-[13px] border ${dim ? 'border-dashed border-faint bg-transparent text-muted' : 'border-line bg-surface text-ink'}`;
-  const line = thick => `flex-1 min-w-6 ${thick ? 'border-t-4 border-good' : 'border-t border-dashed border-faint'}`;
+// The panels' progress indicator: numbered steps, done ones ticked.
+export function Stepper({ steps }) {
   return (
-    <div data-role="own-diagram" className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className={box(false)}>{d.supply}</span><span className={line(direct)}></span>
-        <span className={box(direct)}>{d.platform}{direct ? ' (plumbing)' : ''}</span><span className={line(true)}></span>
-        <span className={box(false)}>{d.users}</span>
-      </div>
-      <div className="text-[12px] text-muted">{direct ? `The thick line is the relationship: ${d.supply.toLowerCase()} and ${d.users.toLowerCase()} are bonded directly, through ${d.platform}.` : `The thick line is the owned relationship: ${d.platform} ↔ ${d.users.toLowerCase()}. ${d.supply} are replaceable (dashed).`}</div>
+    <div data-role="stepper" className="flex items-center text-[13px] phone:text-[11.5px] phone:*:mx-[3px] phone:*:not-has-[i]:min-w-1.5">
+      {steps.map((st, i) => <React.Fragment key={i}>
+        {i > 0 && <span className={`flex-1 min-w-3 h-[1px] my-0 mx-2.5 ${st.done || st.cur ? 'bg-good-mid' : 'bg-line-strong'}`}></span>}
+        <span className={`flex items-center gap-1.5 whitespace-nowrap ${st.cur ? 'text-ink' : st.done ? 'text-good-mid' : 'text-muted'} ${st.cur ? 'font-semibold' : st.done ? 'font-medium' : 'font-normal'}`}>
+          <i className={`w-4.5 h-4.5 rounded-full grid place-items-center text-[11px] not-italic ${st.done ? 'bg-good-mid text-on-accent' : st.cur ? 'bg-accent text-on-accent' : 'border border-line-strong'}`}>{st.done ? '✓' : i + 1}</i>{st.label}
+        </span>
+      </React.Fragment>)}
     </div>
   );
 }
 
 
-export const SERIF = 'font-serif text-[16.5px] leading-[1.65] whitespace-pre-wrap';
-
-// No background, size or colour here: each use sets its own (a selected row, a smaller chat title, a greyed-out
-// item), so two classes for the same property never compete.
-export const NAV = 'flex items-center gap-2.5 border-none rounded-lg py-[7px] px-2 text-left w-full';
-
-export const CHIP = 'bg-surface-2 border border-line rounded-full py-[7px] px-3.5 text-[13.5px] text-ink-2';
-
 // A generic spark for the greeting (not Anthropic's logo).
 export const Spark = () => <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <rect key={i} x="14" y="2" width="2.2" height="11" rx="1.1" fill="var(--color-accent)" transform={`rotate(${i * 30} 15 15)`} />)}</svg>;
-
-// No background or colour here: the Own it action sets its own when it's active.
-export const ACT = 'border-none rounded-[7px] w-7 h-7 flex items-center justify-center p-0';
 
 
 export function CompareTable({ t }) {
@@ -255,14 +243,14 @@ export function CompareTable({ t }) {
 }
 
 // A "work it out" try: one labelled box per step, a number in each.
-export function StepInputs({ steps, entered, onEnter, locked }) {
+export function StepInputs({ steps, entered, onEnter }) {
   return (
     <div data-role="steps" className="flex flex-col gap-2.5">
       {steps.map((st, i) => (
         <label key={st.id} className="flex flex-col gap-[5px]">
           <span className="text-[14px] leading-[1.45]"><span className="text-accent-text">Step {i + 1}.</span> {st.label}</span>
           <span className="flex items-center gap-1.5">
-            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" className="w-40 border border-accent-border rounded-lg py-2 px-2.5 text-[14px] bg-surface outline-none" />
+            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} placeholder="Your number" className="w-40 border border-accent-border rounded-lg py-2 px-2.5 text-[14px] bg-surface outline-none" />
             {st.unit === '%' && <span className="text-[14px] text-muted">%</span>}
           </span>
         </label>

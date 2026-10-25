@@ -1,7 +1,8 @@
 // The Own-it panel for a personal topic (research §13): no answer key, so it offers recognition practice
 // on made-up people instead of a scored try. Picks live here, not in App: nothing is recorded but the count.
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { inline } from './parts.jsx';
+import { LOADING_13, OPTION } from './styles.js';
 
 // The best fit isn't always first: order the readings by a fixed shuffle per scenario, so it's stable across renders.
 const order = (sc) => sc.options.slice().sort((a, b) => ((a.v * 7 + sc.id.length * 3) % 5) - ((b.v * 7 + sc.id.length * 3) % 5));
@@ -21,7 +22,7 @@ export default function SpotPractice({ spot, scenarios, loading, failed, onStart
       </div>
     </div>
   );
-  if (loading) return <div className="text-[13px] text-accent-text animate-blink">Writing a few scenarios…</div>;
+  if (loading) return <div className={LOADING_13}>Writing a few scenarios…</div>;
   if (failed) return (
     <div className="flex flex-col gap-2">
       <div className="text-[13px] text-muted">Couldn't write the scenarios just now.</div>
@@ -42,7 +43,7 @@ export default function SpotPractice({ spot, scenarios, loading, failed, onStart
             {order(sc).map(o => {
               const on = pick === o.v;
               return <button key={o.v} disabled={pick != null} onClick={() => setPicked(p => ({ ...p, [sc.id]: o.v }))}
-                className={`text-left rounded-[9px] px-3 py-2 text-[13.5px] leading-[1.4] text-ink border ${on ? 'border-accent bg-accent-soft' : 'border-accent-border bg-surface'} ${pick == null ? 'hover:bg-wash' : ''}`}>{on ? '● ' : '○ '}{inline(o.label)}</button>;
+                className={`${OPTION} ${on ? 'border-accent bg-accent-soft' : 'border-accent-border bg-surface'} ${pick == null ? 'hover:bg-wash' : ''}`}>{on ? '● ' : '○ '}{inline(o.label)}</button>;
             })}
             {chosen && (
               <div data-role="spot-note" className="text-[13px] leading-[1.5] text-ink-2 bg-surface-2 border border-line rounded-[9px] px-3 py-2 flex flex-col gap-1">

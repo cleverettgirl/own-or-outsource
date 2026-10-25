@@ -1,8 +1,8 @@
 // Learnings: what you own and how it went (design 3a). A map of what you own around you (inner ring: recall this
 // week), the next recall and the counts beside it, calibration, then a card per thing you own. Below: recall when
 // it's open, open gaps, and a labelled sample history.
-import React from 'react';
 import { ChoiceQuestions } from './parts.jsx';
+import { BODY, LINK, LINK_MUTED, LOADING, PRE } from './styles.js';
 
 const pill = { pred: 'bg-accent-soft text-accent-hover', act: 'bg-good-soft text-good-text', mute: 'bg-sunken text-muted', next: 'border border-dashed border-faint text-muted' };
 // "Predicted 3 of 3", "Real work · let Claude answer", "Recall 3 days ago: 3 of 3".
@@ -99,7 +99,7 @@ export default function Learnings({ V }) {
           <div className="flex gap-2.5 items-center text-[13px] flex-wrap text-muted">
             <button onClick={L.skipAhead} data-role="skip-ahead" className="bg-transparent border border-dashed border-faint rounded-lg py-[7px] px-3 text-ink-2 text-[13px] whitespace-nowrap hover:border-good hover:text-good-text">⏩ Skip ahead 3 days</button>
             <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · {L.isDemo ? 'sample data' : 'saved in this browser'}</span>
-            <button onClick={L.resetDemo} data-role="reset-demo" className="bg-transparent border-none p-0 text-[13px] underline underline-offset-[2px] text-muted">Reset demo</button>
+            <button onClick={L.resetDemo} data-role="reset-demo" className={LINK_MUTED}>Reset demo</button>
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export default function Learnings({ V }) {
           <section className="flex flex-col gap-3.5">
             <div className="flex justify-between items-baseline">
               {head('Owning')}
-              <button onClick={L.toggleSort} className="bg-transparent border-none p-0 text-[14px] underline underline-offset-[2px] text-muted">{L.sortByDue ? 'Sort by most recent' : 'Sort by next recall'}</button>
+              <button onClick={L.toggleSort} className={`${LINK} text-[14px] text-muted`}>{L.sortByDue ? 'Sort by most recent' : 'Sort by next recall'}</button>
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
               {L.sorted.map(it => (
@@ -214,16 +214,16 @@ function Recall({ it, L }) {
   return (
     <div data-role="recall" className="flex flex-col gap-2.5">
       <div className="text-[15px] leading-normal">{r.task || 'Preparing a question…'}</div>
-      {!!r.schema && <pre className="m-0 py-2 px-3 bg-sunken rounded-lg font-mono text-[12px] whitespace-pre-wrap text-ink-2">{r.schema}</pre>}
-      {!!r.before && <pre className="m-0 py-2 px-3 bg-sunken rounded-lg font-mono text-[13px] whitespace-pre-wrap text-muted">{r.before}</pre>}
+      {!!r.schema && <pre className={`${PRE} text-[12px] text-ink-2`}>{r.schema}</pre>}
+      {!!r.before && <pre className={`${PRE} text-[13px] text-muted`}>{r.before}</pre>}
       {choice ? <ChoiceQuestions qs={r.check.questions} picked={r.picked} onPick={L.onRecallPick} locked={!!r.grade} />
         : <textarea data-role="recall-text" value={r.text} onChange={L.onRecallText} readOnly={!!r.grade} placeholder={r.placeholder || 'From memory. No looking back.'} className={`w-full min-h-18 resize-y border border-accent-border rounded-lg py-2.5 px-3 text-[13.5px] bg-surface outline-none ${r.lang === 'sql' ? 'font-mono' : 'font-[inherit]'}`}></textarea>}
-      {!!r.after && <pre className="m-0 py-2 px-3 bg-sunken rounded-lg font-mono text-[13px] whitespace-pre-wrap text-muted">{r.after}</pre>}
-      {!r.grade && <div className="flex gap-2 items-center"><button onClick={L.submitRecall} className="bg-inverse text-on-inverse border-none rounded-full py-[9px] px-4 text-[13.5px]">Check it</button><button onClick={L.closeRecall} className="bg-transparent border-none text-[13px] text-muted">Not now</button>{!!r.loading && <span className="text-[12.5px] text-accent-text animate-blink">checking…</span>}</div>}
+      {!!r.after && <pre className={`${PRE} text-[13px] text-muted`}>{r.after}</pre>}
+      {!r.grade && <div className="flex gap-2 items-center"><button onClick={L.submitRecall} className="bg-inverse text-on-inverse border-none rounded-full py-[9px] px-4 text-[13.5px]">Check it</button><button onClick={L.closeRecall} className="bg-transparent border-none text-[13px] text-muted">Not now</button>{!!r.loading && <span className={LOADING}>checking…</span>}</div>}
       {!!r.grade && (
         <div data-role="recall-result" className="flex flex-col gap-1.5">
           <div className="text-[20px] font-serif">{r.gapMode ? (r.full ? 'Still closed.' : 'It slipped a little.') : <>{it.then} → today: {r.right} of {r.n}</>}</div>
-          <div className="text-[13.5px] text-ink-2 leading-normal">{r.grade.note}</div>
+          <div className={BODY}>{r.grade.note}</div>
           <div className={`text-[13px] ${r.full ? 'text-good-text' : 'text-accent-hover'}`}>{r.full ? 'It stuck. ' : "Not quite yet, so it'll come back sooner. "}{it.next ? it.next.replace('next recall', 'Next recall') + '.' : ''}</div>
           <div className="flex gap-2 flex-wrap">
             {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.exploreRecallGap} className="text-on-accent border-none rounded-full py-[7px] px-3.5 text-[12.5px] bg-accent">Explore this gap with Claude</button>}

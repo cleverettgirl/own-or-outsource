@@ -4,7 +4,6 @@
 // items: one per question, so the prediction ("how many of N will you get right?") and the result count the
 // same things. A blank question is not right (it used to slip through as a partial score).
 
-export const CHOICE_SCALE = '5 every pick right · 3 some right · 2 none right · 1 nothing picked yet';
 const WHY = {
   5: 'Every pick matches the reasoning the task is testing.',
   3: 'Some picks hold, and at least one shows a gap in the reasoning.',

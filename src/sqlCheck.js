@@ -10,7 +10,6 @@ let sqlPromise;
 const loadSql = () => (sqlPromise ||= initSqlJs({ locateFile: () => globalThis.__SQL_WASM_PATH || wasmUrl }));
 
 // What each score means. Shown on the reveal so a number always comes with its reason.
-export const SQL_SCALE = '5 right rows · 3 runs, wrong rows · 2 doesn\'t run · 1 nothing yet';
 const WHY = {
   5: 'It runs and returns exactly the rows the task asks for.',
   3: "It runs, but the rows it returns aren't the ones the task asks for.",

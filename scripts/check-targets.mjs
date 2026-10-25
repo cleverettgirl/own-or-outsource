@@ -74,22 +74,10 @@ for (const [q, want] of [
 console.log('--- go first (SQL): items');
 const gf = (await vite.ssrLoadModule('/src/goFirst.js')).GO_FIRST.sql.check;
 for (const q of [gf.expected, ...gf.diagnoses.map(d => d.sql)]) { const g = await checkSql(gf, q); console.log(`${g.score}/5  ${g.items.map(i => (i.ok ? '✓ ' : '✗ ') + i.short).join(' · ')}`); }
-console.log('--- framework: every target declares its three answers (research §8f)');
+console.log('--- framework: every target declares whether its written order matters (research §8f)');
 const all = { ...(await vite.ssrLoadModule('/src/targets.js')).SQL_TARGETS, ...(await vite.ssrLoadModule('/src/bookTargets.js')).BOOK_TARGETS, ...(await vite.ssrLoadModule('/src/junoTargets.js')).JUNO_TARGETS, ...(await vite.ssrLoadModule('/src/reactTargets.js')).REACT_TARGETS };
 for (const [id, t] of Object.entries(all)) {
-  const ok = typeof t.producingIsSkill === 'boolean' && typeof t.writtenOrderMatters === 'boolean' && (t.visual === null || ['compare', 'see', 'timeline'].includes(t.visual))
-    && (!t.writtenOrderMatters || (t.assemble && t.assemble.lines.length >= 3)) && (t.visual !== 'compare' || t.compare);
-  console.log(`${ok ? 'ok      ' : 'MISMATCH'} ${id}: producingIsSkill=${t.producingIsSkill} writtenOrderMatters=${t.writtenOrderMatters} visual=${t.visual}`);
-}
-console.log('--- framework: every try checks the idea, not the arithmetic (§8f invariant 3), go-first questions included');
-// A number is checked only where producing it is the skill, and only when each common mistake gives a clearly
-// different number (more than 2 points away); otherwise reasoning picks fit better.
-const GF = (await vite.ssrLoadModule('/src/goFirst.js')).GO_FIRST;
-const tries = [...Object.entries(all).flatMap(([id, t]) => [['target ' + id + '.write', t.write && t.write.check, t.producingIsSkill], ['target ' + id + '.delayed', t.delayed && t.delayed.check, t.producingIsSkill]]),
-  ...Object.entries(GF).map(([id, g]) => ['go-first ' + id, g.check, g.producingIsSkill])].filter(x => x[1]);
-for (const [name, c, skill] of tries) {
-  const declared = typeof skill === 'boolean';
-  const numberOk = c.type !== 'number' || (skill === true && (c.diagnoses || []).every(d => d.answer.every((v, k) => Math.abs(v - c.expected[k]) > 2)));
-  console.log(`${declared && numberOk ? 'ok      ' : 'MISMATCH'} ${name}: ${c.type}${declared ? '' : ' (producingIsSkill not declared)'}`);
+  const ok = typeof t.writtenOrderMatters === 'boolean' && (!t.writtenOrderMatters || (t.assemble && t.assemble.lines.length >= 3));
+  console.log(`${ok ? 'ok      ' : 'MISMATCH'} ${id}: writtenOrderMatters=${t.writtenOrderMatters}`);
 }
 await vite.close();

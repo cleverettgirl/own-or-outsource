@@ -3,47 +3,13 @@
 // The anchor confusion is hers: "wouldn't Juno want to own both, readers AND writers?"
 // Vela and Pallet in the tasks are made up, so the transfer can't be answered from memory of the chat.
 
-// Compare: one question for every case, so the pattern carries the lesson. Each reveal draws who
-// holds the relationship: supply ─ platform ═ users (platform owns users), or supply ═ users (direct).
-const OPTIONS = [{ v: 'stay', l: 'Users stay' }, { v: 'follow', l: 'Users follow the supplier' }];
-const ask = 'What do most users do?';
-const CASES = [
-  { label: 'Airbnb', code: 'A popular host takes their apartment off Airbnb.', answer: 'stay', ask,
-    diagram: { supply: 'Hosts', platform: 'Airbnb', users: 'Guests', owned: 'users' },
-    note: 'Guests book another place. They have an account with Airbnb, pay Airbnb and complain to Airbnb, not the host. Hosts are interchangeable on purpose.' },
-  { label: 'Netflix', code: 'A studio pulls its shows from Netflix.', answer: 'stay', ask,
-    diagram: { supply: 'Studios', platform: 'Netflix', users: 'Subscribers', owned: 'users' },
-    note: "Most subscribers stay: they're there for something good to watch tonight, not for one studio. Netflix commoditized the scarce thing (broadcast availability) and kept the subscriber." },
-  { label: 'Hairdresser', code: 'Your hairdresser leaves their salon for one across town.', answer: 'follow', ask,
-    diagram: { supply: 'Hairdresser', platform: 'Salon', users: 'Clients', owned: 'direct' },
-    note: "Many clients follow. They're loyal to the person, not the building. That's a supplier owning the relationship, not the platform: the everyday version of the test, from your chat." },
-  { label: 'Substack', code: 'A popular writer leaves Substack for their own website.', answer: 'follow', ask,
-    diagram: { supply: 'Writer', platform: 'Substack', users: 'Readers', owned: 'direct' },
-    note: "Readers follow. They subscribed to the writer, and the writer takes the email list along. Substack is built on the opposite bet: help the writer keep the relationship." },
-  { label: 'Juno', code: 'A popular writer leaves Juno for Substack. (Assume the aggregator model is working.)', answer: 'stay', ask,
-    diagram: { supply: 'Writers', platform: 'Juno', users: 'Readers', owned: 'users' },
-    note: "Readers stay and read someone else. That is the test from your chat: if they followed the writer out the door, Juno wouldn't own the relationship, whatever the org chart says." },
-].map(c => ({ ...c, options: OPTIONS, answerText: OPTIONS.find(o => o.v === c.answer).l.toLowerCase() }));
-const COMPARE = { intro: 'Five cases, one question: a supplier leaves. Before each answer appears, guess what most users do.', cases: CASES };
-
 const VELA = 'Vela (made up) is an app where independent personal trainers post workout programs. Users pay Vela one subscription and can follow any trainer.';
 const PALLET = 'Pallet (made up) is an app where home cooks sell meals. Customers browse, order and pay through Pallet.';
 
 export const JUNO_TARGETS = {
   ownside: {
     label: 'Which side an aggregator owns, and why not both', kind: 'concept',
-    // The Own-it framework (research §8f): three answers decide the steps.
-    producingIsSkill: false, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: 'An aggregator keeps a deep, owned relationship with users and a shallow, replaceable one with suppliers. The asymmetry is the point.',
-      grid: { headers: ['', 'the relationship', 'if one of them leaves'], rows: [
-        ['users (readers)', { t: 'deep, owned, sticky', strong: true }, 'the business is hurt'],
-        ['suppliers (writers)', 'shallow, interchangeable', 'users read someone else'],
-      ] },
-      inYourCode: 'You asked whether Juno would want to own both. Test it like Airbnb: if one writer left, would readers follow them out, or stay and read someone else? Only the second means Juno owns the relationship.',
-      rule: 'Ask: if a top supplier leaves, do users follow them? If yes, the supplier owns the relationship, not the platform.',
-    },
-    compare: COMPARE,
+    writtenOrderMatters: false,
     write: {
       task: `Now a new situation. ${VELA}`,
       hints: ['Run the Airbnb test: if one trainer left, would Vela be hurt the way it would be if users stopped coming?', 'Who do users pay, and who do they complain to?'],
@@ -81,20 +47,7 @@ export const JUNO_TARGETS = {
 
   mechanism: {
     label: 'Mechanism vs result: what gets commoditized, what gets owned', kind: 'concept',
-    producingIsSkill: false, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: 'The mechanism is commoditizing the scarce thing. The result is owning the user relationship. The first is what makes the second possible.',
-      grid: { headers: ['', 'scarce thing made cheap (mechanism)', 'result'], rows: [
-        ['Airbnb', 'trust in a stranger’s home', 'owns the guest'],
-        ['Uber', 'dispatch + driver trust', 'owns the rider'],
-        ['Netflix', 'broadcast availability', 'owns the subscriber'],
-        ['Google', 'the cost of finding information', 'owns the searcher'],
-        ['Juno', { t: 'curation and discovery', strong: true }, 'owns the reader'],
-      ] },
-      inYourCode: "Before the internet, publishing's scarce thing was editorial vetting. Once anyone could publish, it flipped: too much to read, so the scarce thing became finding what's worth it. That's what Juno makes cheap, and why it can own the reader.",
-      rule: 'Find what used to need an expensive, trusted, scarce intermediary. Whoever makes it cheap first gets to own the user.',
-    },
-    compare: COMPARE,
+    writtenOrderMatters: false,
     write: {
       task: `Now a new situation. ${VELA} Sort out the mechanism from the result.`,
       hints: ['Before Vela, what did you need a gym or a referral for?', 'One statement describes what Vela did; the other, what it got as a result.'],

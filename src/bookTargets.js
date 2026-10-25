@@ -1,54 +1,15 @@
 // Learning targets for the book starter: the Rule of Five from Douglas Hubbard's
-// "How to Measure Anything". Same spec as targets.js (explain · compare · write · delayed · check),
+// "How to Measure Anything". Same spec as targets.js (write · delayed · check),
 // but the check is calculated (numberCheck.js) instead of run, and there is no Assemble:
 // a short explanation has no order to rebuild.
 //
 // The anchor confusion is Christine's own (bookTranscript.js): "a median is always between the min and max, so isn't
 // this obvious?" That is true of the SAMPLE's median and says nothing about the POPULATION's.
 
-// Every way n samples can land above (↑) or below (↓) the hidden true median. Each is equally
-// likely, and only "all ↑" and "all ↓" miss, which is the whole argument in one picture.
-export function patterns(n) {
-  return Array.from({ length: 2 ** n }, (_, i) => {
-    const p = i.toString(2).padStart(n, '0').replace(/0/g, '↑').replace(/1/g, '↓');
-    return { p, miss: !p.includes('↑') || !p.includes('↓') };
-  });
-}
-
-// Exact values (so a guess can be scored), rounded labels (so the options don't give the answer away).
-const OPTIONS = [[50, '50%'], [75, '75%'], [87.5, '≈ 88%'], [93.75, '≈ 94%'], [100, '100%']].map(([v, l]) => ({ v, l }));
-const CASES = [
-  { label: "Your sample's median", code: "5 samples. Chance that THEIR OWN median\nis between their smallest and largest?", answer: 100, n: 0,
-    note: "Always, by definition: the middle of 5 numbers sits between the smallest and the largest. This is the obvious version, and it's not what the rule claims." },
-  { label: 'True median · 2 samples', code: "2 samples. Chance the POPULATION's median\nis between them?", answer: 50, n: 2,
-    note: 'Each sample lands above or below the hidden median, like a coin flip. 2 of the 4 patterns land on the same side and miss.' },
-  { label: 'True median · 3 samples', code: "3 samples. Chance the POPULATION's median\nis between the smallest and largest?", answer: 75, n: 3,
-    note: 'Still only 2 patterns miss (all above, all below), but now out of 8. Every extra sample doubles the patterns and keeps the misses at 2.' },
-  { label: 'True median · 5 samples', code: "5 samples. Chance the POPULATION's median\nis between the smallest and largest?", answer: 93.75, n: 5,
-    note: "2 misses out of 32 patterns: 30/32 = 93.75%. That's the Rule of Five. Hubbard rounds it to 93%." },
-].map(c => ({ ...c, options: OPTIONS, answerText: `${c.answer}%` }));
-
-const COMPARE = {
-  intro: 'Four versions of the question. Before each answer appears, guess the chance. The first one is the version you probably have in your head.',
-  cases: CASES,
-};
-
 export const BOOK_TARGETS = {
   rule: {
     label: 'The Rule of Five: why a few random samples usually catch the median', kind: 'concept',
-    // The Own-it framework (research §8f): three answers decide the steps.
-    producingIsSkill: false, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: "The true median is a hidden line. Each random sample is a coin flip: above it or below it. Your smallest and largest samples miss the line only if every sample lands on the same side.",
-      grid: { headers: ['', 'how often'], rows: [
-        ['all 5 above', '(1/2)⁵ = 1/32'],
-        ['all 5 below', '(1/2)⁵ = 1/32'],
-        ['anything else', { t: '30/32 = 93.75%, the line is caught', strong: true }],
-      ] },
-      inYourCode: "You asked whether this is obvious. It is for your 5 numbers' own median. The rule is about the median of everything you didn't sample, which you can't see.",
-      rule: 'Chance of catching the true median with n random samples = 1 − 2 × (1/2)ⁿ. Two ways to miss, each (1/2)ⁿ.',
-    },
-    compare: COMPARE,
+    writtenOrderMatters: false,
     // The try checks the idea in a new situation, not the arithmetic (the exact percentage isn't the skill).
     write: {
       task: 'Now a new situation: you time 4 random support calls, to get a feel for how long a typical call takes.',
@@ -96,17 +57,7 @@ export const BOOK_TARGETS = {
 
   population: {
     label: "Why it's the population's median, not your sample's", kind: 'concept',
-    producingIsSkill: false, writtenOrderMatters: false, visual: 'compare',
-    explain: {
-      model: "There are two medians here. Your sample's median is the middle of the numbers you wrote down. The population's median is the middle of everything you didn't measure. The rule is only about the second one.",
-      grid: { headers: ['', 'can you see it?', 'between your min and max?'], rows: [
-        ["your sample's median", 'yes, it\'s one of your numbers', 'always: that\'s just what "middle" means'],
-        ["the population's median", 'no, it\'s what you want to know', { t: 'usually: 93.75% of the time with 5 samples', strong: true }],
-      ] },
-      inYourCode: 'Your question, "isn\'t a median always between the min and max?", is right about the first row. The book is making a claim about the second row.',
-      rule: 'When a statistic sounds obvious, ask: about the numbers I have, or about the ones I don\'t?',
-    },
-    compare: COMPARE,
+    writtenOrderMatters: false,
     write: {
       task: 'Now a new situation: you ask 5 random employees how long their commute is: 12, 18, 25, 31 and 47 minutes.',
       hints: ['One question is about the 5 numbers in front of you; the other is about a number you can\'t see.', "When would all 5 employees land on the same side of the company's median?"],
