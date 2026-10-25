@@ -74,7 +74,7 @@ export function ownVals(app, o) {
     writeIsChoice: !!(chk && chk.type === 'choice'), writeIsSteps: !!(chk && chk.type === 'steps'), writeSteps: chk && chk.steps ? chk.steps : [], writeQs: chk && chk.questions ? chk.questions : [], writePicked: w.picked,
     onWritePick: (id, val) => app.own.setOwn(cur => ({ write: { ...cur.write, picked: { ...cur.write.picked, [id]: val } } })),
     writeBefore: w.before, writeAfter: w.after, writePlaceholder: w.placeholder || 'Write it here. Ask for a hint any time; hints are part of learning, not cheating.',
-    writeTask: w.task, writeProse: !!(chk && chk.type === 'explain'), writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => app.own.setOwn(cur => ({ write: { ...cur.write, text: e.target.value } })),
+    writeTask: w.task, writeCheckError: w.checkError || '', writeProse: !!(chk && chk.type === 'explain'), writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => app.own.setOwn(cur => ({ write: { ...cur.write, text: e.target.value } })),
     hasHints: w.hints.length > 0, hints: w.hints.map((h, i) => ({ t: h, n: i + 1 })), askHint: app.own.askHint, submitWrite: app.own.submitWrite,
     writeNotGraded: !w.grade, gradeLoading: w.gradeLoading || w.hintLoading, gradeLoadingText: w.hintLoading ? 'thinking of a hint…' : 'grading fairly…',
     // After a fix, the result shown is the latest try; only the prediction stays compared with the first try, since

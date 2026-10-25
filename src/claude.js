@@ -31,7 +31,7 @@ export async function complete({ task, input = {}, messages, onText }) {
   });
   if (onText && r.ok && /ndjson/.test(r.headers.get('Content-Type') || '')) return readStream(r, onText);
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error(data.error || `HTTP ${r.status}`), { status: r.status });
   return data.text;
 }
 

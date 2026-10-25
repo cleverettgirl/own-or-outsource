@@ -15,15 +15,24 @@ export async function runCheck(check, text, before, after, picked) {
   return checkSql(check, text, before, after);
 }
 
+// Claude couldn't be reached (or its reply was unusable), so nothing was checked. Never scored as wrong: the try
+// isn't recorded, and you're asked to check again.
+export const COULDNT_CHECK = "Claude couldn't be reached to check this, so nothing was scored. Your answer is still here: try checking again in a moment.";
+export class CouldNotCheck extends Error {}
+
+// Offline rules, only for the two code starters' own shapes (the SQL revenue query, the React fetch). Anything else
+// returns null: rules written for one query or component would mark any other try wrong.
 export function fallbackGrade(o, attempt, ref) {
   const a = attempt.toLowerCase(); let checks;
-  if (o.lang === 'sql') checks = [[/left\s+(outer\s+)?join/, 'keeps the left table with no matches (LEFT JOIN)'], [/on[\s\S]*(published|paid)/, 'filters the status inside the ON clause'], [/sum\s*\(|count\s*\(|is\s+null/, 'uses the right aggregate or NULL test'], [/group\s+by|is\s+null/, 'groups per row of the left table'], [/order\s+by[\s\S]*desc|is\s+null/, 'sorts descending (without DESC you get the smallest first)']];
+  const starterSql = o.lang === 'sql' && /left\s+join/i.test(ref || '') && /published|paid/i.test(ref || ''), starterReact = /useEffect/.test(ref || '') && /fetch/.test(ref || '');
+  if (!starterSql && !starterReact) return null;
+  if (starterSql) checks = [[/left\s+(outer\s+)?join/, 'keeps the left table with no matches (LEFT JOIN)'], [/on[\s\S]*(published|paid)/, 'filters the status inside the ON clause'], [/sum\s*\(|count\s*\(|is\s+null/, 'uses the right aggregate or NULL test'], [/group\s+by|is\s+null/, 'groups per row of the left table'], [/order\s+by[\s\S]*desc|is\s+null/, 'sorts descending (without DESC you get the smallest first)']];
   else checks = [[/usestate/, 'holds the result in state'], [/useeffect/, 'runs the fetch in an effect'], [/\[\s*slug\s*\]|\[\s*id\s*\]|\[\s*\]/, 'has a dependency array'], [/cancelled|ignore|stale|abort/, 'guards against stale responses'], [/return\s*\(\)\s*=>/, 'returns a cleanup']];
   const hit = checks.filter(c => c[0].test(a)); const miss = checks.filter(c => !c[0].test(a));
   const score = attempt.trim().length < 10 ? 1 : Math.max(1, Math.min(5, hit.length));
   return { items: checks.map(c => ({ short: c[1], ok: attempt.trim().length >= 10 && c[0].test(a) })), score, worked: hit.length ? 'Your version ' + hit.map(c => c[1]).join(', ') + '.' : 'A start, but not much of the structure is there yet.', gap: miss.length ? 'Missing: ' + miss.map(c => c[1]).join(', ') + '.' : 'Nothing structural. This holds.' };
 }
-// Shared grader: Sonnet, requirement checklist with quoted evidence, then deterministic clamps.
+// Shared grader: Claude, requirement checklist with quoted evidence, then deterministic clamps.
 // A SQL try that didn't run: Claude checks each of the target's items against the query as written. Offline, or
 // if Claude can't be reached, it stays "not checked".
 export async function judgeSqlThatDidntRun(o, ran) {
@@ -66,6 +75,6 @@ export async function judgeGap(g, check, answer) {
     return { points, closed: points.every(p => p.ok), feedback: r.feedback || '' };
   } catch (e) {
     if (isColdStart(g)) { const r = judgeColdStartOffline(answer); const points = r.points.map(p => ({ point: p.point, ok: !!p.evidence })); return { points, closed: points.every(p => p.ok), feedback: r.feedback }; }
-    return { points: [], closed: false, feedback: "I couldn't check this just now. Try again in a moment." };
+    return { points: [], closed: false, failed: true, feedback: COULDNT_CHECK };
   }
 }

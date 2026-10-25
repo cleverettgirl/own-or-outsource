@@ -1,7 +1,7 @@
 import { ask } from '../claude.js';
 import { tally, correctionNote } from '../scoring.js';
 import { isColdStart } from '../gaps.js';
-import { runCheck, gradeAttempt, fallbackGrade, judgeGap } from '../grading.js';
+import { runCheck, gradeAttempt, fallbackGrade, judgeGap, COULDNT_CHECK } from '../grading.js';
 import { DAY, rel, quote, pickedText } from '../util.js';
 import { useMergeState } from './useMergeState.js';
 
@@ -53,19 +53,21 @@ export function useRecall(app) {
   async function submitRecall() {
     const r = app.state.recall, isChoice = r.check && r.check.type === 'choice';
     if ((isChoice ? !Object.keys(r.picked).length : !r.text.trim()) || r.loading) return;
-    set({ recall: { ...r, loading: true } });
+    set({ recall: { ...r, loading: true, checkError: '' } });
     let g;
     if (r.gapMode) {
       const e = app.state.ledger.find(x => x.id === r.entryId);
       const res = await judgeGap(e.gap, e.gap.check || { question: r.task, keyPoints: [] }, r.text);
-      g = { score: res.closed ? 5 : 3, items: res.points.length ? res.points.map(p => ({ short: p.point, ok: p.ok })) : [{ short: e.title, ok: res.closed }], note: res.feedback };
+      g = res.failed ? null : { score: res.closed ? 5 : 3, items: res.points.length ? res.points.map(p => ({ short: p.point, ok: p.ok })) : [{ short: e.title, ok: res.closed }], note: res.feedback };
     } else try {
       if (!r.check) throw new Error('no executable check');
       const x = await runCheck(r.check, r.text, r.before, r.after, r.picked); g = { score: x.score, items: x.items, note: [x.worked, x.gap, correctionNote(x.corrections)].filter(Boolean).join(' ') };
     } catch (_) {
       try { g = await gradeAttempt(r.task, r.ref, r.text, r.lang, 'note'); }
-      catch (e) { const f = fallbackGrade({ lang: r.lang }, r.text, r.ref); g = { score: f.score, items: f.items, note: f.worked + ' ' + f.gap }; }
+      catch (e) { const f = fallbackGrade({ lang: r.lang }, r.text, r.ref); g = f && { score: f.score, items: f.items, note: f.worked + ' ' + f.gap }; }
     }
+    // Nothing could be checked: say so, keep your answer, and leave the schedule as it was.
+    if (!g) return set(s => ({ recall: { ...s.recall, loading: false, checkError: COULDNT_CHECK } }));
     // Spacing: right → wait longer each time (7, then 21, then 60 days); missed → back tomorrow.
     const now = app.now();
     set(s => ({ recall: { ...s.recall, grade: g, loading: false } }));

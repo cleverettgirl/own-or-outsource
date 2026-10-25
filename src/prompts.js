@@ -1,6 +1,7 @@
 // Every prompt the app sends to Claude, by name. The SERVER builds each request from these (server/claude.js):
 // the browser sends only a task name and its inputs, never a system prompt, a model or a token limit.
-// So /api/claude can't be used as a general-purpose Claude proxy: each task's instructions are fixed here.
+// So no one can send /api/claude their own system prompt, model or limits. The chat task does take free-form
+// questions, as any chat must, so the server's rate limit (and a spend limit on the API key) caps what it can cost.
 //
 // A task: { kind, json?, system, user(input) } for one-shot calls, or { kind, system(input), chat: true } for
 // conversations, where the browser also sends the turns (the chat itself, Sam).

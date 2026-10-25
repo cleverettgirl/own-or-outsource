@@ -133,6 +133,7 @@ export function GapPanel({ m }) {
             <div className="text-[15px] leading-normal">{inline(m.check.question)}</div>
             <textarea data-role="gap-answer" value={m.text} onChange={m.onText} readOnly={done} placeholder="In your own words. No looking back." className="w-full min-h-27.5 resize-y border border-accent-border rounded-[10px] py-2.5 px-3 text-[14px] bg-surface outline-none font-[inherit] box-border"></textarea>
             {m.phase === 'ask' && <div className="flex gap-2 items-center"><button onClick={m.onSubmit} className={BTN_DARK}>Check my answer</button>{!!m.judging && <span className={LOADING}>reading it…</span>}</div>}
+            {m.phase === 'ask' && !!m.checkError && <div data-role="check-error" role="alert" className="text-[13px] leading-normal text-accent-text bg-accent-soft rounded-lg py-[7px] px-[11px]">{m.checkError}</div>}
             {done && (
               <div data-role="gap-result" className="flex flex-col gap-2 border-t border-line pt-3.5">
                 <div className={`font-serif text-[19px] ${r.closed ? 'text-good-text' : 'text-accent-text'}`}>{r.closed ? '✓ Gap closed' : 'Not closed yet'}</div>

@@ -6,7 +6,7 @@ import { ruleNotes, keepQuoted } from '../notes.js';
 import { tally } from '../scoring.js';
 import { isColdStart } from '../gaps.js';
 import { SQL, REACT, BOOK, JUNO, TARGETS, REACT_TIMING, isReactTiming } from '../scenarios.js';
-import { runCheck, gradeAttempt, judgeSqlThatDidntRun, fallbackGrade, judgeGap } from '../grading.js';
+import { runCheck, gradeAttempt, judgeSqlThatDidntRun, fallbackGrade, judgeGap, CouldNotCheck, COULDNT_CHECK } from '../grading.js';
 import { DAY, quote, pickedText, ownsWhole, isPickCheck, stepLabel, foldRepeats } from '../util.js';
 import { authoredFocus } from './useChat.js';
 import { useMergeState } from './useMergeState.js';
@@ -285,12 +285,15 @@ export function useOwn(app) {
   async function submitWrite() {
     const o = app.state.own, isChoice = isPickCheck(o.write.check);
     if ((isChoice ? !Object.values(o.write.picked).some(v => String(v).trim()) : !o.write.text.trim()) || o.write.gradeLoading) return;
-    setOwn({ write: { ...o.write, gradeLoading: true } });
+    setOwn({ write: { ...o.write, gradeLoading: true, checkError: '' } });
     let g;
     try {
       if (!o.write.check) throw new Error('no executable check');
+      // An explanation with no key points (its try was written offline) goes to the general grader below.
+      if (o.write.check.type === 'explain' && !o.write.check.keyPoints.length) throw new Error('no key points');
       if (o.write.check.type === 'explain') {
         const res = await judgeGap({ topic: o.focus ? o.focus.label : '' }, o.write.check, o.write.text);
+        if (res.failed) throw new CouldNotCheck();
         const ok = res.points.filter(p => p.ok);
         const items = o.write.check.keyPoints.length ? o.write.check.keyPoints.map((p, i) => ({ short: p, ok: !!(res.points[i] && res.points[i].ok), quote: (res.points[i] && res.points[i].evidence) || '' })) : [{ short: 'Explains the idea and applies it', ok: res.closed }];
         g = { items, score: !res.points.length ? 2 : res.closed ? 5 : ok.length ? 3 : 2, why: res.closed ? 'Your answer has every key idea.' : ok.length ? 'Some of the key ideas are there, not all.' : res.points.length ? "The key ideas aren't there yet." : "This couldn't be checked just now.",
@@ -301,9 +304,11 @@ export function useOwn(app) {
       // shouldn't zero a query whose idea is right, so Claude judges the same items from the query itself, and
       // the reveal says so. The plain-words syntax fix stays as "what to fix".
       if (g.didntRun && o.write.check.type === 'sql') g = await judgeSqlThatDidntRun(o, g);
-    } catch (_) { try {
+    } catch (err) { if (!(err instanceof CouldNotCheck)) try {
       g = await gradeAttempt(o.write.task, o.write.ref, o.write.text, o.lang, 'reveal', o.write.requirements);
     } catch (e) { g = fallbackGrade(o, o.write.text, o.write.ref); } }
+    // Nothing could be checked: say so, keep your answer, and record nothing (it isn't your first try yet).
+    if (!g) return setOwn(cur => ({ write: { ...cur.write, gradeLoading: false, checkError: COULDNT_CHECK } }));
     {
       const { right, n } = tally(g), d = right - o.prediction;
       // The item you came to own leads: missing it matters more than missing a side detail.

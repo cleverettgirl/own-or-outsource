@@ -41,7 +41,9 @@ export function useGaps(app) {
     app.chat.setGo(m.id, { judging: true });
     const g = app.state.gaps.find(x => x.id === m.gapId);
     const result = await judgeGap(g, m.check, m.text);
-    app.chat.setGo(m.id, { judging: false, phase: 'done', result });
+    // Nothing could be checked: stay on the question with your answer, and say so.
+    if (result.failed) return app.chat.setGo(m.id, { judging: false, checkError: result.feedback });
+    app.chat.setGo(m.id, { judging: false, checkError: '', phase: 'done', result });
     if (result.closed) closeGap(g, m.check);
   }
   // A closed gap becomes something you own: it joins Learnings and comes back for recall in 3 days.

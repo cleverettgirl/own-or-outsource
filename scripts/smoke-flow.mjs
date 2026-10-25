@@ -430,6 +430,7 @@ const dueTitles = () => [...document.querySelectorAll('[data-role=due-item]')].m
 // The seeded item (Juno's mechanism, owned "3 days ago") is the one thing due; recalling it is a new made-up company.
 const seedDue = () => [...document.querySelectorAll('[data-role=due-item]')].find(d => d.textContent.includes('Mechanism vs result'));
 step('recall: the seeded Juno item is the only thing due', dueTitles().length === 1 && !!seedDue() && seedDue().textContent.includes('Juno'));
+step('recall: the seeded item says it is an example, since a first-time visitor never owned it', /An example: as if you'd owned this in the Juno chat 3 days ago/.test(document.querySelector('[data-role=recall-rail]')?.textContent || ''));
 await act(async () => { [...seedDue().querySelectorAll('button')].find(b => b.textContent.includes('Recall now')).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
 step('recall: the seeded item is a new company, three questions about the idea, not a number', text().includes('Pallet (made up)') && text().includes("What scarce thing did Pallet make cheap?") && text().includes('Compared with Pallet, the rival'));
@@ -798,12 +799,23 @@ for (const [chip, prompt] of [['Parenting · a meltdown leaving the park', "melt
   await click('×');
 }
 
+// ---- A message too long for the server is named as too long, not as Claude being unreachable.
+{
+  await click('New chat');
+  globalThis.fetch = async () => ({ ok: false, status: 413, headers: { get: () => 'application/json' }, json: async () => ({ error: 'Input too long for this prototype.' }) });
+  await type(document.querySelector('main textarea'), 'x'.repeat(50)); await click('↑'); await wait(150);
+  globalThis.fetch = offline;
+  step('too long: a 413 says the message is too long, not that the model is unreachable', text().includes('That message is too long for this prototype') && !text().includes("couldn't reach the model"));
+}
+
 // ---- A people skill is done, not picked: you write what you'd say, it's checked for key moves quoted from your words,
 // and a sample is shown after as one way to say it.
 {
   await click('New chat');
   const reply = "Okay, let's go. I can see you're sad to leave. Do you want to race me to the gate or hop like a frog?";
+  let judgeDown = true;
   globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body);
+    if (b.task === 'gapJudge' && judgeDown) return { ok: false, status: 503, headers: { get: () => 'application/json' }, json: async () => ({ error: 'Overloaded' }) };
     const text = b.task === 'chat' ? 'Connect first, then redirect: name the feeling in a few words, then offer a choice about how you leave.'
       : b.task === 'focusOptions' ? JSON.stringify({ personal: false, spot: '', options: [{ label: 'Connecting before redirecting', mode: 'concept' }] })
       : b.task === 'writeTask' ? JSON.stringify({ orderIsInsight: false, format: 'respond', task: 'Now a new situation: your 4-year-old is crying because the library is closing. What do you say next?', context: '',
@@ -820,8 +832,13 @@ for (const [chip, prompt] of [['Parenting · a meltdown leaving the park', "melt
   const box = document.querySelector('textarea[data-role=write]');
   step("respond: you write it in your own words, in a prose box, not pick it", !!box && box.placeholder.includes("what you'd say or do") && !box.className.includes('font-mono') && !document.querySelector('[data-role=choice-q]'));
   await type(box, reply);
+  const ledgerBefore = JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').ledger?.length;
+  await click('Check my version'); await wait(200);
+  step("couldn't check: when Claude can't be reached, nothing is scored or recorded; your answer stays and it says so", !!document.querySelector('[data-role=check-error]') && text().includes('nothing was scored') && !document.querySelector('[data-role=items]') && document.querySelector('textarea[data-role=write]')?.value === reply && JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').ledger?.length === ledgerBefore);
+  judgeDown = false;
   await click('Check my version'); await wait(200);
   globalThis.fetch = offline;
+  step("couldn't check: checking again once Claude is back scores it as your first try", !document.querySelector('[data-role=check-error]') && !text().includes('Try 2'));
   const quote = document.querySelector('[data-role=item-quote]');
   step('respond: the reveal quotes your words for the move you made, and marks the one you missed', !!quote && quote.textContent.includes("sad to leave") && text().includes('✗') && document.querySelector('[data-role=items]')?.title.includes('key move'));
   const sample = document.querySelector('[data-role=sample]');

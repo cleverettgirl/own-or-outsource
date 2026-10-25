@@ -138,6 +138,8 @@ export function useChat(app) {
       const first = !app.state.messages.some(x => x.type === 'assistant');
       reply = gap && isColdStart(gap) && first ? { intro: '', code: COLD_START.offlineAnswer, lang: 'text', outro: '', scenario: null, plain: true }
         : m.recorded ? { intro: '', code: m.recorded, lang: m.scenario.lang, outro: "(I couldn't reach the model just now, so this is Claude's saved answer to the same question.)", scenario: m.scenario, plain: true }
+        // Too long is not "unreachable": the history is already trimmed, so it's this one message.
+        : e.status === 413 ? { intro: 'That message is too long for this prototype (about 12,000 characters at most). Try a shorter one.', code: '', lang: '', outro: '', scenario: null }
         : { intro: "I couldn't reach the model just now. Try again in a moment, or open a past chat in the sidebar.", code: '', lang: '', outro: '', scenario: null };
     }
     return reply;

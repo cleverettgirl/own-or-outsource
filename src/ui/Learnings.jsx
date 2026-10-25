@@ -113,7 +113,7 @@ export default function Learnings({ V }) {
                 <div data-role="recall-rail" className="text-on-accent rounded-[14px] p-5.5 flex flex-col gap-3 flex-1 bg-accent">
                   <span className="text-[12px] font-semibold tracking-[.04em] opacity-[.85]">READY TO RECALL{L.dueItems.length > 1 ? ` · ${L.dueItems.length} DUE` : ''}</span>
                   <span className="text-[24px] leading-tight font-serif">{first.title}</span>
-                  <span className="text-[13px] leading-normal opacity-[.9]">A quick check from memory, no looking back.{first.firstLine ? ` You ${first.firstLine}.` : ''}</span>
+                  <span className="text-[13px] leading-normal opacity-[.9]">{first.example ? <>An example: as if you'd owned this in the Juno chat 3 days ago. </> : null}A quick check from memory, no looking back.{first.firstLine ? ` You ${first.firstLine}.` : ''}</span>
                   {!first.recall && <button onClick={first.onRecall} className="mt-auto self-start bg-surface border-none rounded-full py-2.5 px-4.5 text-[14px] font-semibold text-accent">Recall now · about a minute</button>}
                   {!!first.recall && <span className="mt-auto text-[13px] opacity-[.9]">Recalling below ↓</span>}
                 </div>
@@ -233,6 +233,7 @@ function Recall({ it, L }) {
       {choice ? <ChoiceQuestions qs={r.check.questions} picked={r.picked} onPick={L.onRecallPick} locked={!!r.grade} />
         : <textarea data-role="recall-text" value={r.text} onChange={L.onRecallText} readOnly={!!r.grade} placeholder={r.placeholder || 'From memory. No looking back.'} className={`w-full min-h-18 resize-y border border-accent-border rounded-lg py-2.5 px-3 text-[13.5px] bg-surface outline-none ${r.lang === 'sql' ? 'font-mono' : 'font-[inherit]'}`}></textarea>}
       {!!r.after && <pre className={`${PRE} text-[13px] text-muted`}>{r.after}</pre>}
+      {!r.grade && !!r.checkError && <div data-role="check-error" role="alert" className="text-[13px] leading-normal text-accent-text bg-accent-soft rounded-lg py-[7px] px-[11px]">{r.checkError}</div>}
       {!r.grade && <div className="flex gap-2 items-center"><button onClick={L.submitRecall} className="bg-inverse text-on-inverse border-none rounded-full py-[9px] px-4 text-[13.5px]">Check it</button><button onClick={L.closeRecall} className="bg-transparent border-none text-[13px] text-muted">Not now</button>{!!r.loading && <span className={LOADING}>checking…</span>}</div>}
       {!!r.grade && (
         <div data-role="recall-result" className="flex flex-col gap-1.5">

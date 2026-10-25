@@ -20,7 +20,7 @@ export function learningsVals(app) {
     const due = e.dueAt != null && e.dueAt <= now, r = S.recall && S.recall.entryId === e.id ? S.recall : null;
     // For the map and the card covers: which chat it came from, what kind it is, how soon it comes back.
     return { sc: e.kind === 'gap' ? 'GAP' : scKey(e.own.scenario), target: e.own.focus && e.own.focus.target, dueAt: e.dueAt, daysToDue: e.dueAt == null ? null : (e.dueAt - now) / DAY,
-      firstLine: e.kind === 'gap' ? '' : `predicted ${e.predicted} of ${e.n}, got ${e.actual} of ${e.n} on the first try`,
+      example: !!e.example, firstLine: e.kind === 'gap' ? '' : `predicted ${e.predicted} of ${e.n}, got ${e.actual} of ${e.n} on the first try`,
       id: e.id, title: e.title, from: e.kind === 'gap' ? e.gap.from : e.own.scenario ? e.own.scenario.title : S.chatTitle, steps, due,
       owned: e.ownedAt != null ? `owned ${rel(e.ownedAt, now)}` : '', next: e.dueAt != null && !due ? `next recall ${rel(e.dueAt, now)}` : '',
       onRecall: () => app.recall.startRecall(e), recall: r && r.grade ? { ...r, ...tally(r.grade), full: allRight(r.grade) } : r, then: r ? r.thenLabel : '',

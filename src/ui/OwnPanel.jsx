@@ -154,6 +154,7 @@ export default function OwnPanel({ V }) {
                         {!!V.gradeLoading && <span className={LOADING}>{V.gradeLoadingText}</span>}
                       </div>
                     )}
+                    {!!V.writeNotGraded && !!V.writeCheckError && <div data-role="check-error" role="alert" className="text-[13px] leading-normal text-accent-text bg-accent-soft rounded-lg py-[7px] px-[11px]">{V.writeCheckError}</div>}
                   </div>
                 )}
 
