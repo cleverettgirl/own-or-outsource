@@ -6,9 +6,9 @@ import { JUNO_TARGETS } from './junoTargets.js';
 import { REACT_TARGETS } from './reactTargets.js';
 
 // The leadership starter: a question nobody prepared targets for, so it shows the generated path (spec-leadership-fixes.md).
-// It asks about disagreeing and names Roger Martin's question, so the answer reliably includes it, credited to him
-// (Claude once credited it to Adam Grant; log 85). That's the person's question, not app logic about leadership.
-export const LEAD_QUESTION = "I'm not a manager, but I want to grow as a leader on my team. What does leading without a title actually look like day to day, including how to disagree with a plan without just criticizing it? Draw on Brené Brown, Adam Grant, Simon Sinek, or Roger Martin's 'what would have to be true?' where it's relevant.";
+// It asks about disagreeing and names Roger Martin among the authors to draw on (until 2026-10-25 it
+// also quoted his "what would have to be true?", log 85). That's the person's question, not app logic about leadership.
+export const LEAD_QUESTION = "I'm not a manager, but I want to grow as a leader on my team. What does leading without a title actually look like day to day, including how to disagree with a plan without just criticizing it? Draw on Brené Brown, Adam Grant, Simon Sinek, or Roger Martin where it's relevant.";
 // The risk starter: a real health headline (WHO/IARC 2015: 50g of processed meat a day, +18% bowel cancer risk), asked
 // the way a person would. Relative vs absolute risk is what the answer has to teach; owning a calculation in it gets a
 // generated "work it out" try (log 63).

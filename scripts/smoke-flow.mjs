@@ -86,7 +86,7 @@ step('tip goes away once you own something', !document.querySelector('[data-role
 step('panel: no copy of Claude\'s text; the whole reply is marked as being owned in the chat', document.querySelectorAll('[data-msg-id][data-owning=whole]').length === 1 && !document.querySelector('[data-role=own-panel] pre') && text().includes('Reread it in your chat'));
 step('panel: Own it opens on the side, chat stays visible, chip marks it', !!document.querySelector('[data-role=own-panel]') && !!document.querySelector('[data-role=own-chip]') && !!document.querySelector('main pre'));
 await click('The whole query');
-step('predict: "no idea where to start?" offers Claude walking you through it first', !!document.querySelector('[data-role=ask-first-predict]') && text().includes('Have Claude walk you through it first'));
+step('predict: "no idea where to start?" offers Claude walking you through it first', !!document.querySelector('[data-role=ask-first-predict]') && /Not sure\? Reread .+, or have Claude walk you through it first in the chat\./.test(document.querySelector('[data-role=predict-hint]').textContent) && !document.querySelector('[data-role=no-idea]'));
 step('predict: the try is shown with what it is checked on, named without giving answers away', ownTitle().includes('The whole query') && !!document.querySelector('[data-role=predict-try]') && text().includes('total pages per author') && [...document.querySelectorAll('[data-role=predict-topics] li')].map(li => li.textContent).join(' | ') === 'who appears | what an empty total shows | which pages count | the sort order' && !text().includes('even Cal') && text().includes('How many of the 4 will you get right on your own?') && text().includes("Under half? You'll start with a quick warm-up.") && document.querySelectorAll('[data-role=predict-option]').length === 5);
 await act(async () => { document.querySelector('button[data-role=change-focus]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(50);
@@ -191,7 +191,7 @@ step('fix: your attempt is still there to edit', kept && kept.value === 'FROM cu
 await type(kept, 'FROM orders o\nLEFT JOIN customers c ON c.id = o.customer_id');
 await click('Check my version');
 await wait(400);
-step('fix: try 2 passes, prediction still measured against try 1', text().includes('Try 2: 2 of 2, fixed') && text().includes('measured against your first try (0 of 2)') && text().includes('You got 0') && !buttons().some(b => b.textContent === 'Fix it'));
+step('fix: the reveal shows try 2 (its ✓ list, no ✗), and only the prediction is compared with try 1, in one quiet line', text().includes('Try 2: 2 of 2, all there.') && !document.querySelector('[data-role=items]')?.textContent.includes('✗') && document.querySelector('[data-role=reveal-line]')?.textContent.includes('compared with your first try (0 of 2)') && !text().includes('You got 0') && !buttons().some(b => b.textContent === 'Fix it'));
 await click('Back to chat');
 
 // ---- You go first: a new question that needs what you owned. Claude offers you the first try.
@@ -278,7 +278,7 @@ await ownAll();
 step('book: owning a whole long answer asks what to own', text().includes('What do you want to own here?'));
 await click('The Rule of Five: why a few random samples usually catch the median');
 step('book: focus picked', ownTitle().includes('The Rule of Five: why a few random samples usually catch the median'));
-step('predict: nudges you to reread what you\'re owning before locking in, as a link to it in the chat', !!document.querySelector('[data-role=predict-reread]') && /Not sure\? Reread (Claude's answer|the part you highlighted) before you lock in a number\./.test(document.querySelector('[data-role=predict-hint]').textContent));
+step('predict: nudges you to reread what you\'re owning before locking in, as a link to it in the chat', !!document.querySelector('[data-role=predict-reread]') && /Not sure\? Reread (Claude's answer|the part you highlighted), or have Claude/.test(document.querySelector('[data-role=predict-hint]').textContent));
 await predict(0);
 await wait(50);
 step('book: starts at the test even at 0, with no visual in the panel', text().includes('4 random support calls') && !text().includes('See it visually'));
@@ -620,7 +620,7 @@ await predict(0);
 step('not ready: predicting under half offers "Ask Claude first" next to the try', !!document.querySelector('[data-role=not-ready]') && !!document.querySelector('textarea[data-role=write]'));
 await act(async () => { document.querySelector('[data-role=ask-first]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
-step('not ready: the panel closes; your highlight is quoted in the chat box, with a request to explain it step by step', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '').startsWith(`About this part of your answer:\n> ${hl}\n\n`) && (document.querySelector('main textarea')?.value || '').includes('explain it another way, with a concrete example?') && !(document.querySelector('main textarea')?.value || '').includes('whatever form') && !(document.querySelector('main textarea')?.value || '').includes('predict') && text().includes('Asked Claude first'));
+step('not ready: the panel closes; your highlight is quoted in the chat box, with a request to explain it step by step', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '').startsWith(`I'm trying to learn “Why status = 'paid' goes in ON, not WHERE”, and I don't really get it yet. Here's the part I mean:\n> ${hl}\n\n`) && (document.querySelector('main textarea')?.value || '').includes('explain it another way, with a concrete example?') && !(document.querySelector('main textarea')?.value || '').includes('whatever form') && !(document.querySelector('main textarea')?.value || '').includes('predict') && text().includes('Asked Claude first'));
 // Send it, then Own it under the new explanation: it owns the focus you picked, not one guessed again from the quote.
 globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ text: 'Think of ON as deciding which orders count as a match…' }) });
 await click('↑');

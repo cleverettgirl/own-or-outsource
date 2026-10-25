@@ -36,7 +36,7 @@ export function ownVals(app, o) {
   const g = w.grade || { score: 0, worked: '', gap: '', revealLine: '' };
   const g1 = w.firstGrade || g;
   const startI = L.indexOf(o.startStep);
-  const t1 = tally(g1), tn = tally(g), N = t1.n;
+  const t1 = tally(g1), tn = tally(g), N = t1.n, fixed = w.attempts > 1;
   const pct = k => (N ? k / N * 100 : 0) + '%';
   const lo = Math.min(o.prediction, t1.right), hi = Math.max(o.prediction, t1.right);
   const picks = isPickCheck(chk);
@@ -77,18 +77,20 @@ export function ownVals(app, o) {
     writeTask: w.task, writeProse: !!(chk && chk.type === 'explain'), writeLoading: w.loading, writeSchema: w.schema, hasWriteSchema: !!w.schema, writeText: w.text, onWriteText: e => app.own.setOwn(cur => ({ write: { ...cur.write, text: e.target.value } })),
     hasHints: w.hints.length > 0, hints: w.hints.map((h, i) => ({ t: h, n: i + 1 })), askHint: app.own.askHint, submitWrite: app.own.submitWrite,
     writeNotGraded: !w.grade, gradeLoading: w.gradeLoading || w.hintLoading, gradeLoadingText: w.hintLoading ? 'thinking of a hint…' : 'grading fairly…',
-    revealHeadline: g1.judgedByClaude ? "It didn't run, so Claude judged it." : g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
+    // After a fix, the result shown is the latest try; only the prediction stays compared with the first try, since
+    // that's what you could do on your own (and a retry always ends at full marks).
+    revealFixed: fixed,
+    revealHeadline: fixed ? (g.judgedByClaude ? `Try ${w.attempts} didn't run, so Claude judged it: ${tn.right} of ${tn.n}.` : g.didntRun ? `Try ${w.attempts} didn't run yet.` : `Try ${w.attempts}: ${tn.right} of ${tn.n}${tn.right === tn.n ? ', all there.' : '.'}`) : g1.judgedByClaude ? "It didn't run, so Claude judged it." : g1.didntRun ? "It didn't run yet." : t1.right === o.prediction ? 'Your prediction matched.' : t1.right > o.prediction ? 'You own more than you predicted.' : 'The reading was smoother than the doing.',
     // What was checked, item by item, on your first try. The idea you came to own is marked.
-    revealItems: (g1.items || []).map(i => ({ ...i, mark: i.ok ? '✓' : '✗' })), revealOwnedNote: (g1.items || []).some(i => i.owned) ? 'the idea you came to own' : '',
+    revealItems: (g.items || []).map(i => ({ ...i, mark: i.ok ? '✓' : '✗' })), revealOwnedNote: (g.items || []).some(i => i.owned) ? 'the idea you came to own' : '',
     canFix: !!w.grade && !allRight(g), fixWrite: app.own.fixWrite,
-    revealFixLine: w.attempts > 1 ? `Try ${w.attempts}: ${tn.right} of ${tn.n}${tn.right === tn.n ? ', fixed' : ''}. Your prediction is still measured against your first try (${t1.right} of ${N}), since that's what you could do on your own.` : '',
     revealNodes, revealCols: `repeat(${L.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
     // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
-    revealWhy: g.didntRun || (picks && (g1.items || []).length) ? '' : g.why || RUBRIC_WHY[g.score] || '',
+    revealWhy: g.didntRun || (picks && (g.items || []).length) ? '' : g.why || RUBRIC_WHY[g.score] || '',
     revealNotes: [...(g.worked && !picks ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
-    revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : chk && chk.respond ? SCALES.respond : chk && SCALES[chk.type] ? SCALES[chk.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
+    revealScale: g.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : chk && chk.respond ? SCALES.respond : chk && SCALES[chk.type] ? SCALES[chk.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
     revealCorrection: correctionNote(g.corrections), revealTables, revealSample: chk && chk.respond ? w.sample || '' : '',
-    revealLine: g1.revealLine, hasGap: !!g.gap, gradeGap: g.gap,
+    revealLine: fixed ? `Your prediction (${o.prediction} of ${N}) is compared with your first try (${t1.right} of ${N}), since that's what you could do on your own.` : g1.revealLine, hasGap: !!g.gap, gradeGap: g.gap,
     // Feedback of any kind (a gap, or a note on how you wrote it) is worth following up, even on a full score.
     canAsk: !!g.gap || !allRight(g) || (w.notes || []).some(x => x.kind !== 'nice'), yourAnswer: app.own.attemptText(o) || '', yourAnswerMono: !(chk && ['choice', 'steps', 'explain', 'number'].includes(chk.type)) && app.own.isCodeOwn(o), finishOwn: app.own.finishOwn, goTeach: app.own.goTeach,
     teachMsgs: tc.msgs.map(x => ({ text: x.text, isSam: x.role === 'sam', row: x.role === 'sam' ? 'self-start' : 'self-end', bubble: x.role === 'sam' ? 'bg-surface' : 'bg-bubble' })),

@@ -140,9 +140,11 @@ export function useOwn(app) {
   // counted as a miss: Own it is offered again under the explanation.
   function askClaudeFirst() {
     const S = app.state, o = S.own, n = plannedItems(o).length, label = o.focus ? o.focus.label : o.lang;
+    // It leads with what you're trying to learn (the focus you picked), then the part of Claude's answer it's about.
     const part = ownsWhole(o) ? '' : o.code;
-    const ask = "I don't really get this yet. Can you explain it another way, with a concrete example?";
-    const text = part ? `About this part of your answer:\n${quote(part)}\n\n${ask}` : `About “${label}”: ${ask}`;
+    const lead = o.focus ? `I'm trying to learn “${label}”, and I don't really get it yet.` : "I don't really get this yet.";
+    const ask = 'Can you explain it another way, with a concrete example?';
+    const text = part ? `${lead} Here's the part I mean:\n${quote(part)}\n\n${ask}` : `${lead} ${ask}`;
     const exit = { id: o.id, title: label, predicted: o.prediction, n, step: 'asked Claude first', askedFirst: true, stepOf: '', startStep: stepLabel(o, o.startStep), scenario: o.scenario };
     set({ own: null });
     app.progress.set({ exits: S.exits.concat([exit]) });

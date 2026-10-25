@@ -69,10 +69,7 @@ export default function OwnPanel({ V }) {
                       </button>
                     ))}
                   </div>
-                  <div data-role="predict-hint" className="text-[14px] leading-[1.55] text-muted">Not sure? <button onClick={V.rereadChat} data-role="predict-reread" className={`${LINK} text-[14px] text-muted`}>Reread {V.predictReread}</button> before you lock in a number.{!!V.predictLow && <> {V.predictLow}</>}</div>
-              <div data-role="no-idea" className={`${BODY} border-t border-line pt-3.5`}>
-                No idea where to start? <button onClick={V.askClaudeFirst} data-role="ask-first-predict" className={`${LINK} text-[13.5px] text-accent-text`}>Have Claude walk you through it first</button>, step by step in the chat. Come back to Own it after.
-              </div>
+                  <div data-role="predict-hint" className="text-[14px] leading-[1.55] text-muted">Not sure? <button onClick={V.rereadChat} data-role="predict-reread" className={`${LINK} text-[14px] text-muted`}>Reread {V.predictReread}</button>, or <button onClick={V.askClaudeFirst} data-role="ask-first-predict" className={`${LINK} text-[14px] text-accent-text`}>have Claude walk you through it first</button> in the chat.{!!V.predictLow && <> {V.predictLow}</>}</div>
                 </div>
               )}
 
@@ -177,7 +174,7 @@ export default function OwnPanel({ V }) {
                         </div>)}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 border-t border-line-soft pt-3.5">
+                  {!V.revealFixed && <div className="flex flex-col gap-2 border-t border-line-soft pt-3.5">
                     <div className="flex justify-between text-[11px] text-muted"><span>0</span><span>{V.revealN}</span></div>
                     <div className="relative h-9">
                       <div className="absolute left-0 right-0 top-[17px] h-0.5 bg-line"></div>
@@ -186,10 +183,9 @@ export default function OwnPanel({ V }) {
                       <div className="absolute top-[17px] h-0.5 bg-muted origin-left animate-[grow_.6s_ease]" style={{ left: V.gapLeft, width: V.gapWidth }}></div>
                     </div>
                     <div className="flex gap-4 text-[12.5px]"><span className="text-accent-text">● You said {V.ownPredictionN} of {V.revealN}</span><span className="text-good-text">● You got {V.actualN}</span></div>
-                  </div>
-                  <div className="text-[14.5px] leading-[1.55]">{V.revealLine}</div>
+                  </div>}
+                  <div data-role="reveal-line" className={V.revealFixed ? 'text-[13px] leading-normal text-muted' : 'text-[14.5px] leading-[1.55]'}>{V.revealLine}</div>
                   <div data-role="saved-line" className="flex gap-2 items-center text-[13px] text-good-text"><span className="w-1.5 h-1.5 rounded-full bg-good"></span>Saved to Learnings. It comes back for a quick recall in 3 days.</div>
-                  {!!V.revealFixLine && <div data-role="fix-line" className="text-[13.5px] leading-normal text-good-text bg-good-soft rounded-lg py-[7px] px-[11px]">{V.revealFixLine}</div>}
                   {V.revealItems.length > 0 && <ItemList items={V.revealItems} ownedNote={V.revealOwnedNote} title={V.revealScale} />}
                   {!!V.revealWhy && <div title={V.revealScale} className={BODY}>{V.revealWhy}</div>}
                   {!!V.revealCorrection && <div className="text-[13px] leading-normal text-ink-2 bg-sunken rounded-lg py-[7px] px-[11px]">{V.revealCorrection}</div>}
