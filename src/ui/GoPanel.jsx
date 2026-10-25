@@ -38,7 +38,7 @@ export default function GoPanel({ m }) {
         <Stepper steps={steps} />
         <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
           <span style={css(LABEL)}>USING WHAT YOU OWN</span>
-          <span style={css(`font-family:Newsreader,Georgia,serif;font-size:26px;line-height:1.2`)}>{ask ? m.owned : m.goOwned}</span>
+          <span style={css(`font-family:Newsreader,Georgia,serif;font-size:26px;line-height:1.2`)}>{ask ? m.ownedName || m.owned : m.goOwned}</span>
           {!ask && !!m.goWas && <span style={css(`font-size:13px;color:#8A8477`)}>Last time {m.goWas}.</span>}
         </div>
         <div style={css(`display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid #E2DCD0;border-radius:12px;padding:14px 18px`)}>
@@ -92,7 +92,25 @@ export default function GoPanel({ m }) {
             <textarea data-role="go-ask-text" value={m.text} onChange={m.onText} readOnly={m.phase !== 'try'} placeholder="Your answer, in your own words or code. No looking anything up." style={css(`width:100%;min-height:110px;resize:vertical;border:1px solid #E3C9B8;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13.5px;background:#fff;box-sizing:border-box`)} />
             {m.phase === 'try' && <div><button onClick={m.onSubmit} style={css(DARK)}>Show me yours</button></div>}
             {m.phase === 'checking' && <span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>comparing…</span>}
-            {m.phase === 'done' && !!m.note && <div data-role="go-ask-note" style={css(`border-top:1px solid #E2DCD0;padding-top:12px`)}><Md text={m.note} small /></div>}
+            {m.phase === 'done' && !!m.verdict && (
+              <div data-role="go-ask-verdict" data-verdict={m.verdict} style={css(`border-top:1px solid #E2DCD0;padding-top:12px;display:flex;gap:10px;align-items:flex-start`)}>
+                <span style={css(`flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:2px;background:${m.verdict === 'yes' ? '#DDEFEC' : '#FBE9E1'};color:${m.verdict === 'yes' ? '#1F6B64' : '#9E4B2A'}`)}>{m.verdict === 'yes' ? '✓' : m.verdict === 'partly' ? '~' : '✗'}</span>
+                <div style={css(`display:flex;flex-direction:column;gap:3px`)}>
+                  <div style={css(`font-size:14px;font-weight:600`)}>{m.verdict === 'yes' ? 'You applied what you own' : m.verdict === 'partly' ? 'You partly applied what you own' : "What you own didn't carry over yet"}</div>
+                  {!!m.verdictLine && <div style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}>{inline(m.verdictLine)}</div>}
+                </div>
+              </div>
+            )}
+            {m.phase === 'done' && !!m.note && <div data-role="go-ask-note" style={css(`${m.verdict ? '' : 'border-top:1px solid #E2DCD0;padding-top:12px'}`)}><Md text={m.note} small /></div>}
+            {m.phase === 'done' && (m.deeper || []).length > 0 && (
+              <div data-role="go-deeper" style={css(`display:flex;flex-direction:column;gap:8px;border-top:1px solid #E2DCD0;padding-top:12px`)}>
+                <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8A847A`)}>Worth going deeper on</div>
+                {m.deeper.map((d, i) => (
+                  <button key={i} onClick={() => m.onDeeper(d)} data-role="go-deeper-item" style={css(`text-align:left;background:#fff;border:1px solid #E3DFD6;border-radius:10px;padding:9px 12px;font-size:13.5px;color:#1F1D1A;display:flex;justify-content:space-between;gap:10px;align-items:center`)} className="hv3"><span>{inline(d)}</span><span style={css(`flex:none;font-size:12.5px;color:#9E4B2A`)}>Ask Claude →</span></button>
+                ))}
+                <div style={css(`font-size:12px;color:#8A847A`)}>Not saved to Learnings. Own it after Claude explains, if you want to keep it.</div>
+              </div>
+            )}
           </div>
         )}
 

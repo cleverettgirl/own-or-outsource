@@ -293,8 +293,9 @@ export default class App extends React.Component {
     this._onSelChange = () => { const s = window.getSelection(); if (this.state.sel && (!s || !s.toString().trim())) this.setState({ sel: null }); };
     document.addEventListener('mousedown', this._onDown);
     document.addEventListener('selectionchange', this._onSelChange);
+    document.addEventListener('mouseup', this.onDocMouseUp);
   }
-  componentWillUnmount() { document.removeEventListener('mousedown', this._onDown); document.removeEventListener('selectionchange', this._onSelChange); }
+  componentWillUnmount() { document.removeEventListener('mousedown', this._onDown); document.removeEventListener('selectionchange', this._onSelChange); document.removeEventListener('mouseup', this.onDocMouseUp); }
   componentDidUpdate(_, prev) {
     const S = this.state;
     // A newly opened panel starts open, not tucked away (phones).
@@ -342,10 +343,15 @@ export default class App extends React.Component {
   // Own-it finds the gap; the chat explains it. These prefill a follow-up with your attempt and what the check said.
   // The context goes in as a quote (the task, your answer, what the check said); the question is yours to write.
   // Naming what confuses you is part of the learning, so the app doesn't put words in your mouth.
-  askAboutIt = () => {
-    const o = this.state.own, w = o.write, g = w.grade, c = w.check;
-    const attempt = c && c.type === 'choice' ? c.questions.map(q => `${q.prompt} → ${(q.options.find(x => x.v === w.picked[q.id]) || {}).l || '(no answer)'}`).join('\n')
+  // Your try as text: the code or explanation you wrote, or each pick. Shown on the reveal and quoted when you ask.
+  attemptText(o = this.state.own) {
+    const w = o.write, c = w.check;
+    return c && c.type === 'choice' ? c.questions.map(q => `${q.prompt} → ${(q.options.find(x => x.v === w.picked[q.id]) || {}).l || '(no answer)'}`).join('\n')
       : c && c.type === 'steps' ? c.steps.map(st => `${st.label}: ${w.picked[st.id] || '(blank)'}`).join('\n') : w.text;
+  }
+  askAboutIt = () => {
+    const o = this.state.own, w = o.write, g = w.grade;
+    const attempt = this.attemptText(o);
     const q = t => String(t).split('\n').map(l => '> ' + l).join('\n');
     const text = `About my try on “${o.focus ? o.focus.label : 'this'}”:\n${q('Task: ' + w.task)}\n${q('My answer: ' + (attempt || '(nothing yet)'))}${g ? '\n' + q('The check said: ' + (g.gap || g.why || '')) : ''}\n\n`;
     this.setState({ composer: text }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
@@ -368,15 +374,17 @@ export default class App extends React.Component {
   // (one small call, run alongside the answer so nothing waits) and, if it does, offers you the first try.
   // Claude's answer is ready behind it either way. Questions about understanding don't trigger this: it only
   // looks at the first question of a new chat.
+  // What a ledger title is called on a new question: a hand-written target's general name when its label is tied to its example.
+  ideaName(title) { const t = Object.values(TARGETS).find(x => x.label === title); return (t && t.idea) || title; }
   ownedTitles() { return [...new Set(this.state.ledger.filter(e => e.kind === 'gap' || e.actual != null).map(e => e.title))].slice(-12); }
   async answerOrGoFirst(m, learn) {
     const owned = this.ownedTitles();
     const replyP = this.fetchReply(m);
     let hit = null;
-    try { const r = await this.ask('goFirstMatch', { question: m.question, owned }); hit = r.match >= 1 && r.match <= owned.length ? owned[r.match - 1] : null; } catch (e) { hit = null; }
+    try { const r = await this.ask('goFirstMatch', { question: m.question, owned: owned.map(t => this.ideaName(t)) }); hit = r.match >= 1 && r.match <= owned.length ? owned[r.match - 1] : null; } catch (e) { hit = null; }
     if (!hit) return this.showReply(m, learn, await replyP);
     const id = this.nid();
-    this.setState(s => ({ messages: s.messages.filter(x => x.type !== 'thinking').concat([{ id, type: 'goAsk', owned: hit, question: m.question, phase: 'offer', text: '', reply: null, note: '', at: Date.now() }]) }));
+    this.setState(s => ({ messages: s.messages.filter(x => x.type !== 'thinking').concat([{ id, type: 'goAsk', owned: hit, ownedName: this.ideaName(hit), question: m.question, phase: 'offer', text: '', reply: null, note: '', at: Date.now() }]) }));
     replyP.then(reply => this.setGo(id, { reply, m, learn }));
   }
   goAskNote(id, rec) { const g = this.state.messages.find(x => x.id === id); const e = this.state.ledger.slice().reverse().find(x => x.title === g.owned); if (e) this.setState(s => ({ ledger: s.ledger.map(x => x.id === e.id ? { ...x, realWork: (x.realWork || []).concat([rec]) } : x) })); }
@@ -385,9 +393,10 @@ export default class App extends React.Component {
     const g = this.state.messages.find(x => x.id === id); if (!g.text.trim() || g.phase !== 'try') return;
     this.setGo(id, { phase: 'checking' }); this.goAskNote(id, { wentFirst: true });
     const reply = g.reply || await new Promise(res => { const t = setInterval(() => { const x = this.state.messages.find(y => y.id === id); if (x && x.reply) { clearInterval(t); res(x.reply); } }, 200); });
-    let note = '';
-    try { note = await this.ask('goFirstCompare', { question: g.question, attempt: g.text, answer: [reply.intro, reply.code, reply.outro].filter(Boolean).join('\n\n') }); } catch (e) { note = ''; }
-    this.setGo(id, { phase: 'done', note });
+    let r = {};
+    try { r = await this.ask('goFirstCompare', { question: g.question, owned: g.ownedName || g.owned, attempt: g.text, answer: [reply.intro, reply.code, reply.outro].filter(Boolean).join('\n\n') }) || {}; } catch (e) { r = {}; }
+    const verdict = ['yes', 'partly', 'no'].includes(r.owned) ? r.owned : null;
+    this.setGo(id, { phase: 'done', note: String(r.note || ''), verdict, verdictLine: verdict ? String(r.ownedLine || '') : '', deeper: (r.deeper || []).map(d => d && String(d.idea || '').trim()).filter(Boolean).slice(0, 2) });
   };
   // The conversation so far, as API turns: user/assistant alternating, starting with the user, recent turns first
   // when it's long (the server caps input size).
@@ -460,7 +469,10 @@ export default class App extends React.Component {
     const first = this.state.messages.find(x => x.type === 'assistant');
     const a = { id: 'a' + this.nid(), msgId, quote, question, scenario: first ? first.scenario : null, chatTitle: this.state.chatTitle, at: this.now(), label: '', checked: false };
     this.setState(s => ({ asked: s.asked.concat([a]) }));
-    // Name it as a learning target (a short phrase) for Learnings; the matched hand-written target wins when there is one.
+    // Name it as a learning target (a short phrase) for Learnings. A focus carried from "explain another way" wins
+    // (it's what you chose), then a matched hand-written target.
+    const c = this.state.carryFocus;
+    if (c && (c.quote ? quote.trim() === c.quote : question.includes(c.label))) { this.setState({ carryFocus: null }); this.setAsked(a.id, { label: c.focus.label, focus: c.focus }); return a; }
     const t = this.matchTarget(a);
     if (t) this.setAsked(a.id, { label: t.label, focus: t });
     else if (topic) this.setAsked(a.id, { label: topic });
@@ -516,14 +528,28 @@ export default class App extends React.Component {
   }
 
   // ---------- selection ----------
-  onCodeMouseUp(m, e) {
-    const s = window.getSelection(); const t = s ? s.toString().trim() : '';
+  onCodeMouseUp(m, e, text = null) {
+    const s = window.getSelection(); const t = text != null ? text : s ? s.toString().trim() : '';
     if (!t || !m.learn || this.state.own) { if (this.state.sel) this.setState({ sel: null }); return; }
     this.setState({ sel: { text: t, x: e.clientX, y: e.clientY, msg: m } });
   }
   // Highlight → "Ask Claude": quote it into the chat and ask. Explanation is what the chat already does well.
   askSelection = () => { const s = this.state.sel; if (!s) return; const ws = window.getSelection(); if (ws) ws.removeAllRanges(); this.setState({ sel: null, composer: `About this part of your answer:\n> ${s.text.replace(/\n/g, '\n> ')}\n\n` }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); };
   ownSelection = () => { const s = this.state.sel; if (!s) return; this.setState({ sel: null }); const ws = window.getSelection(); if (ws) ws.removeAllRanges(); this.beginOwn(s.msg, s.text); };
+  // A drag that starts in an answer but is let go outside it (past the edge, below it, or back over the margin when
+  // you start at a line break) still offers the popover. The answer's own mouseup handles a release inside it.
+  onDocMouseUp = e => {
+    if (e.target.closest && e.target.closest('[data-answer-body]')) return;
+    const s = window.getSelection(); if (!s || !s.rangeCount || !s.toString().trim()) return;
+    const el = n => n && (n.nodeType === 1 ? n : n.parentElement);
+    const body = el(s.anchorNode) && el(s.anchorNode).closest('[data-answer-body]'); if (!body) return;
+    const m = this.state.messages.find(x => String(x.id) === body.closest('[data-msg-id]').getAttribute('data-msg-id')); if (!m) return;
+    // Only the part inside that answer counts, not the buttons or the next message the drag ran into.
+    const r = s.getRangeAt(0).cloneRange();
+    if (!body.contains(r.startContainer)) r.setStart(body, 0);
+    if (!body.contains(r.endContainer)) r.setEnd(body, body.childNodes.length);
+    this.onCodeMouseUp(m, e, r.toString().trim());
+  };
   // Ask about the current step, in context
   stepContext() {
     const o = this.state.own; if (!o) return '';
@@ -646,16 +672,18 @@ export default class App extends React.Component {
   // explanation, which is the chat's job (the chat explains; the panel checks and reinforces). It goes back to the
   // main chat with the message written for you, asking Claude to explain it another way. It names no format: the chat
   // prompt lists what the chat can show (tables, flip-through views…) and Claude picks what fits the topic, which
-  // works for SQL and React and for a people skill like leadership (log 84). Predicting stays in the panel. Someone with no idea doesn't know what to ask
+  // works for SQL and React and for a people skill like leadership (log 84). Asking for "whatever form makes it clearest" changed nothing (log 96), so it isn't asked. Predicting stays in the panel. Someone with no idea doesn't know what to ask
   // yet, so here the app does put words in your mouth (unlike "Ask Claude about this" after a try). It's not
   // counted as a miss: Own it is offered again under the explanation.
   askClaudeFirst = () => {
     const o = this.state.own, n = this.plannedItems(o).length, label = o.focus ? o.focus.label : o.lang;
     const part = o.code !== o.fullCode && o.code.length <= 400 ? o.code : '';
-    const ask = "I don't really get this yet. Can you explain it another way, with a concrete example, in whatever form makes it clearest?";
+    const ask = "I don't really get this yet. Can you explain it another way, with a concrete example?";
     const text = part ? `About this part of your answer:\n${part.split('\n').map(l => '> ' + l).join('\n')}\n\n${ask}` : `About “${label}”: ${ask}`;
     const exit = { id: o.id, title: label, predicted: o.prediction, n, step: 'asked Claude first', askedFirst: true, stepOf: '', startStep: stepLabel(o, o.startStep), scenario: o.scenario };
-    this.setState({ own: null, composer: text, exits: this.state.exits.concat([exit]),
+    // The focus you picked travels with the question, so Own it under the new explanation owns the same thing
+    // (recordAsked) instead of guessing it again from the quoted words.
+    this.setState({ own: null, composer: text, exits: this.state.exits.concat([exit]), carryFocus: o.focus ? { quote: part.trim(), label, focus: o.focus } : null,
       messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Asked Claude first', summary: o.prediction == null ? label : `${label} · predicted ${o.prediction} of ${n}` } : m) },
       () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
   };
@@ -1116,9 +1144,16 @@ export default class App extends React.Component {
       const g = GO_FIRST[m.key], gr = m.grade || {};
       head = 'my go'; question = g.question; answer = g.check.type === 'choice' ? picks(g.check) : m.text;
       said = [gr.gap, (gr.items || []).filter(i => !i.ok).map(i => 'Missed: ' + i.short).join('; ')].filter(Boolean).join(' ');
-    } else if (m.type === 'goAsk') { head = 'my go'; question = m.question; answer = m.text; said = m.note; }
+    } else if (m.type === 'goAsk') { head = 'my go'; question = m.question; answer = m.text; said = [m.verdictLine, m.note].filter(Boolean).join(' '); }
     else { const g = this.state.gaps.find(x => x.id === m.gapId) || {}, r = m.result || {}; head = `closing the gap “${g.topic || ''}”`; question = m.check.question; answer = m.text; said = [r.closed ? 'Closed.' : 'Not closed yet.', r.feedback].filter(Boolean).join(' '); }
     this.prefillChat(`About ${head}:\n${q('Question: ' + question)}\n${q('My answer: ' + (answer || '(nothing)'))}${said ? '\n' + q('The check said: ' + said) : ''}\n\n`);
+  };
+  // A gap the go-first check spotted, taken to the chat: your try is quoted and the idea named; the question is yours.
+  // Nothing is saved: if Claude's explanation lands, Own it is offered under it as usual.
+  goDeeper = (id, idea) => {
+    const m = this.state.messages.find(x => x.id === id); if (!m) return;
+    const q = t => String(t).split('\n').map(l => '> ' + l).join('\n');
+    this.prefillChat(`About my go:\n${q('Question: ' + m.question)}\n${q('My answer: ' + (m.text || '(nothing)'))}\n\nI'd like to go deeper on: ${idea}. `);
   };
   prefillChat(text) { this.setState({ composer: text, view: 'chat' }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); }
   // A missed recall is a gap: keep it, and explore it in a chat.
@@ -1219,7 +1254,7 @@ export default class App extends React.Component {
       if (m.type === 'gapBanner') { const g = S.gaps.find(x => x.id === m.gapId) || {}; Object.assign(v, { isGapBanner: true, gap: g, gapClosed: g.status === 'closed', checking: S.messages.some(x => x.type === 'gapCheck' && x.gapId === m.gapId && x.phase !== 'done'), onCheck: () => this.startGapCheck(m.gapId) }); }
       if (m.type === 'gapCheck') Object.assign(v, { isGapCheck: true, gapTopic: (S.gaps.find(x => x.id === m.gapId) || {}).topic || '', onText: e2 => this.setGo(m.id, { text: e2.target.value }), onSubmit: () => this.submitGapCheck(this.state.messages.find(x => x.id === m.id)), onAgain: () => this.startGapCheck(m.gapId) });
       // Go-first tries happen in the side panel (log 88); the chat keeps the offer and Claude's answer.
-      if (m.type === 'goAsk' || m.type === 'goFirst' || m.type === 'gapCheck') Object.assign(v, { inPanel: false, onAskAbout: () => this.askAboutPanelTry(m.id), onClosePanel: () => this.setGo(m.id, { panelClosed: true }), onOpenPanel: () => this.setGo(m.id, { panelClosed: false }) });
+      if (m.type === 'goAsk' || m.type === 'goFirst' || m.type === 'gapCheck') Object.assign(v, { inPanel: false, onAskAbout: () => this.askAboutPanelTry(m.id), onDeeper: idea => this.goDeeper(m.id, idea), onClosePanel: () => this.setGo(m.id, { panelClosed: true }), onOpenPanel: () => this.setGo(m.id, { panelClosed: false }) });
       if (m.type === 'goAsk') Object.assign(v, { isGoAsk: true, onFirst: () => this.setGo(m.id, { phase: 'try' }), onAnswer: () => this.goAskAnswer(m.id), onText: e2 => this.setGo(m.id, { text: e2.target.value }), onSubmit: () => this.goAskSubmit(m.id),
         replyText: m.reply ? [m.reply.intro, m.reply.code, m.reply.outro].filter(Boolean).join('\n\n') : '', showReply: m.phase === 'answered' || m.phase === 'done' });
       if (m.type === 'goFirst') {
@@ -1415,7 +1450,9 @@ export default class App extends React.Component {
         title, empty: !t.rows.length, cols: t.cols.map(() => 'minmax(0,1fr)').join(' ') || '1fr', headers: t.cols.map(c => ({ t: c })),
         rows: t.rows.map(r => ({ cells: r.cells.map((c, j) => ({ t: c, dim: c === 'NULL', hl: (r.diffs || []).includes(j) ? bg : '' })), bg: r.mark === mark ? bg : '' })),
         legend: [t.rows.some(r => r.mark === mark) ? (mark === 'extra' ? 'highlighted rows: should not be there' : 'highlighted rows: yours is missing them') : '', t.rows.some(r => r.mark === 'near') ? 'highlighted cells: the difference' : '', mark === 'extra' && g.table.dropped && g.table.dropped.length ? `extra columns left out: ${g.table.dropped.join(', ')}` : ''].filter(Boolean).join(' · ') })) : [],
-      revealLine: g1.revealLine, hasWorked: !!g.worked, gradeWorked: g.worked, hasGap: !!g.gap, gradeGap: g.gap, finishOwn: this.finishOwn, goTeach: this.goTeach
+      revealLine: g1.revealLine, hasWorked: !!g.worked, gradeWorked: g.worked, hasGap: !!g.gap, gradeGap: g.gap,
+      // Feedback of any kind (a gap, or a note on how you wrote it) is worth following up, even on a full score.
+      canAsk: !!g.gap || !allRight(g) || (w.notes || []).some(n => n.kind !== 'nice'), yourAnswer: this.attemptText(o) || '', yourAnswerMono: !(w.check && ['choice', 'steps', 'explain', 'number'].includes(w.check.type)) && this.isCodeOwn(o), finishOwn: this.finishOwn, goTeach: this.goTeach
     });
     // teach
     const t = o.teach;

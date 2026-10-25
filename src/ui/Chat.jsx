@@ -49,7 +49,7 @@ export default function Chat({ V }) {
               <div data-msg-id={m.id} data-owning={m.owning || undefined} style={css(`display:flex;flex-direction:column;gap:12px;animation:rise .3s ease;border-radius:12px;transition:box-shadow .3s;${m.flash ? 'box-shadow:0 0 0 3px #F0C9B4,0 0 0 10px #FFF5EE' : ''}`)}>
                 {!!(m.hasIntro) && (<><div style={css(SERIF)}>{m.intro}</div></>)}
                 {!!(m.hasCode) && (<>
-                  <div onMouseUp={m.onMouseUp} style={css(m.plain ? `position:relative` : `position:relative;background:#FBFAF7;border:1px solid #E3DFD6;border-radius:10px;overflow:hidden`)}>
+                  <div onMouseUp={m.onMouseUp} data-answer-body="true" style={css(m.plain ? `position:relative` : `position:relative;background:#FBFAF7;border:1px solid #E3DFD6;border-radius:10px;overflow:hidden`)}>
                     {!m.plain && <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-bottom:1px solid #EEEAE2;font-size:11px;color:#8A847A`)}><span>{m.lang}</span></div>}
                     {!!(m.isMd) && <Md text={m.code} />}
                     {!!(m.isCodeBlock) && (<><pre style={css(`margin:0;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;overflow:auto;white-space:pre`)}>{m.code}</pre></>)}
@@ -85,7 +85,7 @@ export default function Chat({ V }) {
 
             {!!(m.isGoAsk) && (
               <div data-role="go-ask" style={css(`display:flex;flex-direction:column;gap:14px;animation:rise .3s ease`)}>
-                <div style={css(SERIF)}>This one uses something you own: <b>{m.owned}</b>. Want to go first? Write your answer, then I'll show you mine.</div>
+                <div style={css(SERIF)}>This one uses something you own: <b>{m.ownedName || m.owned}</b>. Want to go first? Write your answer, then I'll show you mine.</div>
                 {m.phase === 'offer' && (
                   <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
                     <button onClick={m.onFirst} style={css(`background:#C4613A;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>I'll go first</button>

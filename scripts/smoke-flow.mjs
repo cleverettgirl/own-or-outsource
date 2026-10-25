@@ -142,6 +142,16 @@ await click('SQL · revenue per customer');
 await wait(900);
 const sel = 'LEFT JOIN orders o ON o.customer_id = c.id';
 const realGetSelection = window.getSelection;
+// A real selection inside the answer, let go outside it (past the edge, or back over the margin from a line break).
+{
+  const body = document.querySelector('main [data-answer-body]');
+  const walker = document.createTreeWalker(body, dom.window.NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode()) && !node.textContent.includes('LEFT JOIN'));
+  const range = document.createRange(); const at = node.textContent.indexOf('LEFT JOIN'); range.setStart(node, at); range.setEnd(node, at + 9);
+  window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+  await act(async () => { document.querySelector('main').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 900, clientY: 100 })); });
+  step('highlight: letting go outside the answer still offers the popover', !!document.querySelector('#own-sel-btn'));
+  await act(async () => { document.body.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true })); window.getSelection().removeAllRanges(); });
+}
 window.getSelection = () => ({ toString: () => sel, removeAllRanges() {} });
 await act(async () => { document.querySelector('main [data-msg-id] > div').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 100, clientY: 100 })); });
 await click('Own it');
@@ -161,6 +171,7 @@ await click('Check my version');
 await wait(400);
 step('fragment write: copy mistake diagnosed, 0 of 2, the owned idea named', text().includes('You got 0') && text().includes('this time every order has to stay') && text().includes('the idea you came to own'));
 step('reveal explains the result and how it was checked', text().includes("It runs, but the rows it returns aren't the ones the task asks for.") && !!document.querySelector('[title^="Checked by running your query"]'));
+step('reveal: your answer is there to look back at, as written', document.querySelector('[data-role=your-answer] summary')?.textContent === 'Your answer' && document.querySelector('[data-role=your-answer] div')?.textContent.includes('LEFT JOIN'));
 step('reveal shows your rows vs expected, marked', text().includes('What yours returns') && text().includes('What it should return') && text().includes('highlighted rows: yours is missing them'));
 step('fragment: ledger names the focus', text().includes('When to use LEFT vs INNER vs RIGHT JOIN'));
 step('own icon stays visible, shown active while its panel is open', (() => { const bs = [...document.querySelectorAll('button[data-role=own-all]')]; return bs.length > 0 && bs.at(-1).getAttribute('aria-pressed') === 'true'; })());
@@ -512,7 +523,7 @@ await wait(500);
 await click('Back to chat');
 await click('New chat');
 const asked = [];
-globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); asked.push(b.task); const text = b.task === 'goFirstMatch' ? '{"match": 1}' : b.task === 'goFirstCompare' ? 'You started from **products**, which keeps every one.' : 'Start FROM products and LEFT JOIN the reviews.'; return { ok: true, status: 200, json: async () => ({ text }) }; };
+globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); asked.push(b.task); const text = b.task === 'goFirstMatch' ? '{"match": 1}' : b.task === 'goFirstCompare' ? JSON.stringify({ owned: 'yes', ownedLine: 'You kept the review filters in **ON**, so products with none stay.', note: 'You started from **products**, which keeps every one.', deeper: [{ idea: 'Counting matches after a LEFT JOIN' }, { idea: 'Filtering a year with a date range' }] }) : 'Start FROM products and LEFT JOIN the reviews.'; return { ok: true, status: 200, json: async () => ({ text }) }; };
 await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, 'Write me SQL: every product with its number of reviews, including products with none.'); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
 await click('↑');
 await wait(120);
@@ -523,6 +534,13 @@ await type(document.querySelector('textarea[data-role=go-ask-text]'), 'SELECT p.
 await click('Show me yours');
 await wait(400);
 step('go first on ask: Claude compares, then shows its answer', !!document.querySelector('[data-role=go-ask-note]') && text().includes('You started from products') && text().includes('Start FROM products'));
+step('go first on ask: the idea you own gets its own verdict, first', document.querySelector('[data-role=go-ask-verdict]')?.dataset.verdict === 'yes' && text().includes('You applied what you own') && text().includes('kept the review filters in ON'));
+step('go first on ask: new gaps are named as ideas to go deeper on, and not saved', document.querySelectorAll('[data-role=go-deeper-item]').length === 2 && text().includes('Not saved to Learnings'));
+const ledgerBeforeDeeper = JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').ledger?.length;
+await act(async () => { document.querySelector('[data-role=go-deeper-item]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
+step('go deeper: your try is quoted in the chat box with the idea named; the question is yours', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.startsWith('About my go:') && v.includes('> My answer: SELECT p.name') && v.trim().endsWith("I'd like to go deeper on: Counting matches after a LEFT JOIN."); })());
+step('go deeper: nothing is added to Learnings', ledgerBeforeDeeper > 0 && JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').ledger?.length === ledgerBeforeDeeper);
+await type(document.querySelector('main textarea'), '');
 globalThis.fetch = offline;
 await openLearnings();
 step('go first on ask: Learnings records that you went first', text().includes('went first'));
@@ -552,6 +570,23 @@ step('steps: the reveal names the try "Work it out"', text().includes('Work it o
 globalThis.fetch = offline;
 await click('Back to chat');
 
+// ---- Full score with feedback (Christine's run): the join is right, but the paid filter in ON blanks names.
+// You can still see what you wrote and ask Claude about the feedback.
+await click('New chat');
+await click('SQL · revenue per customer');
+await wait(900);
+window.getSelection = () => ({ toString: () => sel, removeAllRanges() {} });
+await act(async () => { document.querySelector('main [data-msg-id] > div').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 100, clientY: 100 })); });
+await click('Own it');
+window.getSelection = realGetSelection;
+await click('When to use LEFT vs INNER');
+await predict(2);
+await type(document.querySelector('textarea[data-role=write]'), "FROM orders o\nLEFT JOIN customers c ON c.id = o.customer_id and o.status = 'paid'");
+await click('Check my version');
+await wait(400);
+step('full score with feedback: your answer is shown and "Ask Claude about this" is offered', text().includes('You got 2') && text().includes('What to fix:') && document.querySelector('[data-role=your-answer] div')?.textContent.includes("o.status = 'paid'") && !!document.querySelector('[data-role=ask-claude]'));
+await click('Back to chat');
+
 // ---- Not ready yet: a low prediction offers the way back to Claude, with the highlight quoted.
 await click('New chat');
 await click('SQL · revenue per customer');
@@ -561,14 +596,31 @@ window.getSelection = () => ({ toString: () => hl, removeAllRanges() {} });
 await act(async () => { document.querySelector('main [data-msg-id] > div').dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true, clientX: 100, clientY: 100 })); });
 await click('Own it');
 window.getSelection = realGetSelection;
+step('highlight heading: a sentence about ON vs WHERE offers that first, even though it says "join"', (buttons().map(b => b.textContent.trim()).filter(t => /concept|structure$/.test(t))[0] || '').startsWith("Why status = 'paid' goes in ON"));
 await click("Why status = 'paid' goes in ON");
 await predict(0);
 step('not ready: predicting under half offers "Ask Claude first" next to the try', !!document.querySelector('[data-role=not-ready]') && !!document.querySelector('textarea[data-role=write]'));
 await act(async () => { document.querySelector('[data-role=ask-first]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
-step('not ready: the panel closes; your highlight is quoted in the chat box, with a request to explain it step by step', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '').startsWith(`About this part of your answer:\n> ${hl}\n\n`) && (document.querySelector('main textarea')?.value || '').includes('explain it another way') && !(document.querySelector('main textarea')?.value || '').includes('predict') && text().includes('Asked Claude first'));
+step('not ready: the panel closes; your highlight is quoted in the chat box, with a request to explain it step by step', !document.querySelector('[data-role=own-panel]') && (document.querySelector('main textarea')?.value || '').startsWith(`About this part of your answer:\n> ${hl}\n\n`) && (document.querySelector('main textarea')?.value || '').includes('explain it another way, with a concrete example?') && !(document.querySelector('main textarea')?.value || '').includes('whatever form') && !(document.querySelector('main textarea')?.value || '').includes('predict') && text().includes('Asked Claude first'));
+// Send it, then Own it under the new explanation: it owns the focus you picked, not one guessed again from the quote.
+globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ text: 'Think of ON as deciding which orders count as a match…' }) });
+await click('↑');
+await wait(80);
+globalThis.fetch = offline;
+await act(async () => { document.querySelector('button[data-role=own-all][data-expanded]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+await wait(50);
+step('highlight heading: after "explain another way", Own it keeps the focus you picked', ownTitle().includes("Why status = 'paid' goes in ON") && !ownTitle().includes('LEFT vs INNER'), ownTitle());
+await click('Never mind');
 await openLearnings();
 step('not ready: going to Claude first is kept as data, not counted as a miss', (JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').exits || []).some(x => x.askedFirst));
+
+// ---- A new question that needs ON vs WHERE is named by the idea, not the old example's "status = 'paid'".
+{
+  const { SQL_TARGETS } = await vite.ssrLoadModule('/src/targets.js');
+  const idea = SQL_TARGETS.onwhere.idea || '';
+  step('go first on ask: ON vs WHERE has a general name for new questions, free of the paid example', /ON vs WHERE/.test(idea) && !/paid|status|customer|order/i.test(idea), idea);
+}
 
 // ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).
 {

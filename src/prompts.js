@@ -103,8 +103,10 @@ export const TASKS = {
   goFirstMatch: { kind: 'json', json: true, system: 'You judge carefully and conservatively. Strict JSON only.',
     user: i => `Someone has practised these ideas until they own them:\n${(i.owned || []).map((t, k) => `${k + 1}. ${s(t)}`).join('\n')}\n\nThey now ask Claude a new question:\n"${s(i.question)}"\n\nWould answering it well require applying one of those ideas to this new case (not just mentioning a related word)? If several, pick the most central. Return ONLY JSON {"match": the idea's number, or 0 if none}` },
 
-  goFirstCompare: { kind: 'tutor', system: 'You are Claude. Warm, specific, brief. Markdown.',
-    user: i => `You were asked: "${s(i.question)}"\nBefore seeing your answer, the person wrote their own:\n${s(i.attempt)}\n\nYour answer:\n${s(i.answer).slice(0, 3000)}\n\nIn 2-3 short sentences, addressed to them: what their answer got right (quote a few of their words), and the one thing that matters most where yours differs, if anything. No score, no praise words like "great". Don't repeat your whole answer; it's shown right below.` },
+  // The verdict on the idea you own comes first and apart from anything else; new gaps are only named, never saved
+  // (Learnings holds what you chose to own). Each gap is an idea to go deeper on, not a fix to the query.
+  goFirstCompare: { kind: 'json', json: true, system: 'You are Claude. Warm, specific, brief. Strict JSON only.',
+    user: i => `You were asked: "${s(i.question)}"\nBefore seeing your answer, the person wrote their own. They had already practised this idea: "${s(i.owned)}".\nTheir answer:\n${s(i.attempt)}\n\nYour answer:\n${s(i.answer).slice(0, 3000)}\n\nReturn ONLY JSON {"owned": "yes" | "partly" | "no" (did their answer apply "${s(i.owned)}" correctly to this case? judge only that idea), "ownedLine": one sentence, addressed to them, on how they applied that idea, quoting a few of their words, "note": 2-3 short sentences of markdown, addressed to them, on the one thing that matters most where yours differs, beyond that idea (empty string if nothing), "deeper": up to 2 other ideas their answer shows they could go deeper on, most useful first, each {"idea": the idea as a short topic under 9 words (e.g. "Counting matches after a LEFT JOIN"), not a fix to their code}; [] if none}. No score, no praise words like "great". Don't repeat your whole answer; it's shown in the chat.` },
 
   // ---- recall ----
   recallTask: { kind: 'json', json: true, system: 'Strict JSON only.',

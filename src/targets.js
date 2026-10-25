@@ -136,6 +136,8 @@ export const SQL_TARGETS = {
 
   onwhere: {
     label: "Why status = 'paid' goes in ON, not WHERE", kind: 'concept',
+    // The label is tied to this example; a new question that needs it (You go first) names the idea in general.
+    idea: 'Filtering in ON vs WHERE with a LEFT JOIN',
     producingIsSkill: true, writtenOrderMatters: false, visual: 'compare',
     explain: {
       model: 'ON decides which rows count as a match. WHERE runs afterwards and filters the joined result, including the NULL rows a LEFT JOIN added.',
@@ -237,8 +239,9 @@ export function sqlFocusOptions(selection) {
   const lines = selection.split('\n').filter(l => l.trim()).length;
   const opt = (id, label) => ({ label: label || SQL_TARGETS[id].label, mode: SQL_TARGETS[id].kind, target: id });
   if (lines >= 3) return [opt('whole'), opt('joins'), opt('onwhere')];
+  // Talk of filtering (WHERE, the paid condition) points at ON vs WHERE even when the sentence also says "join".
+  if (/paid|status|\bwhere\b/i.test(selection)) return [opt('onwhere'), opt('joins')];
   if (/\bjoin\b/i.test(selection)) return [opt('joins'), opt('onwhere'), opt('joins', 'The join syntax itself')];
-  if (/paid|status/i.test(selection)) return [opt('onwhere'), opt('joins')];
   // No hand-written target covers this part (e.g. ORDER BY): return nothing, and let the caller
   // generate options about what was actually highlighted rather than offer unrelated ones.
   return [];

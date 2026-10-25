@@ -352,6 +352,12 @@ export default function OwnPanel({ V }) {
                   {V.revealItems.length > 0 && <ItemList items={V.revealItems} ownedNote={V.revealOwnedNote} title={V.revealScale} />}
                   {!!V.revealWhy && <div title={V.revealScale} style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}>{V.revealWhy}</div>}
                   {!!(V.revealCorrection) && (<><div style={css(`font-size:13px;line-height:1.5;color:#514C44;background:#F4F1EA;border-radius:8px;padding:7px 11px`)}>{V.revealCorrection}</div></>)}
+                  {!!V.yourAnswer && (
+                    <details data-role="your-answer" style={css(`font-size:13.5px;color:#514C44`)}>
+                      <summary style={css(`cursor:pointer;font-size:13px;color:#8A847A`)}>Your answer</summary>
+                      <div style={css(`margin-top:6px;background:#F4F1EA;border-radius:8px;padding:9px 12px;white-space:pre-wrap;line-height:1.5;${V.yourAnswerMono ? "font-family:'JetBrains Mono',monospace;font-size:12.5px;" : ''}`)}>{V.yourAnswer}</div>
+                    </details>
+                  )}
                   {!!(V.hasGap) && (<><div style={css(`font-size:13.5px;line-height:1.5;color:#514C44`)}><b style={css(`color:#9E4B2A`)}>What to fix:</b> {inline(V.gradeGap || '')}</div></>)}
                   {V.revealTables.length > 0 && (
                     <div style={css(`display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:start`)}>
@@ -378,7 +384,7 @@ export default function OwnPanel({ V }) {
                   )}
                   <div style={css(`display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}>
      {!!(V.revealVisual) && <button onClick={V.revealVisual} style={css(`background:none;border:none;font-size:13px;color:#8A847A`)}>See it visually</button>}
-                    {!!(V.canFix) && <button onClick={V.askAboutIt} data-role="ask-claude" style={css(`background:none;border:1px solid #E3C9B8;border-radius:9px;padding:8px 13px;font-size:13px;color:#9E4B2A`)} className="hv4">Ask Claude about this</button>}
+                    {!!(V.canAsk) && <button onClick={V.askAboutIt} data-role="ask-claude" style={css(`background:none;border:1px solid #E3C9B8;border-radius:9px;padding:8px 13px;font-size:13px;color:#9E4B2A`)} className="hv4">Ask Claude about this</button>}
                     {!!(V.canFix) && <button onClick={V.fixWrite} data-role="fix" style={css(`background:#C4613A;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Fix it</button>}
                     <button onClick={V.finishOwn} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Back to chat</button>
                 <button onClick={V.seeInLearnings} data-role="see-in-learnings" style={css(`background:none;border:1px solid #CFE3DE;border-radius:9px;padding:8px 13px;font-size:13px;color:#1F6B64`)} className="hv6">See it in Learnings →</button>
