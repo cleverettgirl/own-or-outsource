@@ -5,7 +5,8 @@ import { NAV_ICONS, OwnIcon, NAV } from './parts.jsx';
 
 export default function Sidebar({ V }) {
   return (
-    <aside style={css(`width:260px;flex:none;background:#F3F1EC;border-right:1px solid #E3DFD6;display:flex;flex-direction:column;padding:16px 12px;gap:18px;overflow:auto`)}>
+    // On a phone it's a drawer (mobile.css): choosing anything in it closes it.
+    <aside data-role="sidebar" onClickCapture={e => { if (e.target.closest && e.target.closest('button')) V.closeNav(); }} style={css(`width:260px;flex:none;background:#F3F1EC;border-right:1px solid #E3DFD6;display:flex;flex-direction:column;padding:16px 12px;gap:18px;overflow:auto`)}>
       <div style={css(`display:flex;align-items:center;justify-content:space-between;padding:0 6px`)}>
         <span style={css(`font-family:Newsreader,serif;font-size:23px;letter-spacing:-.01em`)}>Claude</span>
         <span style={css(`width:18px;height:14px;border:1.4px solid #8A847A;border-radius:3px`)}></span>

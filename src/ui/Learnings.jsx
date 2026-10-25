@@ -106,7 +106,7 @@ export default function Learnings({ V }) {
         {L.empty ? (
           <div style={css(card + ';font-size:15px;color:#3A3732;line-height:1.5')}>Nothing yet. Use the <span style={css(`color:${ORANGE}`)}>Own it</span> icon under any answer, or open a past chat in the sidebar and own what you learned there.</div>
         ) : (
-          <div style={css(`display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px`)}>
+          <div data-role="learn-top" style={css(`display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px`)}>
             <Map L={L} />
             <div style={css(`display:flex;flex-direction:column;gap:16px`)}>
               {first ? (

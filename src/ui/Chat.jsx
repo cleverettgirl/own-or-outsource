@@ -8,19 +8,20 @@ import Composer from './Composer.jsx';
 export default function Chat({ V }) {
   return (
     <main style={css(`flex:1;display:flex;flex-direction:column;min-width:0;position:relative`)}>
+      <button className="nav-toggle mobile-only" data-role="nav-toggle" onClick={V.openNav} aria-label="Open the menu">☰</button>
       {V.isLearnings ? <Learnings V={V} /> : (<>
       {!V.isEmpty && (
-        <div style={css(`display:flex;align-items:center;justify-content:space-between;padding:14px 24px;flex:none`)}>
+        <div data-role="chat-header" style={css(`display:flex;align-items:center;justify-content:space-between;padding:14px 24px;flex:none`)}>
           <div style={css(`display:flex;align-items:center;gap:6px;font-size:15px;color:#1F1D1A;min-width:0`)}><span style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>{V.chatTitle}</span><span style={css(`color:#8A847A;font-size:11px`)}>⌄</span></div>
           <button aria-disabled="true" title="Not in this prototype" style={css(`background:none;border:none;font-size:13.5px;color:#514C44;display:flex;gap:6px;align-items:center;cursor:default`)}>⇪ Share</button>
         </div>
       )}
       <div ref={V.scrollRef} style={css(`flex:1;overflow:auto;padding:${V.isEmpty ? '0' : '12px'} 0 24px;display:flex;flex-direction:column`)}>
-        <div style={css(`width:100%;max-width:${V.isEmpty ? '640px' : '720px'};margin:${V.isEmpty ? 'auto' : '0 auto'};padding:0 28px;display:flex;flex-direction:column;gap:24px`)}>
+        <div data-role="chat-col" style={css(`width:100%;max-width:${V.isEmpty ? '640px' : '720px'};margin:${V.isEmpty ? 'auto' : '0 auto'};padding:0 28px;display:flex;flex-direction:column;gap:24px`)}>
 
           {!!(V.isEmpty) && (
             <div style={css(`display:flex;flex-direction:column;align-items:center;gap:26px;animation:rise .4s ease;padding-bottom:8vh`)}>
-              <h1 style={css(`display:flex;align-items:center;gap:14px;font-family:Newsreader,serif;font-weight:400;font-size:40px;line-height:1.15;margin:0;letter-spacing:-.01em`)}><Spark />Back at it</h1>
+              <h1 data-role="home-title" style={css(`display:flex;align-items:center;gap:14px;font-family:Newsreader,serif;font-weight:400;font-size:40px;line-height:1.15;margin:0;letter-spacing:-.01em`)}><Spark />Back at it</h1>
               <div data-role="framing" style={css(`font-size:15px;color:#514C44;text-align:center;max-width:500px;line-height:1.55;margin-top:-12px`)}>Claude's answers make things feel clear. <b style={css(`font-weight:600;color:#9E4B2A`)}>Own it</b> checks whether you could do it yourself, and brings it back so it sticks.</div>
               {<Composer V={V} home />}
               <div style={css(`display:flex;gap:8px;flex-wrap:wrap;justify-content:center`)}>
@@ -91,13 +92,10 @@ export default function Chat({ V }) {
                     <button onClick={m.onAnswer} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">Just answer this time</button>
                   </div>
                 )}
-                {(m.phase === 'try' || m.phase === 'checking' || m.phase === 'done') && (
-                  <div style={css(`display:flex;flex-direction:column;gap:10px;border:1px solid #F0C9B4;background:#FFFBF8;border-radius:12px;padding:14px 16px`)}>
-                    <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9E4B2A`)}>Your go</div>
-                    <textarea data-role="go-ask-text" value={m.text} onChange={m.onText} readOnly={m.phase !== 'try'} placeholder="Your answer, in your own words or code. No looking anything up." style={css(`width:100%;min-height:90px;resize:vertical;border:1px solid #E3C9B8;border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13.5px;background:#fff;outline:none`)}></textarea>
-                    {m.phase === 'try' && <div><button onClick={m.onSubmit} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Show me yours</button></div>}
-                    {m.phase === 'checking' && <span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>comparing…</span>}
-                    {m.phase === 'done' && !!m.note && <div data-role="go-ask-note" style={css(`border-top:1px dashed #E3C9B8;padding-top:10px`)}><Md text={m.note} small /></div>}
+                {m.inPanel !== undefined && m.phase !== 'offer' && m.phase !== 'answered' && (
+                  <div data-role="go-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:#6B665C`)}>
+                    <span>{m.phase === 'done' ? 'Your go is in the side panel. Here\'s mine:' : 'Your go is in the side panel. My answer waits until you\'ve tried.'}</span>
+                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:#9E4B2A;text-decoration:underline;text-underline-offset:2px`)}>Open it</button>}
                   </div>
                 )}
                 {m.phase === 'answered' && <div style={css(`font-size:12.5px;color:#8A847A`)}>No problem: noted in Learnings that you let me take this one.</div>}
@@ -114,37 +112,10 @@ export default function Chat({ V }) {
                     <button onClick={m.goAnswer} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:8px 13px;font-size:13px;color:#514C44`)} className="hv6">Just answer this time</button>
                   </div>
                 )}
-                {m.phase === 'predict' && (
-                  <div style={css(`display:flex;flex-direction:column;gap:8px`)}>
-                    {m.goTopics.length > 0 && (
-                      <div data-role="go-topics" style={css(`font-size:13px;color:#514C44;display:flex;flex-direction:column;gap:4px`)}>
-                        <span>{m.goN} {m.goKind}{m.goN === 1 ? '' : 's'}, on:</span>
-                        <ul style={css(`margin:0;padding-left:18px;line-height:1.6`)}>{m.goTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>
-                      </div>
-                    )}
-                    <div style={css(`font-size:14px`)}>{m.goN === 1 ? 'Will you get it right on your own?' : `How many of the ${m.goN} will you get right on your own?`}</div>
-                    <div style={css(`display:flex;gap:6px;max-width:460px`)}>
-                      {Array.from({ length: m.goN + 1 }, (_, k) => <button key={k} onClick={() => m.goPredict(k)} style={css(`flex:1;border:1px solid #E3C9B8;background:#fff;border-radius:10px;padding:9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px`)} className="hv3"><span style={css(`font-family:Newsreader,serif;font-size:18px`)}>{k}</span><span style={css(`font-size:10.5px;color:#716C64`)}>{k === 0 ? 'none' : k === m.goN ? 'all' : ''}</span></button>)}
-                    </div>
-                  </div>
-                )}
-                {(m.phase === 'try' || m.phase === 'done') && (
-                  <div style={css(`display:flex;flex-direction:column;gap:10px;border:1px solid #F0C9B4;background:#FFFBF8;border-radius:12px;padding:14px 16px`)}>
-                    <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9E4B2A`)}>Your go · predicted {m.prediction} of {m.goN}</div>
-                    {!!m.go.task && <div style={css(`font-size:14px`)}>{m.go.task}</div>}
-                    {!!m.go.schema && <pre style={css(`margin:0;padding:8px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#514C44;white-space:pre-wrap`)}>{m.go.schema}</pre>}
-                    {m.go.check.type === 'choice'
-                      ? <ChoiceQuestions qs={m.go.check.questions} picked={m.picked} onPick={m.goPick} locked={m.phase === 'done'} />
-                      : <textarea data-role="go-text" value={m.text} onChange={m.goText} readOnly={m.phase === 'done'} placeholder={m.go.placeholder} style={css(`width:100%;min-height:${m.go.lang === 'sql' ? '110px' : '64px'};resize:vertical;border:1px solid #E3C9B8;border-radius:8px;padding:10px 12px;font-family:${m.go.lang === 'sql' ? "'JetBrains Mono',monospace" : 'inherit'};font-size:13.5px;background:#fff;outline:none`)}></textarea>}
-                    {m.phase === 'try' && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={m.goCheck} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Check mine</button>{!!m.checking && <span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>checking…</span>}</div>}
-                    {m.phase === 'done' && (
-                      <div data-role="go-result" style={css(`display:flex;flex-direction:column;gap:6px;border-top:1px dashed #E3C9B8;padding-top:10px`)}>
-                        <div style={css(`font-family:Newsreader,serif;font-size:18px`)}>{m.goResult}</div>
-                        {m.goItems.length > 0 && <ItemList items={m.goItems} />}
-                        {!!m.grade.worked && <div style={css(`font-size:13.5px;color:#514C44`)}><b style={css(`color:#1F6B64`)}>What held:</b> {m.grade.worked}</div>}
-                        {!!m.grade.gap && <div style={css(`font-size:13.5px;color:#514C44`)}><b style={css(`color:#9E4B2A`)}>What to look at:</b> {m.grade.gap}</div>}
-                      </div>
-                    )}
+                {m.inPanel !== undefined && m.phase !== 'offer' && m.phase !== 'answered' && (
+                  <div data-role="go-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:#6B665C`)}>
+                    <span>{m.phase === 'done' ? 'Your go is in the side panel. Here\'s mine:' : 'Your go is in the side panel. My answer waits until you\'ve tried.'}</span>
+                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:#9E4B2A;text-decoration:underline;text-underline-offset:2px`)}>Open it</button>}
                   </div>
                 )}
                 {(m.phase === 'done' || m.phase === 'answered') && (
@@ -169,23 +140,11 @@ export default function Chat({ V }) {
             )}
 
             {!!(m.isGapCheck) && (
-              <div data-role="gap-check" style={css(`display:flex;flex-direction:column;gap:10px;animation:rise .3s ease`)}>
-                {m.phase === 'loading' && <div style={css(`font-size:13px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>Writing a question for you…</div>}
-                {m.phase !== 'loading' && <>
-                  <div style={css(SERIF)}>Before we call it closed: {m.check.question}</div>
-                  <textarea data-role="gap-answer" value={m.text} onChange={m.onText} readOnly={m.phase === 'done'} placeholder="In your own words. No looking back." style={css(`width:100%;min-height:80px;resize:vertical;border:1px solid #E3C9B8;border-radius:10px;padding:10px 12px;font-size:14px;background:#fff;outline:none;font-family:inherit`)}></textarea>
-                  {m.phase === 'ask' && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={m.onSubmit} style={css(`background:#1F1D1A;color:#F6F4EF;border:none;border-radius:9px;padding:8px 14px;font-size:13.5px`)}>Check my answer</button>{!!m.judging && <span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>reading it…</span>}</div>}
-                  {m.phase === 'done' && (
-                    <div data-role="gap-result" style={css(`display:flex;flex-direction:column;gap:8px;border:1px solid ${m.result.closed ? '#BFE0DB' : '#F0D5C4'};background:${m.result.closed ? '#F2FAF8' : '#FFFBF8'};border-radius:12px;padding:12px 14px`)}>
-                      <div style={css(`font-family:Newsreader,serif;font-size:18px;color:${m.result.closed ? '#1F6B64' : '#9E4B2A'}`)}>{m.result.closed ? '✓ Gap closed' : 'Not closed yet'}</div>
-                      {m.result.points.map((p, i) => <div key={i} style={css(`display:flex;gap:8px;font-size:13.5px;color:#514C44;line-height:1.45`)}><span style={css(`color:${p.ok ? '#1F6B64' : '#B5AFA4'}`)}>{p.ok ? '✓' : '○'}</span><span>{p.point}</span></div>)}
-                      {!!m.result.feedback && <div style={css(`font-size:13.5px;color:#514C44;line-height:1.5`)}>{m.result.feedback}</div>}
-                      {m.result.closed
-                        ? <div style={css(`font-size:13px;color:#1F6B64`)}>It's now in what you own on Learnings, and comes back for recall in 3 days.</div>
-                        : <div style={css(`display:flex;gap:8px;align-items:center;flex-wrap:wrap`)}><span style={css(`font-size:13px;color:#716C64`)}>Keep talking it through with Claude below, then</span><button onClick={m.onAgain} style={css(`background:none;border:1px solid #D9D4CA;border-radius:9px;padding:6px 12px;font-size:12.5px;color:#514C44`)} className="hv6">check me again</button></div>}
-                    </div>
-                  )}
-                </>}
+              <div data-role="gap-check-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:#6B665C;flex-wrap:wrap`)}>
+                {m.phase === 'done'
+                  ? <span style={css(`color:${m.result.closed ? '#1F6B64' : '#9E4B2A'}`)}>{m.result.closed ? '✓ Gap closed. It comes back for recall in 3 days.' : 'Not closed yet. Keep talking it through, then check again.'}</span>
+                  : <span>Your check is in the side panel.</span>}
+                {!m.inPanel && <button onClick={m.onOpenPanel} data-role="gap-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:#9E4B2A;text-decoration:underline;text-underline-offset:2px`)}>{m.phase === 'done' ? 'See the check' : 'Open it'}</button>}
               </div>
             )}
 

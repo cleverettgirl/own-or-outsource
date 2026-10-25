@@ -13,7 +13,7 @@ import { has, rowWith } from './targets.js';
 
 export const GO_FIRST = {
   sql: {
-    targets: ['joins', 'onwhere', 'whole'],
+    targets: ['joins', 'onwhere', 'whole'], producingIsSkill: true,
     chip: 'SQL · orders per customer',
     question: 'Write me a SQL query: the number of orders per customer, including customers with no orders (they should show 0).',
     lang: 'sql', schema: "customers(id, name)\norders(id, customer_id, total, status)", placeholder: 'SELECT …',
@@ -38,11 +38,26 @@ export const GO_FIRST = {
     targets: ['rule', 'population'],
     chip: 'Stats · 6 timed checkouts',
     question: 'I timed 6 random checkout transactions at our store. How likely is it that the median checkout time for all customers is between my fastest and slowest one?',
-    lang: 'statistics', prose: true, placeholder: 'Your answer, e.g. 60%. Working is welcome.',
-    check: { type: 'number', expected: [96.875], tolerance: 0.2, explain: 'Two ways to miss, each (1/2)⁶ = 1/64: 1 − 2/64 = 96.875%.', diagnoses: [
-      { answer: [98.4375], gap: "That counts only one way to miss. All 6 could be slower than the median, or all 6 faster: 1 − 2/64 = 96.875%." },
-      { answer: [100], gap: "100% is true for your 6 timings' own median. The question is about all customers, whose median you can't see." },
-      { answer: [3.125], gap: "3.125% is the chance your range misses it. The question asks how often it catches it: 100% − 3.125%." },
+    lang: 'statistics', prose: true, producingIsSkill: false,
+    // Reasoning picks, not the percentage: the idea is "it only misses if every timing lands on one side", and the
+    // classic one-sided slip (98.4%) sits closer to 96.875% than an honest rounding does, so a number can't tell
+    // them apart (research §8f, invariant 3; the Rule of Five try and recall made the same change, log 42).
+    check: { type: 'choice', questions: [
+      { id: 'likely', short: 'how likely the range catches it', prompt: 'How likely is it that the median checkout time for all customers is between your fastest and slowest timing?', answer: 'v97', options: [
+        { v: 'v97', l: 'Very likely, about 97%: it misses only if all 6 land on one side' },
+        { v: 'v100', l: 'Certain: a median always sits between the fastest and the slowest', gap: "That's true of your 6 timings' own median. The question is about all customers, whose median you can't see, and your 6 could all happen to land on one side of it." },
+        { v: 'v98', l: 'About 98%: it misses only if all 6 are slower than the median', gap: "That counts one way to miss. All 6 could also be faster than the median: two ways, each 1 in 64, so about 97%." },
+      ] },
+      { id: 'miss', short: 'when the range misses', prompt: 'When would your fastest-to-slowest range miss the true median?', answer: 'oneside', options: [
+        { v: 'oneside', l: 'Only when all 6 timings land on the same side of it' },
+        { v: 'outlier', l: 'Whenever one of the 6 timings is unusually slow', gap: "One slow timing just stretches the range. It misses only when every timing is on the same side of the median." },
+        { v: 'spread', l: 'Whenever the 6 timings are spread far apart', gap: "A wide spread makes the range more likely to catch the median, not less." },
+      ] },
+      { id: 'breaks', short: 'what breaks the bet', prompt: 'Which of these would make your range untrustworthy?', answer: 'rush', options: [
+        { v: 'rush', l: 'You timed all 6 during the lunch rush' },
+        { v: 'few', l: 'You timed only 6 checkouts, not 60', gap: "Six is plenty for this bet: the rule is built for tiny samples. What it needs is that they're random." },
+        { v: 'vary', l: 'The 6 times varied a lot from each other', gap: "Variation doesn't break it. Timings that aren't random, like all from the lunch rush, do." },
+      ] },
     ] },
     answer: {
       intro: '',
@@ -52,7 +67,7 @@ export const GO_FIRST = {
   },
 
   juno: {
-    targets: ['ownside', 'mechanism'],
+    targets: ['ownside', 'mechanism'], producingIsSkill: false,
     chip: 'Strategy · a top writer wants a bigger cut',
     question: "One of our top writers says they'll leave Juno for Substack unless we raise their revenue share. How worried should we be?",
     lang: 'strategy', prose: true,

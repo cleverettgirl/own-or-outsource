@@ -1,6 +1,10 @@
 // Checks every hand-written target: the expected answer must score 5/5 and pass every item, and each diagnosed
 // mistake must be recognised by its own gap and fail at least one item. Run: npm run test:targets
 import { createServer } from 'vite';
+
+// Any MISMATCH line fails the run, so `npm test` can't pass with one.
+const log = console.log;
+console.log = (...a) => { if (a.some(x => String(x).includes('MISMATCH'))) process.exitCode = 1; log(...a); };
 const app = process.cwd();
 globalThis.__SQL_WASM_PATH = app + '/node_modules/sql.js/dist/sql-wasm.wasm';
 const vite = await createServer({ root: app, server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
@@ -76,5 +80,16 @@ for (const [id, t] of Object.entries(all)) {
   const ok = typeof t.producingIsSkill === 'boolean' && typeof t.writtenOrderMatters === 'boolean' && (t.visual === null || ['compare', 'see', 'timeline'].includes(t.visual))
     && (!t.writtenOrderMatters || (t.assemble && t.assemble.lines.length >= 3)) && (t.visual !== 'compare' || t.compare);
   console.log(`${ok ? 'ok      ' : 'MISMATCH'} ${id}: producingIsSkill=${t.producingIsSkill} writtenOrderMatters=${t.writtenOrderMatters} visual=${t.visual}`);
+}
+console.log('--- framework: every try checks the idea, not the arithmetic (§8f invariant 3), go-first questions included');
+// A number is checked only where producing it is the skill, and only when each common mistake gives a clearly
+// different number (more than 2 points away); otherwise reasoning picks fit better.
+const GF = (await vite.ssrLoadModule('/src/goFirst.js')).GO_FIRST;
+const tries = [...Object.entries(all).flatMap(([id, t]) => [['target ' + id + '.write', t.write && t.write.check, t.producingIsSkill], ['target ' + id + '.delayed', t.delayed && t.delayed.check, t.producingIsSkill]]),
+  ...Object.entries(GF).map(([id, g]) => ['go-first ' + id, g.check, g.producingIsSkill])].filter(x => x[1]);
+for (const [name, c, skill] of tries) {
+  const declared = typeof skill === 'boolean';
+  const numberOk = c.type !== 'number' || (skill === true && (c.diagnoses || []).every(d => d.answer.every((v, k) => Math.abs(v - c.expected[k]) > 2)));
+  console.log(`${declared && numberOk ? 'ok      ' : 'MISMATCH'} ${name}: ${c.type}${declared ? '' : ' (producingIsSkill not declared)'}`);
 }
 await vite.close();

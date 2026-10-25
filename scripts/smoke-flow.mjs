@@ -187,13 +187,22 @@ step('learnings: a fix shows next to the first try', (document.querySelector('[d
 await click('Try a new question · orders per customer');
 step('go first: Claude offers the first try instead of answering', !!document.querySelector('[data-role=go-first]') && text().includes("Want to answer it yourself first? I'll check yours") && !text().includes('COUNT(o.id) AS orders'));
 await click("I'll go first");
+const panel = () => document.querySelector('[data-role=go-panel]'), inMain = sel => !!document.querySelector('main ' + sel);
+step('go first: the try opens in the side panel; the chat points to it and keeps the offer', !!panel() && !!panel().querySelector('[data-role=go-topics]') && !inMain('[data-role=go-topics]') && !!document.querySelector('main [data-role=go-pointer]') && panel().textContent.includes('number of orders per customer'));
 step('go first: before predicting, it shows what the try is checked on', [...document.querySelectorAll('[data-role=go-topics] li')].map(li => li.textContent).join(' | ') === "who appears | what a customer with no orders counts | how each customer's orders are counted" && text().includes('How many of the 3 will you get right on your own?') && !text().includes('This one needs it'));
-await click('2'); // predicted 2 of 3
+await act(async () => { panel().querySelector('[data-role=go-predict][data-n="2"]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30); // predicted 2 of 3
+step('go first: you write your answer in the panel, not in the chat', !!panel().querySelector('textarea[data-role=go-text]') && !inMain('textarea[data-role=go-text]'));
+await click('Back to chat');
+step('go first: closing the panel mid-try leaves a way back in the chat', !panel() && !!document.querySelector('main [data-role=go-open]'));
+await click('Open it');
 await type(document.querySelector('textarea[data-role=go-text]'), 'SELECT c.name, COUNT(*)\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;');
 await click('Check mine');
 await wait(400);
 step('go first: checked by running it, classic COUNT(*) slip explained', text().includes('You said 2 of 3 and got 2. Spot on.') && text().includes('Dee shows 1 instead of 0'));
-step("go first: then Claude shows its answer", text().includes('COUNT(o.id) AS orders'));
+step("go first: the result is in the panel; Claude's answer appears in the chat", !!panel().querySelector('[data-role=go-result]') && !inMain('[data-role=go-result]') && (document.querySelector('main')?.textContent || '').includes('COUNT(o.id) AS orders'));
+await act(async () => { panel().querySelector('[data-role=ask-claude]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
+step('go first: "Ask Claude about this" puts the question, your answer and what the check said in the chat box; the question is yours', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.startsWith('About my go:') && v.includes('> Question: Write me a SQL query') && v.includes('> My answer: SELECT c.name, COUNT(*)') && v.includes('> The check said: ') && v.endsWith('\n\n') && !!panel(); })());
+await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, ''); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
 await openLearnings();
 step('go first: Learnings records it as real work', text().includes('went first, 2 of 3'));
 
@@ -315,11 +324,21 @@ step('gaps: the banner is context only; "check me" is a suggested reply under Cl
 await click("I think I've got it: check me");
 await wait(30);
 step('gaps: checking yourself is the next turn of the chat', [...document.querySelectorAll('main div')].some(d => d.textContent === "I think I've got it. Check me.") && !document.querySelector('[data-role=gap-check-chip]'));
-step('gaps: the check asks you to explain and apply, not recite', text().includes('Before we call it closed:') && text().includes('Name at least one concrete move'));
+step('gaps: the check opens in the side panel, asking you to explain and apply, not recite', !!document.querySelector('[data-role=gap-panel] textarea[data-role=gap-answer]') && (document.querySelector('[data-role=gap-panel]').textContent.includes('Name at least one concrete move')) && !document.querySelector('main textarea[data-role=gap-answer]') && !!document.querySelector('main [data-role=gap-check-pointer]'));
+await type(document.querySelector('textarea[data-role=gap-answer]'), 'i guess they just market it a lot');
+await click('Check my answer');
+await wait(50);
+step('gaps: not closed yet: the panel says so and offers another check; the chat says to keep talking', document.querySelector('[data-role=gap-panel]')?.textContent.includes('Not closed yet') && buttons().some(b => b.textContent === 'Check me again') && (document.querySelector('main [data-role=gap-check-pointer]')?.textContent || '').includes('Keep talking it through'));
+await act(async () => { document.querySelector('[data-role=gap-panel] [data-role=ask-claude]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
+step('gaps: "Ask Claude about this" quotes the check into the gap chat', (() => { const v = document.querySelector('main textarea')?.value || ''; return v.startsWith('About closing the gap “') && v.includes('> My answer: i guess they just market it a lot') && v.includes('> The check said: Not closed yet.'); })());
+await act(async () => { const el = document.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, ''); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
+await click('Check me again');
+await wait(50);
+step('gaps: checking again opens a fresh check in the panel', !!document.querySelector('[data-role=gap-panel] textarea[data-role=gap-answer]') && !document.querySelector('[data-role=gap-panel]').textContent.includes('Not closed yet'));
 await type(document.querySelector('textarea[data-role=gap-answer]'), "neither side shows up while the other is empty, so it's chicken and egg. Juno should seed writers first, maybe pay or invite a small group, so there's something worth reading.");
 await click('Check my answer');
 await wait(50);
-step('gaps: closed when both key ideas are there', text().includes('✓ Gap closed') && text().includes("It's now in what you own"));
+step('gaps: closed when both key ideas are there; the result is in the panel, with a one-line note in the chat', !!document.querySelector('[data-role=gap-panel] [data-role=gap-result]') && document.querySelector('[data-role=gap-panel]').textContent.includes("It's now in what you own") && ([...document.querySelectorAll('main [data-role=gap-check-pointer]')].at(-1)?.textContent || '').includes('✓ Gap closed'));
 await openLearnings();
 step('gaps: a closed gap becomes something you own, not an open gap', !document.querySelector('[data-role=open-gap]') && text().includes('Gap found') && text().includes('checked ✓'));
 await click('New chat');
@@ -439,6 +458,15 @@ step('learnings: opens from the sidebar, lists what you own with its history', !
 step('learnings: no "You asked about" or "stepped away" sections (cut for focus), sample history labelled', !text().includes('You wanted to learn, then stepped away') && !document.querySelector('[data-role=asked-about]') && text().includes('sample history, mocked'));
 await click('Try a new question · 6 timed checkouts');
 step('learnings: revisit by trying a new question', !document.querySelector('[data-role=learnings]') && text().includes('I timed 6 random checkout transactions'));
+await click("I'll go first");
+step('checkout question checks the reasoning, not 96.875%: three reasoning questions, no number box', [...document.querySelectorAll('[data-role=go-panel] [data-role=go-topics] li')].map(li => li.textContent).join(' | ') === 'how likely the range catches it | when the range misses | what breaks the bet');
+await act(async () => { document.querySelector('[data-role=go-panel] [data-role=go-predict][data-n="3"]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
+await click('Very likely, about 97%: it misses only if all 6 land on one side');
+await click('Only when all 6 timings land on the same side of it');
+await click('You timed only 6 checkouts, not 60');
+await click('Check mine'); await wait(50);
+step('checkout question: "about 97%" is right without the exact number; a wrong pick is explained', text().includes('You said 3 of 3 and got 2') && text().includes('Six is plenty for this bet') && !document.querySelector('[data-role=go-panel] textarea'));
+await click('Back to chat');
 
 // ---- Calibration counts the same things it predicts; a blank answer is never right.
 await click('New chat');
@@ -490,6 +518,7 @@ await click('↑');
 await wait(120);
 step('go first on ask: Claude offers the first try, with its answer held back', !!document.querySelector('[data-role=go-ask]') && text().includes('This one uses something you own') && !text().includes('Start FROM products') && asked.includes('goFirstMatch') && asked.includes('chat'));
 await click("I'll go first");
+step('go first on ask: your answer goes in the side panel too', !!document.querySelector('[data-role=go-panel] textarea[data-role=go-ask-text]') && !document.querySelector('main textarea[data-role=go-ask-text]'));
 await type(document.querySelector('textarea[data-role=go-ask-text]'), 'SELECT p.name, COUNT(r.id) FROM products p LEFT JOIN reviews r ON r.product_id = p.id GROUP BY p.name');
 await click('Show me yours');
 await wait(400);

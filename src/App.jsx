@@ -20,6 +20,7 @@ import { SCALES, RUBRIC_WHY, tally, allRight, calibration, correctionNote } from
 import Sidebar from './ui/Sidebar.jsx';
 import Chat from './ui/Chat.jsx';
 import OwnPanel from './ui/OwnPanel.jsx';
+import GoPanel, { GapPanel } from './ui/GoPanel.jsx';
 import { isColdStart, COLD_START, judgeColdStartOffline } from './gaps.js';
 import { REACT_TURNS } from './reactTranscript.js';
 
@@ -296,6 +297,9 @@ export default class App extends React.Component {
   componentWillUnmount() { document.removeEventListener('mousedown', this._onDown); document.removeEventListener('selectionchange', this._onSelChange); }
   componentDidUpdate(_, prev) {
     const S = this.state;
+    // A newly opened panel starts open, not tucked away (phones).
+    const key = st => (st.own ? 'own' + st.own.id : '') + (st.messages.filter(m => ['goFirst', 'goAsk', 'gapCheck'].includes(m.type) && !m.panelClosed && m.phase !== 'offer' && m.phase !== 'answered').map(m => m.id).pop() || '');
+    if (S.sheetMin && key(prev) !== key(S) && key(S)) this.setState({ sheetMin: false });
     if (['ledger', 'gaps', 'asked', 'exits', 'timeShift', 'tipDismissed'].some(k => prev[k] !== S[k])) this.saveProgress();
     if (prev.messages !== this.state.messages || (this.state.own && prev.own !== this.state.own && prev.own && prev.own.phase !== this.state.own.phase)) {
       const el = this.scrollRef.current; if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
@@ -1101,6 +1105,22 @@ export default class App extends React.Component {
     this.setState({ recall: null, messages: [], own: null, sel: null, activeGap: null, chatTitle: 'New chat', view: 'chat', composer: text },
       () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } });
   };
+  // The same for the panel's other reveals (go-first and the gap check, log 90): the context goes into this chat's box
+  // as a quote, the question is yours, and the panel stays open beside it.
+  askAboutPanelTry = id => {
+    const m = this.state.messages.find(x => x.id === id); if (!m) return;
+    const q = t => String(t).split('\n').map(l => '> ' + l).join('\n');
+    const picks = c => c.questions.map(x => `${x.prompt} → ${(x.options.find(o => o.v === m.picked[x.id]) || {}).l || '(no answer)'}`).join('\n');
+    let head, question, answer, said;
+    if (m.type === 'goFirst') {
+      const g = GO_FIRST[m.key], gr = m.grade || {};
+      head = 'my go'; question = g.question; answer = g.check.type === 'choice' ? picks(g.check) : m.text;
+      said = [gr.gap, (gr.items || []).filter(i => !i.ok).map(i => 'Missed: ' + i.short).join('; ')].filter(Boolean).join(' ');
+    } else if (m.type === 'goAsk') { head = 'my go'; question = m.question; answer = m.text; said = m.note; }
+    else { const g = this.state.gaps.find(x => x.id === m.gapId) || {}, r = m.result || {}; head = `closing the gap “${g.topic || ''}”`; question = m.check.question; answer = m.text; said = [r.closed ? 'Closed.' : 'Not closed yet.', r.feedback].filter(Boolean).join(' '); }
+    this.prefillChat(`About ${head}:\n${q('Question: ' + question)}\n${q('My answer: ' + (answer || '(nothing)'))}${said ? '\n' + q('The check said: ' + said) : ''}\n\n`);
+  };
+  prefillChat(text) { this.setState({ composer: text, view: 'chat' }, () => { const el = this.composerRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); }
   // A missed recall is a gap: keep it, and explore it in a chat.
   recallGap() {
     const r = this.state.recall, e = this.state.ledger.find(x => x.id === r.entryId);
@@ -1197,7 +1217,9 @@ export default class App extends React.Component {
     const messages = S.messages.map(m => {
       const v = { ...m, isUser: m.type === 'user', isThinking: m.type === 'thinking', isAssistant: m.type === 'assistant', isOwn: m.type === 'own', isOwnDone: m.type === 'ownDone' };
       if (m.type === 'gapBanner') { const g = S.gaps.find(x => x.id === m.gapId) || {}; Object.assign(v, { isGapBanner: true, gap: g, gapClosed: g.status === 'closed', checking: S.messages.some(x => x.type === 'gapCheck' && x.gapId === m.gapId && x.phase !== 'done'), onCheck: () => this.startGapCheck(m.gapId) }); }
-      if (m.type === 'gapCheck') Object.assign(v, { isGapCheck: true, onText: e2 => this.setGo(m.id, { text: e2.target.value }), onSubmit: () => this.submitGapCheck(this.state.messages.find(x => x.id === m.id)), onAgain: () => this.startGapCheck(m.gapId) });
+      if (m.type === 'gapCheck') Object.assign(v, { isGapCheck: true, gapTopic: (S.gaps.find(x => x.id === m.gapId) || {}).topic || '', onText: e2 => this.setGo(m.id, { text: e2.target.value }), onSubmit: () => this.submitGapCheck(this.state.messages.find(x => x.id === m.id)), onAgain: () => this.startGapCheck(m.gapId) });
+      // Go-first tries happen in the side panel (log 88); the chat keeps the offer and Claude's answer.
+      if (m.type === 'goAsk' || m.type === 'goFirst' || m.type === 'gapCheck') Object.assign(v, { inPanel: false, onAskAbout: () => this.askAboutPanelTry(m.id), onClosePanel: () => this.setGo(m.id, { panelClosed: true }), onOpenPanel: () => this.setGo(m.id, { panelClosed: false }) });
       if (m.type === 'goAsk') Object.assign(v, { isGoAsk: true, onFirst: () => this.setGo(m.id, { phase: 'try' }), onAnswer: () => this.goAskAnswer(m.id), onText: e2 => this.setGo(m.id, { text: e2.target.value }), onSubmit: () => this.goAskSubmit(m.id),
         replyText: m.reply ? [m.reply.intro, m.reply.code, m.reply.outro].filter(Boolean).join('\n\n') : '', showReply: m.phase === 'answered' || m.phase === 'done' });
       if (m.type === 'goFirst') {
@@ -1216,14 +1238,18 @@ export default class App extends React.Component {
         if (v.ownExpanded) v.ownAll = () => this.checkLanded(askedItem.id); v.ownAllLabel = m.lang === 'email' ? 'Own the whole email' : m.lang === 'sql' ? 'Own the whole query' : m.plain ? 'Own this response' : 'Own the whole thing'; v.isMd = !!m.plain; v.isProse = !v.isMd && (m.lang === 'email' || !!(m.scenario && m.scenario.prose) || !!m.plain); v.isCodeBlock = !v.isMd && !v.isProse; }
       return v;
     });
+    // The go-first try shown in the side panel: the latest one that's under way (or just finished) and not closed.
+    const goPanel = messages.slice().reverse().find(v => ((v.isGo && ['predict', 'try', 'done'].includes(v.phase)) || (v.isGoAsk && ['try', 'checking', 'done'].includes(v.phase)) || v.isGapCheck) && !v.panelClosed) || null;
+    if (goPanel) goPanel.inPanel = true;
     const ledger = S.ledger.map(e => ({ ...e, hasDelayed: e.delayed != null, isDue: e.dueAt != null && e.dueAt <= this.now() }));
     // Calibration across every item you predicted: what share you expected to get right vs what you got.
     // The Brier score (mean squared gap between your expected chance and each item's outcome; 0 is perfect)
     // is in the tooltip for anyone who wants the standard measure.
     const cal = calibration(S.ledger);
     const V = {
-      hasOwn: !!o, panelRef: this.panelRef, focusPanel: () => { const pn = this.panelRef.current; if (pn) pn.scrollTop = 0; },
+      goPanel, hasOwn: !!o, panelRef: this.panelRef, focusPanel: () => { const pn = this.panelRef.current; if (pn) pn.scrollTop = 0; },
       dismissTip: () => this.setState({ tipDismissed: true }),
+      openNav: () => this.setState({ navOpen: true }), closeNav: () => this.setState({ navOpen: false }),
       isLearnings: S.view === 'learnings', openLearnings: this.openLearnings, ownedCount: S.ledger.filter(e => !e.merged).length, dueCount: S.ledger.filter(e => e.dueAt != null && e.dueAt <= this.now()).length,
       learn: this.learningsVals(),
       // Seeded chats show up as past chats: you already talked with Claude, now see what stuck.
@@ -1262,7 +1288,7 @@ export default class App extends React.Component {
       focusOther: o.focusOther, onFocusOther: e => this.setOwn({ focusOther: e.target.value }), onFocusOtherKey: e => { if (e.key === 'Enter') this.submitFocusOther(); }, submitFocusOther: this.submitFocusOther,
       hasFocus: !!o.focus, focusLabel: o.focus ? o.focus.label : '',
       toggleRefresher: () => this.setOwn(cur => ({ refresherOpen: !cur.refresherOpen })), refresherOpen: !!o.refresherOpen,
-      rereadChat: () => { const hl = this._ownedRange && this._ownedRange.startContainer.parentElement; if (hl) { hl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } const el = document.querySelector(`[data-msg-id="${o.msgId}"]`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); this.setState({ flashMsg: o.msgId }); setTimeout(() => this.setState({ flashMsg: null }), 1600); } },
+      rereadChat: () => { if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) this.setState({ sheetMin: true }); const hl = this._ownedRange && this._ownedRange.startContainer.parentElement; if (hl) { hl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } const el = document.querySelector(`[data-msg-id="${o.msgId}"]`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); this.setState({ flashMsg: o.msgId }); setTimeout(() => this.setState({ flashMsg: null }), 1600); } },
       goNext: this.goNext, seeNextLabel: 'Got it, ' + nextLabel[nextOf('see')],
       goVisual: this.goVisual, visualAgainLabel: 'See it visually',
       seeIsProse: o.lang === 'email',
@@ -1403,15 +1429,23 @@ export default class App extends React.Component {
 
   render() {
     const V = this.renderVals();
+    const panel = V.hasOwn && !V.isLearnings ? <OwnPanel V={V} /> : V.goPanel && !V.isLearnings ? (V.goPanel.isGapCheck ? <GapPanel m={V.goPanel} /> : <GoPanel m={V.goPanel} />) : null;
     return (
       <>
-      <div style={css(`display:flex;height:100vh;overflow:hidden`)}>
+      <div data-role="app" className={(this.state.navOpen ? 'nav-open ' : '') + (panel ? 'with-sheet' : '')} style={css(`display:flex;height:100vh;overflow:hidden`)}>
 
       <Sidebar V={V} />
+      {!!this.state.navOpen && <div className="nav-backdrop mobile-only" onClick={() => this.setState({ navOpen: false })}></div>}
 
       <Chat V={V} />
 
-      {!!(V.hasOwn && !V.isLearnings) && <OwnPanel V={V} />}
+      {/* On a phone the panel is a sheet over the chat (mobile.css); on a wide screen the wrapper doesn't exist for layout. */}
+      {!!panel && (
+        <div className={'sheet' + (this.state.sheetMin ? ' min' : '')}>
+          {panel}
+          <button className="sheet-toggle mobile-only" data-role="sheet-toggle" onClick={() => this.setState(s => ({ sheetMin: !s.sheetMin }))} aria-label={this.state.sheetMin ? 'Open the panel' : 'Tuck the panel away to read the chat'}>{this.state.sheetMin ? '⌃' : '⌄'}</button>
+        </div>
+      )}
       </div>
       </>
     );
