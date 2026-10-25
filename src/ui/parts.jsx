@@ -7,7 +7,7 @@ import { css } from '../css.js';
 // Inline markdown: `code`, **bold**, *italic*, nested in any combination (*italic with **bold***, ***both***).
 // Runs of asterisks are paired the way markdown renderers do it: each closing run matches the nearest open run
 // before it, taking 2 (bold) when both runs have 2, else 1 (italic). Unpaired asterisks stay as text.
-const codeCss = `font-family:'JetBrains Mono',monospace;font-size:.86em;background:var(--sunken);border-radius:4px;padding:1px 5px`;
+const codeCss = `font-family:'JetBrains Mono',monospace;font-size:.86em;background:var(--color-sunken);border-radius:4px;padding:1px 5px`;
 export function inline(t) {
   const toks = [];
   for (const m of String(t).matchAll(/`[^`]+`|\*+|[^*`]+|`/g)) {
@@ -56,16 +56,16 @@ function Flip({ text, small }) {
   const views = text.split(/^## /m).map(v => v.trim()).filter(Boolean).map(v => { const nl = v.indexOf('\n'); return nl < 0 ? { label: v, body: '' } : { label: v.slice(0, nl).trim(), body: v.slice(nl + 1) }; });
   const [at, setAt] = React.useState(0);
   if (views.length < 2) return <MdBlocks text={text.replace(/^## /gm, '### ')} small={small} />;
-  const i = Math.min(at, views.length - 1), nav = `background:none;border:1px solid var(--border-strong);border-radius:8px;padding:5px 11px;font-size:12.5px;color:var(--text-2)`;
+  const i = Math.min(at, views.length - 1), nav = `background:none;border:1px solid var(--color-line-strong);border-radius:8px;padding:5px 11px;font-size:12.5px;color:var(--color-ink-2)`;
   return (
-    <div data-role="flip" style={css(`border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden`)}>
-      <div style={css(`display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border-soft);background:var(--surface-2)`)}>
-        {views.map((v, j) => <button key={j} onClick={() => setAt(j)} aria-pressed={j === i} style={css(`border-radius:99px;padding:4px 11px;font-size:12.5px;border:1px solid ${j === i ? 'var(--accent)' : 'var(--border)'};background:${j === i ? 'var(--accent)' : 'var(--surface)'};color:${j === i ? 'var(--surface)' : 'var(--text-2)'}`)}>{inline(v.label)}</button>)}
+    <div data-role="flip" style={css(`border:1px solid var(--color-line);border-radius:12px;background:var(--color-surface);overflow:hidden`)}>
+      <div style={css(`display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--color-line-soft);background:var(--color-surface-2)`)}>
+        {views.map((v, j) => <button key={j} onClick={() => setAt(j)} aria-pressed={j === i} style={css(`border-radius:99px;padding:4px 11px;font-size:12.5px;border:1px solid ${j === i ? 'var(--color-accent)' : 'var(--color-line)'};background:${j === i ? 'var(--color-accent)' : 'var(--color-surface)'};color:${j === i ? 'var(--color-surface)' : 'var(--color-ink-2)'}`)}>{inline(v.label)}</button>)}
       </div>
       <div style={css(`padding:14px 16px`)}><MdBlocks text={views[i].body} small={small} /></div>
-      <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--border-soft)`)}>
+      <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--color-line-soft)`)}>
         <button onClick={() => setAt(i - 1)} disabled={i === 0} style={css(nav + (i === 0 ? ';opacity:.4' : ''))}>← Back</button>
-        <span style={css(`font-size:12px;color:var(--muted)`)}>{i + 1} of {views.length}</span>
+        <span style={css(`font-size:12px;color:var(--color-muted)`)}>{i + 1} of {views.length}</span>
         <button onClick={() => setAt(i + 1)} disabled={i === views.length - 1} data-role="flip-next" style={css(nav + (i === views.length - 1 ? ';opacity:.4' : ''))}>Next →</button>
       </div>
     </div>
@@ -102,15 +102,15 @@ function MdBlocks({ text, small }) {
       const key = `${i}-${j}`;
       const tb = mdTable(b, small, key);
       if (tb) out.push(...tb);
-      else if (/^(-{3,}|\*{3,}|_{3,})$/.test(b)) out.push(<hr key={key} style={css(`border:none;border-top:1px solid var(--border);margin:4px 0;width:100%`)} />);
+      else if (/^(-{3,}|\*{3,}|_{3,})$/.test(b)) out.push(<hr key={key} style={css(`border:none;border-top:1px solid var(--color-line);margin:4px 0;width:100%`)} />);
       else if (/^#{1,3} /.test(b)) out.push(<div key={key} style={css(`font-family:Newsreader,serif;font-size:${small ? '15.5px' : '18.5px'};font-weight:600;margin-top:4px`)}>{inline(b.replace(/^#{1,3} /, ''))}</div>);
       else if (b.split('\n').every(l => /^\d+\. /.test(l))) out.push(<ol key={key} style={css(`margin:0;padding-left:24px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.replace(/^\d+\. /, ''))}</li>)}</ol>);
       else if (b.split('\n').every(l => /^[-*] /.test(l))) out.push(<ul key={key} style={css(`margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.slice(2))}</li>)}</ul>);
       else out.push(<div key={key} style={css(body)}>{inline(b)}</div>);
     });
     if (parts[i + 2] != null) out.push(
-      <div key={`c${i}`} style={css(`background:var(--surface-2);border:1px solid var(--border);border-radius:10px;overflow:hidden`)}>
-        <div style={css(`padding:6px 12px;border-bottom:1px solid var(--border-soft);font-size:11px;color:var(--muted)`)}>{parts[i + 1] || 'code'}</div>
+      <div key={`c${i}`} style={css(`background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:10px;overflow:hidden`)}>
+        <div style={css(`padding:6px 12px;border-bottom:1px solid var(--color-line-soft);font-size:11px;color:var(--color-muted)`)}>{parts[i + 1] || 'code'}</div>
         <pre style={css(`margin:0;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:${small ? '12px' : '13px'};line-height:1.6;overflow:auto;white-space:pre`)}>{parts[i + 2].replace(/\n$/, '')}</pre>
       </div>);
   }
@@ -125,12 +125,12 @@ function mdTable(b, small, key) {
   const lines = b.split('\n'), sep = lines.findIndex(l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes('-'));
   if (sep < 1 || !lines[sep - 1].includes('|') || !lines.slice(sep - 1).every(l => l.includes('|'))) return null;
   const head = cellsOf(lines[sep - 1]), rows = lines.slice(sep + 1).map(cellsOf), before = lines.slice(0, sep - 1).join('\n').trim();
-  const cell = `padding:5px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border-soft)`;
+  const cell = `padding:5px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--color-line-soft)`;
   return [
     before && <div key={key + 'p'} style={css(small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55' : SERIF)}>{inline(before)}</div>,
-    <div key={key} data-role="md-table" style={css(`border:1px solid var(--border);border-radius:8px;overflow:auto;background:var(--surface)`)}>
+    <div key={key} data-role="md-table" style={css(`border:1px solid var(--color-line);border-radius:8px;overflow:auto;background:var(--color-surface)`)}>
       <table style={css(`border-collapse:collapse;width:100%;font-size:${small ? '12px' : '13px'};line-height:1.45`)}>
-        <thead><tr>{head.map((h, i) => <th key={i} style={css(cell + `;font-size:11px;font-weight:600;color:var(--muted)`)}>{inline(h)}</th>)}</tr></thead>
+        <thead><tr>{head.map((h, i) => <th key={i} style={css(cell + `;font-size:11px;font-weight:600;color:var(--color-muted)`)}>{inline(h)}</th>)}</tr></thead>
         <tbody>{rows.map((r, i) => <tr key={i}>{head.map((_, j) => <td key={j} style={css(cell + (i === rows.length - 1 ? ';border-bottom:none' : ''))}>{inline(r[j] || '')}</td>)}</tr>)}</tbody>
       </table>
     </div>,
@@ -142,9 +142,9 @@ export function ItemList({ items, ownedNote = '', title }) {
   return (
     <div data-role="items" title={title} style={css(`display:flex;flex-direction:column;gap:4px`)}>
       {items.map((it, i) => (
-        <div key={i} style={css(`display:flex;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.45;color:${it.ok ? 'var(--text)' : it.unchecked ? 'var(--muted)' : 'var(--accent-text)'}`)}>
-          <span style={css(`flex:none;width:14px;color:${it.ok ? 'var(--good)' : it.unchecked ? 'var(--faint)' : 'var(--accent)'}`)}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
-          <span>{it.short}{it.blank ? <span style={css(`color:var(--muted)`)}> (left blank)</span> : null}{it.unchecked ? <span style={css(`color:var(--muted)`)}> (not checked: it didn't run)</span> : null}{it.judged ? <span style={css(`color:var(--muted)`)}> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span style={css(`font-size:12px;color:var(--muted)`)}> · {ownedNote}</span> : null}</span>
+        <div key={i} style={css(`display:flex;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.45;color:${it.ok ? 'var(--color-ink)' : it.unchecked ? 'var(--color-muted)' : 'var(--color-accent-text)'}`)}>
+          <span style={css(`flex:none;width:14px;color:${it.ok ? 'var(--color-good)' : it.unchecked ? 'var(--color-faint)' : 'var(--color-accent)'}`)}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
+          <span>{it.short}{it.blank ? <span style={css(`color:var(--color-muted)`)}> (left blank)</span> : null}{it.unchecked ? <span style={css(`color:var(--color-muted)`)}> (not checked: it didn't run)</span> : null}{it.judged ? <span style={css(`color:var(--color-muted)`)}> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span style={css(`font-size:12px;color:var(--color-muted)`)}> · {ownedNote}</span> : null}</span>
         </div>
       ))}
     </div>
@@ -173,10 +173,10 @@ export function ChoiceQuestions({ qs, picked, onPick, locked }) {
     <div style={css(`display:flex;flex-direction:column;gap:14px`)}>
       {qs.map((q, i) => (
         <div key={q.id} data-role="choice-q" style={css(`display:flex;flex-direction:column;gap:6px`)}>
-          <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--accent-text)`)}>{i + 1}.</span> {inline(q.prompt)}</div>
+          <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--color-accent-text)`)}>{i + 1}.</span> {inline(q.prompt)}</div>
           {shuffled(q).map(o => {
             const on = picked[q.id] === o.v;
-            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? 'var(--accent)' : 'var(--accent-border)'};background:${on ? 'var(--accent-soft)' : 'var(--surface)'};color:var(--text);border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
+            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? 'var(--color-accent)' : 'var(--color-accent-border)'};background:${on ? 'var(--color-accent-soft)' : 'var(--color-surface)'};color:var(--color-ink);border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
           })}
         </div>
       ))}
@@ -200,7 +200,7 @@ export const NAV_ICONS = {
   Search: <svg {...ico}><circle cx="7" cy="7" r="4.3" /><path d="M10.2 10.2 13.5 13.5" /></svg>,
   Projects: <svg {...ico}><rect x="2.5" y="3.5" width="11" height="9" rx="1.5" /><path d="M2.5 6.5h11" /></svg>,
   Artifacts: <svg {...ico}><path d="M8 2.3 13.2 5v6L8 13.7 2.8 11V5z" /><path d="M2.8 5 8 7.8 13.2 5M8 7.8v5.9" /></svg>,
-  Customize: <svg {...ico}><path d="M2.5 5h11M2.5 11h11" /><circle cx="6" cy="5" r="1.5" fill="var(--sidebar)" /><circle cx="10" cy="11" r="1.5" fill="var(--sidebar)" /></svg>,
+  Customize: <svg {...ico}><path d="M2.5 5h11M2.5 11h11" /><circle cx="6" cy="5" r="1.5" fill="var(--color-sidebar)" /><circle cx="10" cy="11" r="1.5" fill="var(--color-sidebar)" /></svg>,
 };
 
 // Placeholder for the Own-it entry point (an open book); the designer will choose the final icon.
@@ -210,8 +210,8 @@ export const OwnIcon = () => <svg {...ico}><path d="M8 4.2C6.6 3.2 4.6 2.8 2.5 3
 // Who holds the relationship: platform owns users (supply is replaceable), or supply and users bond directly.
 export function OwnDiagram({ d }) {
   const direct = d.owned === 'direct';
-  const box = dim => css(`flex:none;padding:7px 12px;border-radius:8px;font-size:13px;border:1px ${dim ? 'dashed var(--faint)' : 'solid var(--border)'};background:${dim ? 'transparent' : 'var(--surface)'};color:${dim ? 'var(--muted)' : 'var(--text)'}`);
-  const line = thick => css(`flex:1;min-width:24px;border-top:${thick ? '4px solid var(--good)' : '1px dashed var(--faint)'}`);
+  const box = dim => css(`flex:none;padding:7px 12px;border-radius:8px;font-size:13px;border:1px ${dim ? 'dashed var(--color-faint)' : 'solid var(--color-line)'};background:${dim ? 'transparent' : 'var(--color-surface)'};color:${dim ? 'var(--color-muted)' : 'var(--color-ink)'}`);
+  const line = thick => css(`flex:1;min-width:24px;border-top:${thick ? '4px solid var(--color-good)' : '1px dashed var(--color-faint)'}`);
   return (
     <div data-role="own-diagram" style={css(`display:flex;flex-direction:column;gap:6px`)}>
       <div style={css(`display:flex;align-items:center;gap:6px`)}>
@@ -219,7 +219,7 @@ export function OwnDiagram({ d }) {
         <span style={box(direct)}>{d.platform}{direct ? ' (plumbing)' : ''}</span><span style={line(true)}></span>
         <span style={box(false)}>{d.users}</span>
       </div>
-      <div style={css(`font-size:12px;color:var(--muted)`)}>{direct ? `The thick line is the relationship: ${d.supply.toLowerCase()} and ${d.users.toLowerCase()} are bonded directly, through ${d.platform}.` : `The thick line is the owned relationship: ${d.platform} ↔ ${d.users.toLowerCase()}. ${d.supply} are replaceable (dashed).`}</div>
+      <div style={css(`font-size:12px;color:var(--color-muted)`)}>{direct ? `The thick line is the relationship: ${d.supply.toLowerCase()} and ${d.users.toLowerCase()} are bonded directly, through ${d.platform}.` : `The thick line is the owned relationship: ${d.platform} ↔ ${d.users.toLowerCase()}. ${d.supply} are replaceable (dashed).`}</div>
     </div>
   );
 }
@@ -227,25 +227,25 @@ export function OwnDiagram({ d }) {
 
 export const SERIF = 'font-family:Newsreader,serif;font-size:16.5px;line-height:1.65;white-space:pre-wrap';
 
-export const NAV = 'display:flex;align-items:center;gap:10px;background:none;border:none;border-radius:8px;padding:7px 8px;font-size:14px;color:var(--text);text-align:left;width:100%';
+export const NAV = 'display:flex;align-items:center;gap:10px;background:none;border:none;border-radius:8px;padding:7px 8px;font-size:14px;color:var(--color-ink);text-align:left;width:100%';
 
-export const CHIP = 'background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:7px 14px;font-size:13.5px;color:var(--text-2)';
+export const CHIP = 'background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:99px;padding:7px 14px;font-size:13.5px;color:var(--color-ink-2)';
 
 // A generic spark for the greeting (not Anthropic's logo).
-export const Spark = () => <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <rect key={i} x="14" y="2" width="2.2" height="11" rx="1.1" fill="var(--accent)" transform={`rotate(${i * 30} 15 15)`} />)}</svg>;
+export const Spark = () => <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <rect key={i} x="14" y="2" width="2.2" height="11" rx="1.1" fill="var(--color-accent)" transform={`rotate(${i * 30} 15 15)`} />)}</svg>;
 
 export const ACT = 'background:none;border:none;border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:inherit;padding:0';
 
 
 export function CompareTable({ t }) {
   return (
-    <div style={css(`border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)`)}>
-      <div style={css(`display:grid;grid-template-columns:${t.cols};font-size:11px;font-weight:600;color:var(--muted);padding:5px 10px;border-bottom:1px solid var(--border-soft);gap:8px`)}>
+    <div style={css(`border:1px solid var(--color-line);border-radius:8px;overflow:hidden;background:var(--color-surface)`)}>
+      <div style={css(`display:grid;grid-template-columns:${t.cols};font-size:11px;font-weight:600;color:var(--color-muted);padding:5px 10px;border-bottom:1px solid var(--color-line-soft);gap:8px`)}>
         {t.headers.map((h, i) => <span key={i}>{h.t}</span>)}
       </div>
       {t.rows.map((r, i) => (
         <div key={i} style={css(`display:grid;grid-template-columns:${t.cols};font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;gap:8px;background:${r.bg || 'transparent'}`)}>
-          {r.cells.map((c, j) => <span key={j} style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.dim ? 'var(--accent-mid)' : 'var(--text)'};${c.hl ? `background:${c.hl};border-radius:4px;margin:-1px -4px;padding:1px 4px;font-weight:600` : ''}`)}>{c.t}</span>)}
+          {r.cells.map((c, j) => <span key={j} style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.dim ? 'var(--color-accent-mid)' : 'var(--color-ink)'};${c.hl ? `background:${c.hl};border-radius:4px;margin:-1px -4px;padding:1px 4px;font-weight:600` : ''}`)}>{c.t}</span>)}
         </div>
       ))}
     </div>
@@ -258,10 +258,10 @@ export function StepInputs({ steps, entered, onEnter, locked }) {
     <div data-role="steps" style={css(`display:flex;flex-direction:column;gap:10px`)}>
       {steps.map((st, i) => (
         <label key={st.id} style={css(`display:flex;flex-direction:column;gap:5px`)}>
-          <span style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--accent-text)`)}>Step {i + 1}.</span> {st.label}</span>
+          <span style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--color-accent-text)`)}>Step {i + 1}.</span> {st.label}</span>
           <span style={css(`display:flex;align-items:center;gap:6px`)}>
-            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" style={css(`width:160px;border:1px solid var(--accent-border);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--surface);outline:none`)} />
-            {st.unit === '%' && <span style={css(`font-size:14px;color:var(--muted)`)}>%</span>}
+            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" style={css(`width:160px;border:1px solid var(--color-accent-border);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--color-surface);outline:none`)} />
+            {st.unit === '%' && <span style={css(`font-size:14px;color:var(--color-muted)`)}>%</span>}
           </span>
         </label>
       ))}

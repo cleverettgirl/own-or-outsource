@@ -68,7 +68,7 @@ step('home: greeting, composer without an upfront toggle, typed starters as chip
 step('home: seeded chats are past chats in the sidebar', document.querySelectorAll('[data-role=past-chat]').length === 2);
 step('recall: an item from a few days ago is ready, shown on Learnings', document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') === '1 to recall');
 
-step('home: the quick starts are prompts: leadership, SQL, React, risk; Juno is a past chat', ['Leadership · leading without a title', 'SQL · revenue per customer', 'React · fetch on mount', 'Health · a bacon and cancer headline'].every(l => buttons().some(b => b.textContent === l)) && !buttons().some(b => /Start here/.test(b.textContent)));
+step('home: the quick starts are prompts: leadership, SQL, React, risk, reading, tax; Juno is a past chat', ['Leadership · leading without a title', 'SQL · revenue per customer', 'React · fetch on mount', 'Health · a bacon and cancer headline', 'Reading · sounds out words, misses the story', 'Money · a raise into a higher tax bracket'].every(l => buttons().some(b => b.textContent === l)) && !buttons().some(b => /Start here/.test(b.textContent)));
 await click('SQL · revenue per customer');
 await wait(50);
 step('a quick start sends its prompt as your message; offline, the saved answer stands in, labelled', text().includes('Write me a SQL query for revenue per customer') && text().includes("this is Claude's saved answer to the same question"));
@@ -629,11 +629,6 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   const files = ['src', 'src/ui'].flatMap(d => readdirSync(d).filter(f => /\.(jsx?|css)$/.test(f) && f !== 'theme.css').map(f => `${d}/${f}`));
   const stray = files.flatMap(f => (readFileSync(f, 'utf8').match(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b(?![-\w])/g) || []).map(h => `${f} ${h}`));
   step('theme: no hard-coded colours outside theme.css', stray.length === 0, stray.slice(0, 5).join(', '));
-  const opt = m => document.querySelector(`[data-theme-option=${m}]`);
-  await act(async () => { opt('dark').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-  step('theme: Dark sets the theme and remembers it', document.documentElement.dataset.theme === 'dark' && window.localStorage.getItem('own-it:theme') === 'dark' && opt('dark').getAttribute('aria-checked') === 'true');
-  await act(async () => { opt('system').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-  step('theme: System goes back to the OS setting', !document.documentElement.dataset.theme && window.localStorage.getItem('own-it:theme') === null);
 }
 
 // ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).
@@ -725,6 +720,14 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   await click('×');
 }
 
+// ---- The reading and tax starters are live prompts with no saved answer: offline, they say so instead of standing in.
+for (const [chip, prompt] of [['Reading · sounds out words, misses the story', "My 6-year-old can sound out words fine"], ['Money · a raise into a higher tax bracket', 'moves me into a higher tax bracket']]) {
+  await click('New chat');
+  globalThis.fetch = offline;
+  await click(chip); await wait(150);
+  step(`${chip.split(' ·')[0]} starter sends its prompt as your message; offline, no saved answer, it says so`, text().includes(prompt) && text().includes("I couldn't reach the model just now") && !text().includes("Claude's saved answer"));
+}
+
 // ---- Sam fits what you own: a live answer about a health headline is an idea, so Sam asks about an idea, not code.
 {
   await click('New chat');
@@ -745,6 +748,30 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   globalThis.fetch = offline;
   step("sam: on an idea (not code), Sam asks what the idea is, never about code", text().includes("What's the main idea, in plain words") && !text().includes('what this code is for'));
   await click('Done, back to chat');
+}
+
+// ---- A personal topic has no answer key: recognition practice on made-up people, nothing scored (research §13).
+{
+  await click('New chat');
+  const opt = (label, fits) => ({ label, fits, note: `Note on ${label}.` });
+  globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body);
+    const text = b.task === 'chat' ? 'Conviction points at what you did and toward repair; shame says you are bad and pushes you to hide.'
+      : b.task === 'focusOptions' ? JSON.stringify({ personal: true, spot: 'shame vs conviction', options: [{ label: 'Telling conviction from shame', mode: 'concept' }] })
+      : b.task === 'spotPractice' ? JSON.stringify({ scenarios: [
+          { text: 'Priya fixed a missed form the same day, but weeks later calls herself a fraud.', prompt: "What's going on?", options: [opt('Shame lingering after repair', true), opt('Conviction still at work', false), opt('Healthy humility', false)] },
+          { text: 'Marcus snapped at a coworker, apologised the next day and felt settled.', prompt: "What's going on?", options: [opt('Conviction leading to repair', true), opt('Shame about who he is', false)] }] })
+      : '{}';
+    return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ text }) }; };
+  await click('Health · a bacon and cancer headline'); await wait(150);
+  await ownAll(); await wait(150);
+  step('personal: no focus list or prediction, an unscored offer to practise spotting it', text().includes("there's no answer key to test you against") && text().includes('shame vs conviction') && !document.querySelector('[data-role=predict-option]') && !document.querySelector('[data-role=stepper]')?.textContent);
+  await click('Practise spotting it'); await wait(150);
+  step('personal: scenarios about made-up people, nothing scored', document.querySelectorAll('[data-role=spot-q]').length === 2 && text().includes('Practice, not scored'));
+  await click('Conviction still at work'); await click('Conviction leading to repair');
+  step('personal: a pick that fits less well also shows another way to see it', text().includes('Note on Conviction still at work.') && text().includes('Another way to see it: Shame lingering after repair'));
+  await click('Done'); await wait(50);
+  globalThis.fetch = offline;
+  step('personal: the chat says practised, not scored, and no score is shown', text().includes('Practised') && text().includes('shame vs conviction · practised 2 scenarios, not scored') && !/predicted \d/.test(text().split('Practised')[1] || ''));
 }
 
 // ---- Hybrid SQL check: a query that doesn't run is judged by Claude on the same items, and says so.

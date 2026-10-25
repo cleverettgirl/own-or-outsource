@@ -14,6 +14,7 @@ import { JUNO_TARGETS, junoFocusOptions } from './junoTargets.js';
 import { JUNO_TURNS } from './junoTranscript.js';
 import { checkChoice } from './choiceCheck.js';
 import { checkSteps } from './stepsCheck.js';
+import { normalizeSpot, spotSummary } from './spot.js';
 import { GO_FIRST, goFirstFor } from './goFirst.js';
 import { ruleNotes, keepQuoted } from './notes.js';
 import { SCALES, RUBRIC_WHY, tally, allRight, calibration, correctionNote } from './scoring.js';
@@ -32,6 +33,10 @@ const LEAD_QUESTION = "I'm not a manager, but I want to grow as a leader on my t
 // the way a person would. Relative vs absolute risk is what the answer has to teach; owning a calculation in it gets a
 // generated "work it out" try (log 63).
 const RISK_QUESTION = 'I just saw a headline saying that eating 50g of processed meat a day, about two slices of bacon, raises your risk of bowel cancer by 18%. Should I stop eating meat?';
+// Two more topics nobody prepared targets for (§13): a parent's question (decoding vs comprehension) and a money one
+// (marginal vs effective rate). Only the person's question is written here; the try is generated, as for leadership.
+const READING_QUESTION = "My 6-year-old can sound out words fine but often can't tell me what the story was about. What's going on, and how can I help at home?";
+const TAX_QUESTION = 'I just got a raise that moves me into a higher tax bracket. Will I actually take home less?';
 // Names userId, as the recorded component and its walkthrough do (asked with "id", live answers used `id`).
 const REACT_LIVE_QUESTION = 'How do I fetch a user by userId in a React component when it mounts, and refetch when userId changes?';
 import { REACT_TARGETS } from './reactTargets.js';
@@ -324,6 +329,8 @@ export default class App extends React.Component {
   }
   startLead = () => this.startLive(LEAD_QUESTION);
   startRisk = () => this.startLive(RISK_QUESTION);
+  startReading = () => this.startLive(READING_QUESTION);
+  startTax = () => this.startLive(TAX_QUESTION);
   startSql = () => this.startLive(SQL_QUESTION, this.SQL, SQL_TURNS[0].claude);
   startReact = () => this.startLive(REACT_LIVE_QUESTION, this.REACT, REACT_TURNS[0].claude);
   // Replays a real chat as-is. Every answer can be highlighted or owned whole (the icon under it).
@@ -599,6 +606,8 @@ export default class App extends React.Component {
     ];
     try {
       const r = await this.ask('focusOptions', { lang: o.lang, fullCode: o.fullCode, code: o.code });
+      // A personal topic (faith, family, your own feelings) has no answer key: offer recognition practice, never a score.
+      if (r.personal && r.spot && !reactTiming) return this.setOwn({ phase: 'spot', spot: { label: String(r.spot), scenarios: null, loading: false, failed: false } });
       const opts = (r.options || []).filter(x => x && x.label).slice(0, 3).map(x => ({ label: x.label, mode: x.mode === 'sequence' ? 'sequence' : 'concept' }));
       this.setOwn({ focusOptions: reactTiming ? [TIMING].concat(opts.slice(0, 2)) : opts.length ? opts : fallback });
     } catch (e) { this.setOwn({ focusOptions: reactTiming ? [TIMING].concat(fallback.slice(0, 1)) : fallback }); }
@@ -612,6 +621,21 @@ export default class App extends React.Component {
     if (m.scenario === this.JUNO) return { label: JUNO_TARGETS.ownside.label, mode: JUNO_TARGETS.ownside.kind, target: 'ownside' };
     return { label: "The whole thing: each part and why it's in that order", mode: this.isMultiLine(m.code) ? 'sequence' : 'concept', whole: true };
   }
+  // Recognition practice on made-up people (research §13). The picks stay in the panel; only the count reaches the chat.
+  startSpot = async () => {
+    const o = this.state.own;
+    this.setOwn(cur => ({ spot: { ...cur.spot, loading: true, failed: false } }));
+    try {
+      const scenarios = normalizeSpot(await this.ask('spotPractice', { spot: o.spot.label, fullCode: o.fullCode }));
+      this.setOwn(cur => ({ spot: { ...cur.spot, loading: false, scenarios: scenarios.length ? scenarios : null, failed: !scenarios.length } }));
+    } catch (e) { this.setOwn(cur => ({ spot: { ...cur.spot, loading: false, failed: true } })); }
+  };
+  // Back to the chat with the question left to you, as elsewhere (log 63).
+  spotChat = () => { this.cancelOwn(); const el = this.composerRef.current; if (el) el.focus(); };
+  finishSpot = picked => {
+    const o = this.state.own, summary = spotSummary(o.spot.label, picked, o.spot.scenarios || []);
+    this.setState({ own: null, messages: this.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Practised', summary } : m) });
+  };
   changeFocus = () => { this.setOwn({ phase: 'focus', focus: null, askedFocus: true }, () => { if (!this.state.own.focusOptions) this.loadFocusOptions(); }); };
   // The try is prepared as soon as the focus is known, so the prediction can say what you'll be asked to do.
   pickFocus(focus) {
@@ -1295,20 +1319,21 @@ export default class App extends React.Component {
       ],
       messages, ledger, ledgerEmpty: !S.ledger.length && !S.exits.length, exits: S.exits, hasExits: !!S.exits.length, chatTitle: S.chatTitle, isEmpty: !S.messages.length, composer: S.composer,
       hasCalibration: cal.items > 0, calibrationText: cal.text, calibrationTitle: cal.title,
-      composerBorder: 'var(--border-strong)', composerPlaceholder: 'Ask Claude anything…',
-      onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startLead: this.startLead, startRisk: this.startRisk, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
+      composerBorder: 'var(--color-line-strong)', composerPlaceholder: 'Ask Claude anything…',
+      onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startLead: this.startLead, startRisk: this.startRisk, startReading: this.startReading, startTax: this.startTax, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
             composerRef: this.composerRef, hasSel: !!S.sel, selX: S.sel ? S.sel.x + 'px' : '0px', selY: S.sel ? S.sel.y + 'px' : '0px', ownSelection: this.ownSelection, askSelection: this.askSelection, scrollRef: this.scrollRef,
     };
     if (!o) return V;
     const L = this.ladder(o);
     // One progress indicator for the whole flow. The visual (Compare / See it) is part of "Try it", not a step of its own.
-    const phases = (o.askedFocus ? ['focus'] : []).concat(['predict', 'ladder', 'reveal']);
+    // Personal practice has no predict or reveal, so no stepper.
+    const phases = o.phase === 'spot' ? [] : (o.askedFocus ? ['focus'] : []).concat(['predict', 'ladder', 'reveal']);
     const phaseName = { focus: 'What to own', predict: 'Predict', ladder: 'Try it', reveal: 'Reveal' };
     const curPhase = o.phase === 'teach' ? 'reveal' : o.phase;
     const stepper = phases.map(ph => ({ label: phaseName[ph], cur: ph === curPhase, done: phases.indexOf(ph) < phases.indexOf(curPhase) }));
-    const phaseLabels = Object.fromEntries(phases.map(ph => [ph, ph === 'ladder' && o.step === 'assemble' ? 'Try it · warming up with the pieces' : ph === 'ladder' && o.step !== 'write' ? 'Try it · seeing it visually' : phaseName[ph]]).concat([['teach', 'Optional · teach Sam']]));
+    const phaseLabels = Object.fromEntries(phases.map(ph => [ph, ph === 'ladder' && o.step === 'assemble' ? 'Try it · warming up with the pieces' : ph === 'ladder' && o.step !== 'write' ? 'Try it · seeing it visually' : phaseName[ph]]).concat([['teach', 'Optional · teach Sam'], ['spot', 'Practise spotting it']]));
     const goStep = s => () => { if (this.state.own.phase === 'ladder' && this.state.own.step === s) return; this.setOwn({ phase: 'ladder' }, () => this.enterStep(s)); };
-    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), bg: cur ? 'var(--accent)' : done ? 'var(--accent-soft-2)' : 'transparent', fg: cur ? 'var(--surface)' : done ? 'var(--accent-text)' : 'var(--muted)' }; });
+    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), bg: cur ? 'var(--color-accent)' : done ? 'var(--color-accent-soft-2)' : 'transparent', fg: cur ? 'var(--color-surface)' : done ? 'var(--color-accent-text)' : 'var(--color-muted)' }; });
     const nextOf = s => L[L.indexOf(s) + 1];
     const nextLabel = { see: 'see it run →', assemble: 'assemble it →', compare: 'compare it →', write: 'now write one yourself →' };
     Object.assign(V, {
@@ -1321,7 +1346,8 @@ export default class App extends React.Component {
       ownEntryLabel: 'Own it', ownTitle: o.focus ? o.focus.label : S.chatTitle, ownCode: o.code.replace(/```\w*\n?/g, '').replace(/\*\*|`/g, ''), ownIsProse: !!(o.scenario && o.scenario.prose), conceptInLabel: (o.scenario && o.scenario.inYourLabel) || 'In your query', ownPhaseLabel: phaseLabels[o.phase], stepper, ownShowLadderNav: o.phase === 'ladder' || o.phase === 'reveal', ladderNav,
       phaseFocus: o.phase === 'focus', focusLoading: !o.focusOptions, focusOptions: (o.focusOptions || []).map(f => ({ label: f.label, kind: f.mode === 'sequence' ? 'structure' : 'concept', onPick: () => this.pickFocus(f) })),
       focusOther: o.focusOther, onFocusOther: e => this.setOwn({ focusOther: e.target.value }), onFocusOtherKey: e => { if (e.key === 'Enter') this.submitFocusOther(); }, submitFocusOther: this.submitFocusOther,
-      hasFocus: !!o.focus, focusLabel: o.focus ? o.focus.label : '',
+      hasFocus: !!o.focus, focusLabel: o.focus ? o.focus.label : o.spot ? o.spot.label[0].toUpperCase() + o.spot.label.slice(1) : '',
+      phaseSpot: o.phase === 'spot', spotProps: o.spot ? { spot: o.spot.label, scenarios: o.spot.scenarios, loading: o.spot.loading, failed: o.spot.failed, onStart: this.startSpot, onChat: this.spotChat, onDone: this.finishSpot } : null,
       toggleRefresher: () => this.setOwn(cur => ({ refresherOpen: !cur.refresherOpen })), refresherOpen: !!o.refresherOpen,
       rereadChat: () => { if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) this.setState({ sheetMin: true }); const hl = this._ownedRange && this._ownedRange.startContainer.parentElement; if (hl) { hl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } const el = document.querySelector(`[data-msg-id="${o.msgId}"]`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); this.setState({ flashMsg: o.msgId }); setTimeout(() => this.setState({ flashMsg: null }), 1600); } },
       goNext: this.goNext, seeNextLabel: 'Got it, ' + nextLabel[nextOf('see')],
@@ -1363,12 +1389,12 @@ export default class App extends React.Component {
     Object.assign(V, {
             seeIntro: isSqlSee ? 'The query, run on six customers and twelve orders, in the order the database actually runs it. Two side steps show what would go wrong with a plain JOIN, and with the filter in WHERE.' : o.scenario === this.REACT ? 'The component, run through a mount, two quick id changes, and a late response. Two side steps show what breaks without the cleanup, and with an empty dependency array.' : 'The code, run step by step in the order things actually happen.',
       seeLoading: o.seeLoading, seeReady: !!see && !o.timeline, seeTimeline: !!o.timeline,
-      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, bg: i === idx ? (s.contrast ? 'var(--muted)' : 'var(--accent)') : i < idx ? (s.contrast ? 'var(--border-soft)' : 'var(--accent-soft-2)') : 'var(--sunken)', fg: i === idx ? 'var(--surface)' : i < idx ? (s.contrast ? 'var(--muted)' : 'var(--accent-text)') : 'var(--muted)', italic: s.contrast ? 'italic' : 'normal' })) : [],
+      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, bg: i === idx ? (s.contrast ? 'var(--color-muted)' : 'var(--color-accent)') : i < idx ? (s.contrast ? 'var(--color-line-soft)' : 'var(--color-accent-soft-2)') : 'var(--color-sunken)', fg: i === idx ? 'var(--color-surface)' : i < idx ? (s.contrast ? 'var(--color-muted)' : 'var(--color-accent-text)') : 'var(--color-muted)', italic: s.contrast ? 'italic' : 'normal' })) : [],
       seeStepTitle: cur ? cur.title : '', seeStepNote: cur ? cur.note : '', seeHasTable: !!(cur && cur.rows),
       seeIsContrast: !!(cur && cur.contrast), seeStepKicker: cur && cur.contrast ? 'What would go wrong' : 'What happens',
       seeCols: cur && cur.headers ? cur.headers.map(() => 'minmax(0,1fr)').join(' ') : '1fr',
       seeHeaders: cur && cur.headers ? cur.headers.map(t => ({ t })) : [],
-      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), bg: r.dim ? 'var(--accent-soft)' : 'var(--surface)', fg: r.dim ? 'var(--accent-mid)' : 'var(--text)', deco: r.dim ? 'line-through' : 'none' })) : [],
+      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), bg: r.dim ? 'var(--color-accent-soft)' : 'var(--color-surface)', fg: r.dim ? 'var(--color-accent-mid)' : 'var(--color-ink)', deco: r.dim ? 'line-through' : 'none' })) : [],
       seeRowCount: cur && cur.rows ? (cur.rows.filter(r => !r.dim).length + ' rows' + (cur.rows.some(r => r.dim) ? ', ' + cur.rows.filter(r => r.dim).length + (cur.contrast ? ' would be lost' : ' dropped') : '')) : '',
       seePrev: this.seePrev, seeNext: this.seeNext, seeHasNext: !!see && idx < see.length - 1, seeAtEnd: !!see && idx === see.length - 1,
       hasBridges: !!(o.bridges && o.bridges.length), bridges: (o.bridges || []).map(t => ({ t }))
@@ -1381,7 +1407,7 @@ export default class App extends React.Component {
       const g = cm.guesses[cm.idx];
       Object.assign(V, {
         cmpLoading: !!cm.loading, cmpIntro: cm.intro || '', cmpHasCases: cm.cases.length > 0,
-        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), bg: i === cm.idx ? 'var(--accent)' : cm.revealed[i] ? 'var(--accent-soft-2)' : 'var(--sunken)', fg: i === cm.idx ? 'var(--surface)' : cm.revealed[i] ? 'var(--accent-text)' : 'var(--muted)' })),
+        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), bg: i === cm.idx ? 'var(--color-accent)' : cm.revealed[i] ? 'var(--color-accent-soft-2)' : 'var(--color-sunken)', fg: i === cm.idx ? 'var(--color-surface)' : cm.revealed[i] ? 'var(--color-accent-text)' : 'var(--color-muted)' })),
         cmpHasSource: !!cm.source, cmpSource: cm.source ? [['customers', cm.source.customers], ['orders', cm.source.orders]].map(([name, t]) => ({ name, ...table(t.headers, t.rows) })) : [],
         cmpCode: k ? k.code : '', cmpIsTable: !!(k && k.rows), cmpIsPick: !!(k && k.options), cmpShown: shown, cmpHidden: !!k && !shown,
         cmpPickOptions: k && k.options ? k.options.map(x => ({ l: x.l, onPick: () => this.cmpGuess(cm.idx, x.v) })) : [],
@@ -1404,7 +1430,7 @@ export default class App extends React.Component {
       const byId = {}; a.pieces.forEach(p => byId[p.id] = p);
       Object.assign(V, {
         asmBank: a.bank.map(id => ({ text: byId[id].text, onClick: () => this.asmAdd(id) })), asmBankEmpty: !a.bank.length,
-        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), bg: a.lastWrong.includes(id) ? 'var(--accent-soft)' : 'var(--surface)', border: a.lastWrong.includes(id) ? 'var(--accent)' : 'var(--border)' })),
+        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), bg: a.lastWrong.includes(id) ? 'var(--color-accent-soft)' : 'var(--color-surface)', border: a.lastWrong.includes(id) ? 'var(--color-accent)' : 'var(--color-line)' })),
         asmFeedback: !!a.feedback, asmFeedbackText: a.feedback, asmNotCorrect: !a.correct, asmCorrect: a.correct, asmLoading: a.loading, checkAsm: this.checkAsm,
         asmWhyPrompt: (this.targetOf(o) && this.targetOf(o).assemble && this.targetOf(o).assemble.why) || 'In one line: what would break if you swapped two of these lines?', asmHasDecoy: !!(a.pieces.some(p => p.id === 'dx')), asmWhy: a.why, onAsmWhy: e => this.setAsm({ why: e.target.value })
       });
@@ -1438,7 +1464,7 @@ export default class App extends React.Component {
       revealNodes: order.map((s, i) => {
         const v = o.visited[s] || 0; const skipped = i < startI && !v;
         let detail = skipped ? 'optional, not opened' : s === 'see' ? (v > 1 ? 'watched ' + v + '×' : 'watched it run') : s === 'assemble' ? (a ? (a.attempts === 1 ? 'right first try' : a.attempts + ' tries' + (a.usedDistractor ? ', filter in WHERE' : '')) : '') : s === 'compare' ? (cmGuessed ? cmRight + ' of ' + cmGuessed + ' guesses right' : 'compared') : (t1.right + ' of ' + N + (w.attempts > 1 ? ' → ' + tn.right + ' on try ' + w.attempts : '') + (w.hints.length ? ', ' + w.hints.length + ' hint' + (w.hints.length > 1 ? 's' : '') : ', no hints'));
-        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dotBg: skipped ? 'var(--bg)' : s === 'write' ? 'var(--good)' : 'var(--accent)', dotBorder: skipped ? 'var(--border-strong)' : s === 'write' ? 'var(--good)' : 'var(--accent)', fg: skipped ? 'var(--faint)' : 'var(--text)' };
+        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dotBg: skipped ? 'var(--color-page)' : s === 'write' ? 'var(--color-good)' : 'var(--color-accent)', dotBorder: skipped ? 'var(--color-line-strong)' : s === 'write' ? 'var(--color-good)' : 'var(--color-accent)', fg: skipped ? 'var(--color-faint)' : 'var(--color-ink)' };
       }),
       revealCols: `repeat(${order.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
@@ -1446,7 +1472,7 @@ export default class App extends React.Component {
       revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
       revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),
-      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', 'var(--accent-soft)'], ['What it should return', g.table.expected, 'missing', 'var(--good-soft)']].map(([title, t, mark, bg]) => ({
+      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', 'var(--color-accent-soft)'], ['What it should return', g.table.expected, 'missing', 'var(--color-good-soft)']].map(([title, t, mark, bg]) => ({
         title, empty: !t.rows.length, cols: t.cols.map(() => 'minmax(0,1fr)').join(' ') || '1fr', headers: t.cols.map(c => ({ t: c })),
         rows: t.rows.map(r => ({ cells: r.cells.map((c, j) => ({ t: c, dim: c === 'NULL', hl: (r.diffs || []).includes(j) ? bg : '' })), bg: r.mark === mark ? bg : '' })),
         legend: [t.rows.some(r => r.mark === mark) ? (mark === 'extra' ? 'highlighted rows: should not be there' : 'highlighted rows: yours is missing them') : '', t.rows.some(r => r.mark === 'near') ? 'highlighted cells: the difference' : '', mark === 'extra' && g.table.dropped && g.table.dropped.length ? `extra columns left out: ${g.table.dropped.join(', ')}` : ''].filter(Boolean).join(' · ') })) : [],
@@ -1457,7 +1483,7 @@ export default class App extends React.Component {
     // teach
     const t = o.teach;
     Object.assign(V, {
-      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', align: m.role === 'sam' ? 'flex-start' : 'flex-end', bg: m.role === 'sam' ? 'var(--surface)' : 'var(--bubble)' })),
+      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', align: m.role === 'sam' ? 'flex-start' : 'flex-end', bg: m.role === 'sam' ? 'var(--color-surface)' : 'var(--color-bubble)' })),
       teachLoading: t.loading, teachOpen: t.turns < 3 && !t.debrief, teachDebrief: t.debrief || null, teachDebriefLoading: !!t.debriefLoading, wrapTeach: this.debriefTeach, canWrap: t.turns >= 1 && !t.debrief,
       exploreTeachGap: u => this.exploreGap(this.teachGap(u)), saveTeachGap: u => this.teachGap(u), gapTopics: S.gaps.map(g => g.topic), teachInput: t.input, onTeachInput: e => this.setOwn({ teach: { ...this.state.own.teach, input: e.target.value } }), onTeachKey: e => { if (e.key === 'Enter') this.sendTeach(); }, sendTeach: this.sendTeach
     });

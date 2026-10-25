@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // In dev, serve /api/claude from the same handler Vercel uses in production,
 // so `npm run dev` is the whole app and no Vercel login is needed locally.
@@ -25,5 +26,5 @@ function devApi() {
 export default defineConfig(({ mode }) => {
   // Make ANTHROPIC_API_KEY from .env.local visible to the server code (never to the browser).
   Object.assign(process.env, loadEnv(mode, process.cwd(), ''));
-  return { plugins: [react(), devApi()] };
+  return { plugins: [react(), tailwindcss(), devApi()] };
 });

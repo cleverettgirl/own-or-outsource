@@ -1,10 +1,10 @@
 /* Hover states from the design (style-hover); !important beats the inline base styles. */
-.hv1:hover{background:var(--hover) !important}
-.hv2:hover{border-color:var(--good) !important;color:var(--good-text) !important}
-.hv3:hover{border-color:var(--accent) !important}
-.hv4:hover{background:var(--accent-soft) !important}
-.hv5:hover{box-shadow:inset 0 0 0 1px var(--accent) !important}
-.hv6:hover{background:var(--sunken) !important}
-.hv7:hover{border-color:var(--accent) !important;background:var(--accent-soft) !important}
-.hv8:hover{border-color:var(--muted) !important}
-.hv9:hover{background:var(--accent-text) !important}
+.hv1:hover{background:var(--color-wash) !important}
+.hv2:hover{border-color:var(--color-good) !important;color:var(--color-good-text) !important}
+.hv3:hover{border-color:var(--color-accent) !important}
+.hv4:hover{background:var(--color-accent-soft) !important}
+.hv5:hover{box-shadow:inset 0 0 0 1px var(--color-accent) !important}
+.hv6:hover{background:var(--color-sunken) !important}
+.hv7:hover{border-color:var(--color-accent) !important;background:var(--color-accent-soft) !important}
+.hv8:hover{border-color:var(--color-muted) !important}
+.hv9:hover{background:var(--color-accent-text) !important}

@@ -23,8 +23,10 @@
     "sql.js": "1.14.2"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
     "@vitejs/plugin-react": "4.3.4",
     "jsdom": "^25.0.1",
+    "tailwindcss": "4.3.3",
     "vite": "5.4.11"
   }
 }

@@ -87,105 +87,105 @@ export default function EffectTimeline({ onDone }) {
   const go = d => { const j = Math.min(V.events.length - 1, Math.max(0, i + d)); setI(j); if (variant === 'correct' && j === V.events.length - 1) setSeenAll(true); };
   const pick = v => { setVariant(v); setI(0); };
   const fade = t => (t > now ? 0.18 : 1);
-  const lane = (k, label) => <text x={8} y={22 + k * 30} fontSize="11" fill="var(--muted)">{label}</text>;
+  const lane = (k, label) => <text x={8} y={22 + k * 30} fontSize="11" fill="var(--color-muted)">{label}</text>;
   const y = k => 12 + k * 30;
   const picked = CLICKS.find(p => now >= p.from && now < p.to).id;
   const shown = V.screen.find(sc => now >= sc.from && now < sc.to);
 
   return (
     <div data-role="effect-timeline" style={css(`display:flex;flex-direction:column;gap:12px`)}>
-      <div style={css(`font-size:13.5px;line-height:1.5;color:var(--text-2)`)}>The setup: the card sits next to a list of users. Clicking a name sends its <code>userId</code> to the card. You click Ada, then Bo, then quickly Cy, before Bo's data has arrived. Watch when the <b>cleanup</b> runs.</div>
+      <div style={css(`font-size:13.5px;line-height:1.5;color:var(--color-ink-2)`)}>The setup: the card sits next to a list of users. Clicking a name sends its <code>userId</code> to the card. You click Ada, then Bo, then quickly Cy, before Bo's data has arrived. Watch when the <b>cleanup</b> runs.</div>
       <div data-role="mini-app" style={css(`display:flex;gap:10px;align-items:stretch`)}>
-        <div style={css(`display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;width:140px`)}>
-          <div style={css(`font-size:10.5px;color:var(--muted);padding:2px 6px`)}>Users</div>
-          {[1, 2, 3].map(id => <div key={id} style={css(`font-size:13px;padding:5px 8px;border-radius:6px;background:${picked === id ? 'var(--text)' : 'transparent'};color:${picked === id ? 'var(--surface)' : 'var(--text-2)'}`)}>{USERS[id]}{picked === id ? '  ← clicked' : ''}</div>)}
+        <div style={css(`display:flex;flex-direction:column;gap:3px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:10px;padding:6px;width:140px`)}>
+          <div style={css(`font-size:10.5px;color:var(--color-muted);padding:2px 6px`)}>Users</div>
+          {[1, 2, 3].map(id => <div key={id} style={css(`font-size:13px;padding:5px 8px;border-radius:6px;background:${picked === id ? 'var(--color-ink)' : 'transparent'};color:${picked === id ? 'var(--color-surface)' : 'var(--color-ink-2)'}`)}>{USERS[id]}{picked === id ? '  ← clicked' : ''}</div>)}
         </div>
-        <div style={css(`flex:1;background:var(--surface);border:1px solid ${shown && shown.bad ? 'var(--accent)' : 'var(--border)'};border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;justify-content:center`)}>
-          <div style={css(`font-size:10.5px;color:var(--muted)`)}>UserProfile · props: userId = {picked}</div>
-          <div style={css(`font-family:Newsreader,serif;font-size:22px;color:${shown && shown.bad ? 'var(--accent-text)' : 'var(--text)'}`)}>{shown ? shown.t : ''}</div>
-          {shown && shown.bad && <div style={css(`font-size:12px;color:var(--accent-text)`)}>Wrong user: you clicked {USERS[picked]}</div>}
+        <div style={css(`flex:1;background:var(--color-surface);border:1px solid ${shown && shown.bad ? 'var(--color-accent)' : 'var(--color-line)'};border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;justify-content:center`)}>
+          <div style={css(`font-size:10.5px;color:var(--color-muted)`)}>UserProfile · props: userId = {picked}</div>
+          <div style={css(`font-family:Newsreader,serif;font-size:22px;color:${shown && shown.bad ? 'var(--color-accent-text)' : 'var(--color-ink)'}`)}>{shown ? shown.t : ''}</div>
+          {shown && shown.bad && <div style={css(`font-size:12px;color:var(--color-accent-text)`)}>Wrong user: you clicked {USERS[picked]}</div>}
         </div>
       </div>
 
       <div style={css(`display:flex;gap:6px;flex-wrap:wrap`)}>
         {Object.entries(VARIANTS).map(([k, v]) => (
           <button key={k} onClick={() => pick(k)} disabled={k !== 'correct' && !seenAll} title={k !== 'correct' && !seenAll ? 'Watch the working version to the end first' : ''}
-            style={css(`font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid ${variant === k ? 'var(--accent)' : 'var(--border)'};background:${variant === k ? 'var(--accent)' : 'var(--surface)'};color:${variant === k ? 'var(--surface)' : k !== 'correct' && !seenAll ? 'var(--faint)' : 'var(--text-2)'}`)}>{v.label}</button>
+            style={css(`font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid ${variant === k ? 'var(--color-accent)' : 'var(--color-line)'};background:${variant === k ? 'var(--color-accent)' : 'var(--color-surface)'};color:${variant === k ? 'var(--color-surface)' : k !== 'correct' && !seenAll ? 'var(--color-faint)' : 'var(--color-ink-2)'}`)}>{v.label}</button>
         ))}
       </div>
 
-      <svg viewBox={`0 0 600 ${y(5) + 18}`} style={css(`width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px`)} role="img" aria-label="Timeline of clicks, effect runs, their requests and cleanups, and what the card shows">
+      <svg viewBox={`0 0 600 ${y(5) + 18}`} style={css(`width:100%;background:var(--color-surface);border:1px solid var(--color-line);border-radius:10px`)} role="img" aria-label="Timeline of clicks, effect runs, their requests and cleanups, and what the card shows">
         {lane(0, 'you click')}
-        {CLICKS.map((p, k) => <g key={k} opacity={fade(p.from)}><rect x={x(p.from) + 1} y={y(0)} width={x(p.to) - x(p.from) - 2} height="16" rx="4" fill="var(--sunken)" /><text x={x(p.from) + 6} y={y(0) + 12} fontSize="11" fill="var(--text-2)">{USERS[p.id]} (userId {p.id})</text></g>)}
+        {CLICKS.map((p, k) => <g key={k} opacity={fade(p.from)}><rect x={x(p.from) + 1} y={y(0)} width={x(p.to) - x(p.from) - 2} height="16" rx="4" fill="var(--color-sunken)" /><text x={x(p.from) + 6} y={y(0) + 12} fontSize="11" fill="var(--color-ink-2)">{USERS[p.id]} (userId {p.id})</text></g>)}
         {RUNS.map((r, k) => {
           const run = V.runs.find(q => q.n === r.n);
-          if (!run) return <g key={k}>{lane(k + 1, `run #${r.n}`)}<text x={x(r.start)} y={y(k + 1) + 12} fontSize="11" fill="var(--faint)" opacity={fade(r.start)}>never runs</text></g>;
+          if (!run) return <g key={k}>{lane(k + 1, `run #${r.n}`)}<text x={x(r.start)} y={y(k + 1) + 12} fontSize="11" fill="var(--color-faint)" opacity={fade(r.start)}>never runs</text></g>;
           // A cleanup before the response cuts the request off there.
           const aborted = run.cleanup != null && run.cleanup < run.resp;
           const end = aborted ? run.cleanup : run.resp;
-          const tone = variant === 'noCleanup' && run.n === 2 ? 'var(--accent)' : 'var(--good)';
+          const tone = variant === 'noCleanup' && run.n === 2 ? 'var(--color-accent)' : 'var(--color-good)';
           return (
             <g key={k}>
               {lane(k + 1, `run #${r.n}`)}
-              {aborted && <rect x={x(run.start)} y={y(k + 1) + 4} width={x(run.resp) - x(run.start)} height="8" rx="4" fill="none" stroke="var(--accent-border)" strokeDasharray="3 3" opacity={run.start > now ? 0.12 : 0.45} />}
-              <rect x={x(run.start)} y={y(k + 1) + 4} width={Math.max(0, Math.min(x(end), x(now)) - x(run.start))} height="8" rx="4" fill="var(--accent-border)" opacity={run.start > now ? 0 : 1} />
-              <text x={x(run.start)} y={y(k + 1) + 2} fontSize="9" fill="var(--accent-text)" opacity={fade(run.start)}>fetch {USERS[run.id]}</text>
-              {run.cleanup != null && run.cleanup <= T_MAX && <g opacity={fade(run.cleanup)}><line x1={x(run.cleanup)} x2={x(run.cleanup)} y1={y(k + 1) - 2} y2={y(k + 1) + 18} stroke="var(--accent-text)" strokeWidth="2" /><text x={x(run.cleanup) - 4} y={y(k + 1) + 12} fontSize="11" fill="var(--accent-text)" textAnchor="end">✂</text></g>}
+              {aborted && <rect x={x(run.start)} y={y(k + 1) + 4} width={x(run.resp) - x(run.start)} height="8" rx="4" fill="none" stroke="var(--color-accent-border)" strokeDasharray="3 3" opacity={run.start > now ? 0.12 : 0.45} />}
+              <rect x={x(run.start)} y={y(k + 1) + 4} width={Math.max(0, Math.min(x(end), x(now)) - x(run.start))} height="8" rx="4" fill="var(--color-accent-border)" opacity={run.start > now ? 0 : 1} />
+              <text x={x(run.start)} y={y(k + 1) + 2} fontSize="9" fill="var(--color-accent-text)" opacity={fade(run.start)}>fetch {USERS[run.id]}</text>
+              {run.cleanup != null && run.cleanup <= T_MAX && <g opacity={fade(run.cleanup)}><line x1={x(run.cleanup)} x2={x(run.cleanup)} y1={y(k + 1) - 2} y2={y(k + 1) + 18} stroke="var(--color-accent-text)" strokeWidth="2" /><text x={x(run.cleanup) - 4} y={y(k + 1) + 12} fontSize="11" fill="var(--color-accent-text)" textAnchor="end">✂</text></g>}
               {aborted
-                ? <text x={x(run.resp) + 6} y={y(k + 1) + 12} fontSize="9" fill="var(--faint)" opacity={fade(run.resp)}>would have arrived</text>
-                : <g opacity={fade(run.resp)}><circle cx={x(run.resp)} cy={y(k + 1) + 8} r="8" fill={tone} /><text x={x(run.resp)} y={y(k + 1) + 12} fontSize="10" fill="var(--surface)" textAnchor="middle">✓</text></g>}
+                ? <text x={x(run.resp) + 6} y={y(k + 1) + 12} fontSize="9" fill="var(--color-faint)" opacity={fade(run.resp)}>would have arrived</text>
+                : <g opacity={fade(run.resp)}><circle cx={x(run.resp)} cy={y(k + 1) + 8} r="8" fill={tone} /><text x={x(run.resp)} y={y(k + 1) + 12} fontSize="10" fill="var(--color-surface)" textAnchor="middle">✓</text></g>}
             </g>
           );
         })}
         {lane(4, 'card shows')}
-        {V.screen.map((s, k) => <g key={k} opacity={fade(s.from)}><rect x={x(s.from) + 1} y={y(4)} width={x(s.to) - x(s.from) - 2} height="18" rx="4" fill={s.bad ? 'var(--accent-soft)' : s.t === 'Loading…' ? 'var(--sunken)' : 'var(--good-soft)'} stroke={s.bad ? 'var(--accent)' : 'none'} /><text x={x(s.from) + 6} y={y(4) + 13} fontSize="11" fill={s.bad ? 'var(--accent-text)' : 'var(--text)'} fontWeight={s.bad ? 600 : 400}>{s.t}</text></g>)}
-        <line x1={x(now)} x2={x(now)} y1="4" y2={y(5) + 4} stroke="var(--text)" strokeWidth="1.5" />
-        <text x={x(now)} y={y(5) + 15} fontSize="10" textAnchor="middle" fill="var(--text)">now</text>
+        {V.screen.map((s, k) => <g key={k} opacity={fade(s.from)}><rect x={x(s.from) + 1} y={y(4)} width={x(s.to) - x(s.from) - 2} height="18" rx="4" fill={s.bad ? 'var(--color-accent-soft)' : s.t === 'Loading…' ? 'var(--color-sunken)' : 'var(--color-good-soft)'} stroke={s.bad ? 'var(--color-accent)' : 'none'} /><text x={x(s.from) + 6} y={y(4) + 13} fontSize="11" fill={s.bad ? 'var(--color-accent-text)' : 'var(--color-ink)'} fontWeight={s.bad ? 600 : 400}>{s.t}</text></g>)}
+        <line x1={x(now)} x2={x(now)} y1="4" y2={y(5) + 4} stroke="var(--color-ink)" strokeWidth="1.5" />
+        <text x={x(now)} y={y(5) + 15} fontSize="10" textAnchor="middle" fill="var(--color-ink)">now</text>
       </svg>
-      <div style={css(`display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:-6px`)}>
-        <span><span style={css(`display:inline-block;width:18px;height:6px;border-radius:3px;background:var(--accent-border);vertical-align:middle`)}></span> request in flight</span>
-        <span style={css(`color:var(--accent-text)`)}>✂ cleanup: controller.abort()</span>
-        <span><span style={css(`color:var(--good)`)}>✓</span> response shown</span>
+      <div style={css(`display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--color-muted);margin-top:-6px`)}>
+        <span><span style={css(`display:inline-block;width:18px;height:6px;border-radius:3px;background:var(--color-accent-border);vertical-align:middle`)}></span> request in flight</span>
+        <span style={css(`color:var(--color-accent-text)`)}>✂ cleanup: controller.abort()</span>
+        <span><span style={css(`color:var(--color-good)`)}>✓</span> response shown</span>
         <span>dashed: the part that was cut off</span>
       </div>
 
       <div style={css(`display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;align-items:start`)}>
-        <div style={css(`display:flex;flex-direction:column;gap:6px;border-left:2px solid ${ev.bad ? 'var(--accent)' : 'var(--good)'};padding:2px 0 2px 12px`)}>
-          <div style={css(`font-size:11px;color:var(--muted)`)}>step {i + 1} of {V.events.length}{V.removed || V.changed ? ' · code changed on the right' : ''}</div>
-          <div style={css(`font-size:14.5px;font-weight:500;color:${ev.bad ? 'var(--accent-text)' : 'var(--text)'}`)}>{ev.title}</div>
+        <div style={css(`display:flex;flex-direction:column;gap:6px;border-left:2px solid ${ev.bad ? 'var(--color-accent)' : 'var(--color-good)'};padding:2px 0 2px 12px`)}>
+          <div style={css(`font-size:11px;color:var(--color-muted)`)}>step {i + 1} of {V.events.length}{V.removed || V.changed ? ' · code changed on the right' : ''}</div>
+          <div style={css(`font-size:14.5px;font-weight:500;color:${ev.bad ? 'var(--color-accent-text)' : 'var(--color-ink)'}`)}>{ev.title}</div>
           {ev.ask && answer == null ? (
             <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
               <div style={css(`font-size:13.5px`)}>{ev.ask.q}</div>
-              <div style={css(`display:flex;gap:6px`)}>{ev.ask.options.map(o => <button key={o} onClick={() => setAnswer(o)} style={css(`flex:1;border:1px solid var(--accent-border);background:var(--surface);border-radius:8px;padding:7px 0;font-size:13.5px`)} className="hv3">{o}</button>)}</div>
+              <div style={css(`display:flex;gap:6px`)}>{ev.ask.options.map(o => <button key={o} onClick={() => setAnswer(o)} style={css(`flex:1;border:1px solid var(--color-accent-border);background:var(--color-surface);border-radius:8px;padding:7px 0;font-size:13.5px`)} className="hv3">{o}</button>)}</div>
             </div>
           ) : (
             <>
-              {ev.ask && <div style={css(`font-size:13px;font-weight:500;color:${answer === ev.ask.answer ? 'var(--good-text)' : 'var(--accent-text)'}`)}>You said {answer}. {answer === ev.ask.answer ? 'Right.' : `It's ${ev.ask.answer}.`}</div>}
-              <div style={css(`font-size:13px;line-height:1.5;color:var(--text-2)`)}>{ev.note}</div>
+              {ev.ask && <div style={css(`font-size:13px;font-weight:500;color:${answer === ev.ask.answer ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>You said {answer}. {answer === ev.ask.answer ? 'Right.' : `It's ${ev.ask.answer}.`}</div>}
+              <div style={css(`font-size:13px;line-height:1.5;color:var(--color-ink-2)`)}>{ev.note}</div>
               {ev.cycle && (
                 <ol data-role="cycle" style={css(`margin:2px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px`)}>
-                  {ev.cycle.map((c, k) => <li key={k} style={css(`display:flex;gap:8px;align-items:baseline;font-size:12.5px;line-height:1.4;padding:5px 8px;border-radius:7px;background:${c.key ? 'var(--accent-soft)' : 'var(--sunken)'};color:${c.key ? 'var(--accent-text)' : 'var(--text-2)'};font-weight:${c.key ? 600 : 400}`)}><span style={css(`flex:none`)}>{k + 1}.</span><span>{c.t}</span></li>)}
+                  {ev.cycle.map((c, k) => <li key={k} style={css(`display:flex;gap:8px;align-items:baseline;font-size:12.5px;line-height:1.4;padding:5px 8px;border-radius:7px;background:${c.key ? 'var(--color-accent-soft)' : 'var(--color-sunken)'};color:${c.key ? 'var(--color-accent-text)' : 'var(--color-ink-2)'};font-weight:${c.key ? 600 : 400}`)}><span style={css(`flex:none`)}>{k + 1}.</span><span>{c.t}</span></li>)}
                 </ol>
               )}
             </>
           )}
         </div>
-        <pre style={css(`margin:0;padding:8px 0;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;overflow:auto`)}>
+        <pre style={css(`margin:0;padding:8px 0;background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;overflow:auto`)}>
           {CODE.map((l, k) => {
             const gone = (V.removed || []).includes(k), changed = V.changed && V.changed[k] != null, on = ev.lines.includes(k);
-            return <div key={k} style={css(`padding:0 10px;white-space:pre;background:${changed || (on && (ev.bad || k === 9)) ? 'var(--accent-soft)' : on ? 'var(--accent-soft)' : 'transparent'};color:${gone ? 'var(--accent)' : changed || on ? 'var(--text)' : 'var(--muted)'};text-decoration:${gone ? 'line-through' : 'none'};font-weight:${on && k === 9 ? 600 : 400}`)}>{(changed ? V.changed[k] : l) || ' '}</div>;
+            return <div key={k} style={css(`padding:0 10px;white-space:pre;background:${changed || (on && (ev.bad || k === 9)) ? 'var(--color-accent-soft)' : on ? 'var(--color-accent-soft)' : 'transparent'};color:${gone ? 'var(--color-accent)' : changed || on ? 'var(--color-ink)' : 'var(--color-muted)'};text-decoration:${gone ? 'line-through' : 'none'};font-weight:${on && k === 9 ? 600 : 400}`)}>{(changed ? V.changed[k] : l) || ' '}</div>;
           })}
-          <div style={css(`padding:4px 10px 0;font-family:'Instrument Sans',system-ui,sans-serif;font-size:10.5px;color:var(--muted);white-space:normal`)}>the effect from Claude's answer, trimmed to the timing</div>
+          <div style={css(`padding:4px 10px 0;font-family:'Instrument Sans',system-ui,sans-serif;font-size:10.5px;color:var(--color-muted);white-space:normal`)}>the effect from Claude's answer, trimmed to the timing</div>
         </pre>
       </div>
 
       <div style={css(`display:flex;gap:8px;align-items:center;justify-content:space-between`)}>
         <div style={css(`display:flex;gap:6px`)}>
-          <button onClick={() => go(-1)} disabled={i === 0} style={css(`background:none;border:1px solid var(--border-strong);border-radius:8px;padding:7px 12px;font-size:13px`)} className="hv6">← Back</button>
-          {i < V.events.length - 1 && <button onClick={() => go(1)} disabled={blocked} style={css(`background:${blocked ? 'var(--faint)' : 'var(--text)'};color:var(--inverse-text);border:none;border-radius:8px;padding:7px 14px;font-size:13px`)}>Next →</button>}
+          <button onClick={() => go(-1)} disabled={i === 0} style={css(`background:none;border:1px solid var(--color-line-strong);border-radius:8px;padding:7px 12px;font-size:13px`)} className="hv6">← Back</button>
+          {i < V.events.length - 1 && <button onClick={() => go(1)} disabled={blocked} style={css(`background:${blocked ? 'var(--color-faint)' : 'var(--color-ink)'};color:var(--color-on-inverse);border:none;border-radius:8px;padding:7px 14px;font-size:13px`)}>Next →</button>}
         </div>
-        {seenAll && variant === 'correct' && i === V.events.length - 1 && <span style={css(`font-size:12.5px;color:var(--muted)`)}>Now try breaking it ↑</span>}
-        {seenAll && <button onClick={onDone} style={css(`background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Got it, now write one yourself →</button>}
+        {seenAll && variant === 'correct' && i === V.events.length - 1 && <span style={css(`font-size:12.5px;color:var(--color-muted)`)}>Now try breaking it ↑</span>}
+        {seenAll && <button onClick={onDone} style={css(`background:var(--color-accent);color:var(--color-on-accent);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Got it, now write one yourself →</button>}
       </div>
     </div>
   );
