@@ -4,7 +4,6 @@
 // is cut off, ✂), then runs the new effect. Step through it like a video; at each click a numbered strip
 // shows that cycle. Then "break it": no cleanup, or [] deps, and watch the card go wrong.
 import React from 'react';
-import { css } from './css.js';
 
 // The effect from Claude's answer, trimmed to the lines that matter for timing.
 const CODE = [
@@ -93,28 +92,28 @@ export default function EffectTimeline({ onDone }) {
   const shown = V.screen.find(sc => now >= sc.from && now < sc.to);
 
   return (
-    <div data-role="effect-timeline" style={css(`display:flex;flex-direction:column;gap:12px`)}>
-      <div style={css(`font-size:13.5px;line-height:1.5;color:var(--color-ink-2)`)}>The setup: the card sits next to a list of users. Clicking a name sends its <code>userId</code> to the card. You click Ada, then Bo, then quickly Cy, before Bo's data has arrived. Watch when the <b>cleanup</b> runs.</div>
-      <div data-role="mini-app" style={css(`display:flex;gap:10px;align-items:stretch`)}>
-        <div style={css(`display:flex;flex-direction:column;gap:3px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:10px;padding:6px;width:140px`)}>
-          <div style={css(`font-size:10.5px;color:var(--color-muted);padding:2px 6px`)}>Users</div>
-          {[1, 2, 3].map(id => <div key={id} style={css(`font-size:13px;padding:5px 8px;border-radius:6px;background:${picked === id ? 'var(--color-ink)' : 'transparent'};color:${picked === id ? 'var(--color-surface)' : 'var(--color-ink-2)'}`)}>{USERS[id]}{picked === id ? '  ← clicked' : ''}</div>)}
+    <div data-role="effect-timeline" className="flex flex-col gap-3">
+      <div className="text-[13.5px] leading-normal text-ink-2">The setup: the card sits next to a list of users. Clicking a name sends its <code>userId</code> to the card. You click Ada, then Bo, then quickly Cy, before Bo's data has arrived. Watch when the <b>cleanup</b> runs.</div>
+      <div data-role="mini-app" className="flex gap-2.5 items-stretch">
+        <div className="flex flex-col gap-[3px] bg-surface border border-line rounded-[10px] p-1.5 w-35">
+          <div className="text-[10.5px] text-muted py-0.5 px-1.5">Users</div>
+          {[1, 2, 3].map(id => <div key={id} className={`text-[13px] py-[5px] px-2 rounded-md ${picked === id ? 'bg-inverse text-on-inverse' : 'bg-transparent text-ink-2'}`}>{USERS[id]}{picked === id ? '  ← clicked' : ''}</div>)}
         </div>
-        <div style={css(`flex:1;background:var(--color-surface);border:1px solid ${shown && shown.bad ? 'var(--color-accent)' : 'var(--color-line)'};border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;justify-content:center`)}>
-          <div style={css(`font-size:10.5px;color:var(--color-muted)`)}>UserProfile · props: userId = {picked}</div>
-          <div style={css(`font-family:Newsreader,serif;font-size:22px;color:${shown && shown.bad ? 'var(--color-accent-text)' : 'var(--color-ink)'}`)}>{shown ? shown.t : ''}</div>
-          {shown && shown.bad && <div style={css(`font-size:12px;color:var(--color-accent-text)`)}>Wrong user: you clicked {USERS[picked]}</div>}
+        <div className={`flex-1 bg-surface border rounded-[10px] py-2.5 px-3.5 flex flex-col gap-1 justify-center ${shown && shown.bad ? 'border-accent' : 'border-line'}`}>
+          <div className="text-[10.5px] text-muted">UserProfile · props: userId = {picked}</div>
+          <div className={`font-serif text-[22px] ${shown && shown.bad ? 'text-accent-text' : 'text-ink'}`}>{shown ? shown.t : ''}</div>
+          {shown && shown.bad && <div className="text-[12px] text-accent-text">Wrong user: you clicked {USERS[picked]}</div>}
         </div>
       </div>
 
-      <div style={css(`display:flex;gap:6px;flex-wrap:wrap`)}>
+      <div className="flex gap-1.5 flex-wrap">
         {Object.entries(VARIANTS).map(([k, v]) => (
           <button key={k} onClick={() => pick(k)} disabled={k !== 'correct' && !seenAll} title={k !== 'correct' && !seenAll ? 'Watch the working version to the end first' : ''}
-            style={css(`font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid ${variant === k ? 'var(--color-accent)' : 'var(--color-line)'};background:${variant === k ? 'var(--color-accent)' : 'var(--color-surface)'};color:${variant === k ? 'var(--color-surface)' : k !== 'correct' && !seenAll ? 'var(--color-faint)' : 'var(--color-ink-2)'}`)}>{v.label}</button>
+            className={`text-[12px] py-[5px] px-[11px] rounded-full border ${variant === k ? 'border-accent bg-accent' : 'border-line bg-surface'} ${variant === k ? 'text-on-accent' : k !== 'correct' && !seenAll ? 'text-faint' : 'text-ink-2'}`}>{v.label}</button>
         ))}
       </div>
 
-      <svg viewBox={`0 0 600 ${y(5) + 18}`} style={css(`width:100%;background:var(--color-surface);border:1px solid var(--color-line);border-radius:10px`)} role="img" aria-label="Timeline of clicks, effect runs, their requests and cleanups, and what the card shows">
+      <svg viewBox={`0 0 600 ${y(5) + 18}`} className="w-full bg-surface border border-line rounded-[10px]" role="img" aria-label="Timeline of clicks, effect runs, their requests and cleanups, and what the card shows">
         {lane(0, 'you click')}
         {CLICKS.map((p, k) => <g key={k} opacity={fade(p.from)}><rect x={x(p.from) + 1} y={y(0)} width={x(p.to) - x(p.from) - 2} height="16" rx="4" fill="var(--color-sunken)" /><text x={x(p.from) + 6} y={y(0) + 12} fontSize="11" fill="var(--color-ink-2)">{USERS[p.id]} (userId {p.id})</text></g>)}
         {RUNS.map((r, k) => {
@@ -142,50 +141,50 @@ export default function EffectTimeline({ onDone }) {
         <line x1={x(now)} x2={x(now)} y1="4" y2={y(5) + 4} stroke="var(--color-ink)" strokeWidth="1.5" />
         <text x={x(now)} y={y(5) + 15} fontSize="10" textAnchor="middle" fill="var(--color-ink)">now</text>
       </svg>
-      <div style={css(`display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--color-muted);margin-top:-6px`)}>
-        <span><span style={css(`display:inline-block;width:18px;height:6px;border-radius:3px;background:var(--color-accent-border);vertical-align:middle`)}></span> request in flight</span>
-        <span style={css(`color:var(--color-accent-text)`)}>✂ cleanup: controller.abort()</span>
-        <span><span style={css(`color:var(--color-good)`)}>✓</span> response shown</span>
+      <div className="flex gap-3.5 flex-wrap text-[11.5px] text-muted -mt-1.5">
+        <span><span className="inline-block w-4.5 h-1.5 rounded-[3px] bg-accent-border align-middle"></span> request in flight</span>
+        <span className="text-accent-text">✂ cleanup: controller.abort()</span>
+        <span><span className="text-good">✓</span> response shown</span>
         <span>dashed: the part that was cut off</span>
       </div>
 
-      <div style={css(`display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;align-items:start`)}>
-        <div style={css(`display:flex;flex-direction:column;gap:6px;border-left:2px solid ${ev.bad ? 'var(--color-accent)' : 'var(--color-good)'};padding:2px 0 2px 12px`)}>
-          <div style={css(`font-size:11px;color:var(--color-muted)`)}>step {i + 1} of {V.events.length}{V.removed || V.changed ? ' · code changed on the right' : ''}</div>
-          <div style={css(`font-size:14.5px;font-weight:500;color:${ev.bad ? 'var(--color-accent-text)' : 'var(--color-ink)'}`)}>{ev.title}</div>
+      <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-3 items-start">
+        <div className={`flex flex-col gap-1.5 border-l-[2px] py-0.5 pr-0 pl-3 ${ev.bad ? 'border-accent' : 'border-good'}`}>
+          <div className="text-[11px] text-muted">step {i + 1} of {V.events.length}{V.removed || V.changed ? ' · code changed on the right' : ''}</div>
+          <div className={`text-[14.5px] font-medium ${ev.bad ? 'text-accent-text' : 'text-ink'}`}>{ev.title}</div>
           {ev.ask && answer == null ? (
-            <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
-              <div style={css(`font-size:13.5px`)}>{ev.ask.q}</div>
-              <div style={css(`display:flex;gap:6px`)}>{ev.ask.options.map(o => <button key={o} onClick={() => setAnswer(o)} style={css(`flex:1;border:1px solid var(--color-accent-border);background:var(--color-surface);border-radius:8px;padding:7px 0;font-size:13.5px`)} className="hv3">{o}</button>)}</div>
+            <div className="flex flex-col gap-1.5">
+              <div className="text-[13.5px]">{ev.ask.q}</div>
+              <div className="flex gap-1.5">{ev.ask.options.map(o => <button key={o} onClick={() => setAnswer(o)} className="flex-1 border border-accent-border bg-surface rounded-lg py-[7px] px-0 text-[13.5px] hover:border-accent">{o}</button>)}</div>
             </div>
           ) : (
             <>
-              {ev.ask && <div style={css(`font-size:13px;font-weight:500;color:${answer === ev.ask.answer ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>You said {answer}. {answer === ev.ask.answer ? 'Right.' : `It's ${ev.ask.answer}.`}</div>}
-              <div style={css(`font-size:13px;line-height:1.5;color:var(--color-ink-2)`)}>{ev.note}</div>
+              {ev.ask && <div className={`text-[13px] font-medium ${answer === ev.ask.answer ? 'text-good-text' : 'text-accent-text'}`}>You said {answer}. {answer === ev.ask.answer ? 'Right.' : `It's ${ev.ask.answer}.`}</div>}
+              <div className="text-[13px] leading-normal text-ink-2">{ev.note}</div>
               {ev.cycle && (
-                <ol data-role="cycle" style={css(`margin:2px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px`)}>
-                  {ev.cycle.map((c, k) => <li key={k} style={css(`display:flex;gap:8px;align-items:baseline;font-size:12.5px;line-height:1.4;padding:5px 8px;border-radius:7px;background:${c.key ? 'var(--color-accent-soft)' : 'var(--color-sunken)'};color:${c.key ? 'var(--color-accent-text)' : 'var(--color-ink-2)'};font-weight:${c.key ? 600 : 400}`)}><span style={css(`flex:none`)}>{k + 1}.</span><span>{c.t}</span></li>)}
+                <ol data-role="cycle" className="mt-0.5 mb-0 mx-0 p-0 list-none flex flex-col gap-1">
+                  {ev.cycle.map((c, k) => <li key={k} className={`flex gap-2 items-baseline text-[12.5px] leading-[1.4] py-[5px] px-2 rounded-[7px] ${c.key ? 'bg-accent-soft text-accent-text' : 'bg-sunken text-ink-2'} ${c.key ? 'font-semibold' : 'font-normal'}`}><span className="flex-none">{k + 1}.</span><span>{c.t}</span></li>)}
                 </ol>
               )}
             </>
           )}
         </div>
-        <pre style={css(`margin:0;padding:8px 0;background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;overflow:auto`)}>
+        <pre className="m-0 py-2 px-0 bg-surface-2 border border-line rounded-lg font-mono text-[11px] leading-[1.6] overflow-auto">
           {CODE.map((l, k) => {
             const gone = (V.removed || []).includes(k), changed = V.changed && V.changed[k] != null, on = ev.lines.includes(k);
-            return <div key={k} style={css(`padding:0 10px;white-space:pre;background:${changed || (on && (ev.bad || k === 9)) ? 'var(--color-accent-soft)' : on ? 'var(--color-accent-soft)' : 'transparent'};color:${gone ? 'var(--color-accent)' : changed || on ? 'var(--color-ink)' : 'var(--color-muted)'};text-decoration:${gone ? 'line-through' : 'none'};font-weight:${on && k === 9 ? 600 : 400}`)}>{(changed ? V.changed[k] : l) || ' '}</div>;
+            return <div key={k} className={`py-0 px-2.5 whitespace-pre ${changed || (on && (ev.bad || k === 9)) ? 'bg-accent-soft' : on ? 'bg-accent-soft' : 'bg-transparent'} ${gone ? 'text-accent' : changed || on ? 'text-ink' : 'text-muted'} ${gone ? 'line-through' : 'no-underline'} ${on && k === 9 ? 'font-semibold' : 'font-normal'}`}>{(changed ? V.changed[k] : l) || ' '}</div>;
           })}
-          <div style={css(`padding:4px 10px 0;font-family:'Instrument Sans',system-ui,sans-serif;font-size:10.5px;color:var(--color-muted);white-space:normal`)}>the effect from Claude's answer, trimmed to the timing</div>
+          <div className="pt-1 px-2.5 font-sans text-[10.5px] text-muted whitespace-normal">the effect from Claude's answer, trimmed to the timing</div>
         </pre>
       </div>
 
-      <div style={css(`display:flex;gap:8px;align-items:center;justify-content:space-between`)}>
-        <div style={css(`display:flex;gap:6px`)}>
-          <button onClick={() => go(-1)} disabled={i === 0} style={css(`background:none;border:1px solid var(--color-line-strong);border-radius:8px;padding:7px 12px;font-size:13px`)} className="hv6">← Back</button>
-          {i < V.events.length - 1 && <button onClick={() => go(1)} disabled={blocked} style={css(`background:${blocked ? 'var(--color-faint)' : 'var(--color-ink)'};color:var(--color-on-inverse);border:none;border-radius:8px;padding:7px 14px;font-size:13px`)}>Next →</button>}
+      <div className="flex gap-2 items-center justify-between">
+        <div className="flex gap-1.5">
+          <button onClick={() => go(-1)} disabled={i === 0} className="bg-transparent border border-line-strong rounded-lg py-[7px] px-3 text-[13px] hover:bg-sunken">← Back</button>
+          {i < V.events.length - 1 && <button onClick={() => go(1)} disabled={blocked} className={`text-on-inverse border-none rounded-lg py-[7px] px-3.5 text-[13px] ${blocked ? 'bg-faint' : 'bg-ink'}`}>Next →</button>}
         </div>
-        {seenAll && variant === 'correct' && i === V.events.length - 1 && <span style={css(`font-size:12.5px;color:var(--color-muted)`)}>Now try breaking it ↑</span>}
-        {seenAll && <button onClick={onDone} style={css(`background:var(--color-accent);color:var(--color-on-accent);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>Got it, now write one yourself →</button>}
+        {seenAll && variant === 'correct' && i === V.events.length - 1 && <span className="text-[12.5px] text-muted">Now try breaking it ↑</span>}
+        {seenAll && <button onClick={onDone} className="bg-accent text-on-accent border-none rounded-[9px] py-[9px] px-3.5 text-[13.5px]">Got it, now write one yourself →</button>}
       </div>
     </div>
   );

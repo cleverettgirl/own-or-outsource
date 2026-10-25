@@ -21,7 +21,7 @@ export default function SpotPractice({ spot, scenarios, loading, failed, onStart
       </div>
     </div>
   );
-  if (loading) return <div className="text-[13px] text-accent-text animate-pulse">Writing a few scenarios…</div>;
+  if (loading) return <div className="text-[13px] text-accent-text animate-blink">Writing a few scenarios…</div>;
   if (failed) return (
     <div className="flex flex-col gap-2">
       <div className="text-[13px] text-muted">Couldn't write the scenarios just now.</div>

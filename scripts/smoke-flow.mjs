@@ -629,6 +629,11 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   const files = ['src', 'src/ui'].flatMap(d => readdirSync(d).filter(f => /\.(jsx?|css)$/.test(f) && f !== 'theme.css').map(f => `${d}/${f}`));
   const stray = files.flatMap(f => (readFileSync(f, 'utf8').match(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b(?![-\w])/g) || []).map(h => `${f} ${h}`));
   step('theme: no hard-coded colours outside theme.css', stray.length === 0, stray.slice(0, 5).join(', '));
+  // Styling is Tailwind classes: no css() style strings, and text on clay or teal uses the on-accent colour, which
+  // stays white in dark mode (text-surface turned dark there).
+  const src = files.filter(f => f.endsWith('.jsx')).map(f => readFileSync(f, 'utf8')).join('\n');
+  step('styling: Tailwind classes only, no css() style strings', !/\bcss\(/.test(src) && !files.includes('src/css.js'));
+  step('styling: text on a coloured background uses the on-accent colour', !/text-surface\b/.test(src));
 }
 
 // ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).

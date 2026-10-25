@@ -4,7 +4,6 @@
 import React from 'react';
 import { complete } from './claude.js';
 import { TASKS } from './prompts.js';
-import { css } from './css.js';
 import { SQL_TARGETS, sqlFocusOptions } from './targets.js';
 import { checkSql } from './sqlCheck.js';
 import { BOOK_TARGETS, bookFocusOptions, patterns } from './bookTargets.js';
@@ -1319,7 +1318,7 @@ export default class App extends React.Component {
       ],
       messages, ledger, ledgerEmpty: !S.ledger.length && !S.exits.length, exits: S.exits, hasExits: !!S.exits.length, chatTitle: S.chatTitle, isEmpty: !S.messages.length, composer: S.composer,
       hasCalibration: cal.items > 0, calibrationText: cal.text, calibrationTitle: cal.title,
-      composerBorder: 'var(--color-line-strong)', composerPlaceholder: 'Ask Claude anything…',
+      composerPlaceholder: 'Ask Claude anything…',
       onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startLead: this.startLead, startRisk: this.startRisk, startReading: this.startReading, startTax: this.startTax, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
             composerRef: this.composerRef, hasSel: !!S.sel, selX: S.sel ? S.sel.x + 'px' : '0px', selY: S.sel ? S.sel.y + 'px' : '0px', ownSelection: this.ownSelection, askSelection: this.askSelection, scrollRef: this.scrollRef,
     };
@@ -1333,7 +1332,7 @@ export default class App extends React.Component {
     const stepper = phases.map(ph => ({ label: phaseName[ph], cur: ph === curPhase, done: phases.indexOf(ph) < phases.indexOf(curPhase) }));
     const phaseLabels = Object.fromEntries(phases.map(ph => [ph, ph === 'ladder' && o.step === 'assemble' ? 'Try it · warming up with the pieces' : ph === 'ladder' && o.step !== 'write' ? 'Try it · seeing it visually' : phaseName[ph]]).concat([['teach', 'Optional · teach Sam'], ['spot', 'Practise spotting it']]));
     const goStep = s => () => { if (this.state.own.phase === 'ladder' && this.state.own.step === s) return; this.setOwn({ phase: 'ladder' }, () => this.enterStep(s)); };
-    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), bg: cur ? 'var(--color-accent)' : done ? 'var(--color-accent-soft-2)' : 'transparent', fg: cur ? 'var(--color-surface)' : done ? 'var(--color-accent-text)' : 'var(--color-muted)' }; });
+    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), cls: cur ? 'bg-accent text-on-accent' : done ? 'bg-accent-soft-2 text-accent-text' : 'bg-transparent text-muted' }; });
     const nextOf = s => L[L.indexOf(s) + 1];
     const nextLabel = { see: 'see it run →', assemble: 'assemble it →', compare: 'compare it →', write: 'now write one yourself →' };
     Object.assign(V, {
@@ -1389,12 +1388,12 @@ export default class App extends React.Component {
     Object.assign(V, {
             seeIntro: isSqlSee ? 'The query, run on six customers and twelve orders, in the order the database actually runs it. Two side steps show what would go wrong with a plain JOIN, and with the filter in WHERE.' : o.scenario === this.REACT ? 'The component, run through a mount, two quick id changes, and a late response. Two side steps show what breaks without the cleanup, and with an empty dependency array.' : 'The code, run step by step in the order things actually happen.',
       seeLoading: o.seeLoading, seeReady: !!see && !o.timeline, seeTimeline: !!o.timeline,
-      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, bg: i === idx ? (s.contrast ? 'var(--color-muted)' : 'var(--color-accent)') : i < idx ? (s.contrast ? 'var(--color-line-soft)' : 'var(--color-accent-soft-2)') : 'var(--color-sunken)', fg: i === idx ? 'var(--color-surface)' : i < idx ? (s.contrast ? 'var(--color-muted)' : 'var(--color-accent-text)') : 'var(--color-muted)', italic: s.contrast ? 'italic' : 'normal' })) : [],
+      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, cls: (i === idx ? (s.contrast ? 'bg-muted text-on-accent' : 'bg-accent text-on-accent') : i < idx ? (s.contrast ? 'bg-line-soft text-muted' : 'bg-accent-soft-2 text-accent-text') : 'bg-sunken text-muted') + (s.contrast ? ' italic' : '') })) : [],
       seeStepTitle: cur ? cur.title : '', seeStepNote: cur ? cur.note : '', seeHasTable: !!(cur && cur.rows),
       seeIsContrast: !!(cur && cur.contrast), seeStepKicker: cur && cur.contrast ? 'What would go wrong' : 'What happens',
       seeCols: cur && cur.headers ? cur.headers.map(() => 'minmax(0,1fr)').join(' ') : '1fr',
       seeHeaders: cur && cur.headers ? cur.headers.map(t => ({ t })) : [],
-      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), bg: r.dim ? 'var(--color-accent-soft)' : 'var(--color-surface)', fg: r.dim ? 'var(--color-accent-mid)' : 'var(--color-ink)', deco: r.dim ? 'line-through' : 'none' })) : [],
+      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), cls: r.dim ? 'bg-accent-soft text-accent-mid line-through' : 'bg-surface text-ink' })) : [],
       seeRowCount: cur && cur.rows ? (cur.rows.filter(r => !r.dim).length + ' rows' + (cur.rows.some(r => r.dim) ? ', ' + cur.rows.filter(r => r.dim).length + (cur.contrast ? ' would be lost' : ' dropped') : '')) : '',
       seePrev: this.seePrev, seeNext: this.seeNext, seeHasNext: !!see && idx < see.length - 1, seeAtEnd: !!see && idx === see.length - 1,
       hasBridges: !!(o.bridges && o.bridges.length), bridges: (o.bridges || []).map(t => ({ t }))
@@ -1407,7 +1406,7 @@ export default class App extends React.Component {
       const g = cm.guesses[cm.idx];
       Object.assign(V, {
         cmpLoading: !!cm.loading, cmpIntro: cm.intro || '', cmpHasCases: cm.cases.length > 0,
-        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), bg: i === cm.idx ? 'var(--color-accent)' : cm.revealed[i] ? 'var(--color-accent-soft-2)' : 'var(--color-sunken)', fg: i === cm.idx ? 'var(--color-surface)' : cm.revealed[i] ? 'var(--color-accent-text)' : 'var(--color-muted)' })),
+        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), cls: i === cm.idx ? 'bg-accent text-on-accent' : cm.revealed[i] ? 'bg-accent-soft-2 text-accent-text' : 'bg-sunken text-muted' })),
         cmpHasSource: !!cm.source, cmpSource: cm.source ? [['customers', cm.source.customers], ['orders', cm.source.orders]].map(([name, t]) => ({ name, ...table(t.headers, t.rows) })) : [],
         cmpCode: k ? k.code : '', cmpIsTable: !!(k && k.rows), cmpIsPick: !!(k && k.options), cmpShown: shown, cmpHidden: !!k && !shown,
         cmpPickOptions: k && k.options ? k.options.map(x => ({ l: x.l, onPick: () => this.cmpGuess(cm.idx, x.v) })) : [],
@@ -1430,7 +1429,7 @@ export default class App extends React.Component {
       const byId = {}; a.pieces.forEach(p => byId[p.id] = p);
       Object.assign(V, {
         asmBank: a.bank.map(id => ({ text: byId[id].text, onClick: () => this.asmAdd(id) })), asmBankEmpty: !a.bank.length,
-        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), bg: a.lastWrong.includes(id) ? 'var(--color-accent-soft)' : 'var(--color-surface)', border: a.lastWrong.includes(id) ? 'var(--color-accent)' : 'var(--color-line)' })),
+        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), cls: a.lastWrong.includes(id) ? 'bg-accent-soft border-accent' : 'bg-surface border-line' })),
         asmFeedback: !!a.feedback, asmFeedbackText: a.feedback, asmNotCorrect: !a.correct, asmCorrect: a.correct, asmLoading: a.loading, checkAsm: this.checkAsm,
         asmWhyPrompt: (this.targetOf(o) && this.targetOf(o).assemble && this.targetOf(o).assemble.why) || 'In one line: what would break if you swapped two of these lines?', asmHasDecoy: !!(a.pieces.some(p => p.id === 'dx')), asmWhy: a.why, onAsmWhy: e => this.setAsm({ why: e.target.value })
       });
@@ -1464,7 +1463,7 @@ export default class App extends React.Component {
       revealNodes: order.map((s, i) => {
         const v = o.visited[s] || 0; const skipped = i < startI && !v;
         let detail = skipped ? 'optional, not opened' : s === 'see' ? (v > 1 ? 'watched ' + v + '×' : 'watched it run') : s === 'assemble' ? (a ? (a.attempts === 1 ? 'right first try' : a.attempts + ' tries' + (a.usedDistractor ? ', filter in WHERE' : '')) : '') : s === 'compare' ? (cmGuessed ? cmRight + ' of ' + cmGuessed + ' guesses right' : 'compared') : (t1.right + ' of ' + N + (w.attempts > 1 ? ' → ' + tn.right + ' on try ' + w.attempts : '') + (w.hints.length ? ', ' + w.hints.length + ' hint' + (w.hints.length > 1 ? 's' : '') : ', no hints'));
-        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dotBg: skipped ? 'var(--color-page)' : s === 'write' ? 'var(--color-good)' : 'var(--color-accent)', dotBorder: skipped ? 'var(--color-line-strong)' : s === 'write' ? 'var(--color-good)' : 'var(--color-accent)', fg: skipped ? 'var(--color-faint)' : 'var(--color-ink)' };
+        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dot: skipped ? 'bg-page border-line-strong' : s === 'write' ? 'bg-good border-good' : 'bg-accent border-accent', fg: skipped ? 'text-faint' : 'text-ink' };
       }),
       revealCols: `repeat(${order.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
@@ -1472,7 +1471,7 @@ export default class App extends React.Component {
       revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
       revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),
-      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', 'var(--color-accent-soft)'], ['What it should return', g.table.expected, 'missing', 'var(--color-good-soft)']].map(([title, t, mark, bg]) => ({
+      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', 'bg-accent-soft'], ['What it should return', g.table.expected, 'missing', 'bg-good-soft']].map(([title, t, mark, bg]) => ({
         title, empty: !t.rows.length, cols: t.cols.map(() => 'minmax(0,1fr)').join(' ') || '1fr', headers: t.cols.map(c => ({ t: c })),
         rows: t.rows.map(r => ({ cells: r.cells.map((c, j) => ({ t: c, dim: c === 'NULL', hl: (r.diffs || []).includes(j) ? bg : '' })), bg: r.mark === mark ? bg : '' })),
         legend: [t.rows.some(r => r.mark === mark) ? (mark === 'extra' ? 'highlighted rows: should not be there' : 'highlighted rows: yours is missing them') : '', t.rows.some(r => r.mark === 'near') ? 'highlighted cells: the difference' : '', mark === 'extra' && g.table.dropped && g.table.dropped.length ? `extra columns left out: ${g.table.dropped.join(', ')}` : ''].filter(Boolean).join(' · ') })) : [],
@@ -1483,7 +1482,7 @@ export default class App extends React.Component {
     // teach
     const t = o.teach;
     Object.assign(V, {
-      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', align: m.role === 'sam' ? 'flex-start' : 'flex-end', bg: m.role === 'sam' ? 'var(--color-surface)' : 'var(--color-bubble)' })),
+      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', row: m.role === 'sam' ? 'self-start' : 'self-end', bubble: m.role === 'sam' ? 'bg-surface' : 'bg-bubble' })),
       teachLoading: t.loading, teachOpen: t.turns < 3 && !t.debrief, teachDebrief: t.debrief || null, teachDebriefLoading: !!t.debriefLoading, wrapTeach: this.debriefTeach, canWrap: t.turns >= 1 && !t.debrief,
       exploreTeachGap: u => this.exploreGap(this.teachGap(u)), saveTeachGap: u => this.teachGap(u), gapTopics: S.gaps.map(g => g.topic), teachInput: t.input, onTeachInput: e => this.setOwn({ teach: { ...this.state.own.teach, input: e.target.value } }), onTeachKey: e => { if (e.key === 'Enter') this.sendTeach(); }, sendTeach: this.sendTeach
     });
@@ -1495,18 +1494,18 @@ export default class App extends React.Component {
     const panel = V.hasOwn && !V.isLearnings ? <OwnPanel V={V} /> : V.goPanel && !V.isLearnings ? (V.goPanel.isGapCheck ? <GapPanel m={V.goPanel} /> : <GoPanel m={V.goPanel} />) : null;
     return (
       <>
-      <div data-role="app" className={(this.state.navOpen ? 'nav-open ' : '') + (panel ? 'with-sheet' : '')} style={css(`display:flex;height:100vh;overflow:hidden`)}>
+      <div data-role="app" className={`flex h-[100vh] phone:h-dvh overflow-hidden ${(this.state.navOpen ? 'nav-open ' : '') + (panel ? 'with-sheet' : '')}`}>
 
       <Sidebar V={V} />
-      {!!this.state.navOpen && <div className="nav-backdrop mobile-only" onClick={() => this.setState({ navOpen: false })}></div>}
+      {!!this.state.navOpen && <div className="hidden phone:block fixed inset-0 z-[55] bg-[rgba(31,29,26,.35)]" onClick={() => this.setState({ navOpen: false })}></div>}
 
       <Chat V={V} />
 
-      {/* On a phone the panel is a sheet over the chat (mobile.css); on a wide screen the wrapper doesn't exist for layout. */}
+      {/* On a phone the panel is a sheet over the chat (sheet.css); on a wide screen the wrapper doesn't exist for layout. */}
       {!!panel && (
         <div className={'sheet' + (this.state.sheetMin ? ' min' : '')}>
           {panel}
-          <button className="sheet-toggle mobile-only" data-role="sheet-toggle" onClick={() => this.setState(s => ({ sheetMin: !s.sheetMin }))} aria-label={this.state.sheetMin ? 'Open the panel' : 'Tuck the panel away to read the chat'}>{this.state.sheetMin ? '⌃' : '⌄'}</button>
+          <button className="hidden phone:flex absolute top-[13px] right-14 z-[2] w-9.5 h-9.5 rounded-[10px] border-none bg-transparent items-center justify-center text-[18px] text-muted" data-role="sheet-toggle" onClick={() => this.setState(s => ({ sheetMin: !s.sheetMin }))} aria-label={this.state.sheetMin ? 'Open the panel' : 'Tuck the panel away to read the chat'}>{this.state.sheetMin ? '⌃' : '⌄'}</button>
         </div>
       )}
       </div>

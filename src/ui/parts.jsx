@@ -1,13 +1,12 @@
 // Shared pieces of the interface: markdown, item lists, choice questions, icons, small diagrams, style constants.
 import React from 'react';
-import { css } from '../css.js';
 
 
 // Claude's answers as Claude renders them: paragraphs, ## headings, - bullets, `inline code`, fenced code blocks.
 // Inline markdown: `code`, **bold**, *italic*, nested in any combination (*italic with **bold***, ***both***).
 // Runs of asterisks are paired the way markdown renderers do it: each closing run matches the nearest open run
 // before it, taking 2 (bold) when both runs have 2, else 1 (italic). Unpaired asterisks stay as text.
-const codeCss = `font-family:'JetBrains Mono',monospace;font-size:.86em;background:var(--color-sunken);border-radius:4px;padding:1px 5px`;
+const CODE = 'font-mono text-[.86em] bg-sunken rounded-sm py-px px-[5px]';
 export function inline(t) {
   const toks = [];
   for (const m of String(t).matchAll(/`[^`]+`|\*+|[^*`]+|`/g)) {
@@ -20,7 +19,7 @@ export function inline(t) {
   const out = []; // items: { nodes } or an open star run { star, open, close, at }
   const stack = [];
   for (const tk of toks) {
-    if (!tk.star) { out.push({ nodes: [tk.code != null ? <code style={css(codeCss)}>{tk.code}</code> : tk.text] }); continue; }
+    if (!tk.star) { out.push({ nodes: [tk.code != null ? <code className={CODE}>{tk.code}</code> : tk.text] }); continue; }
     let left = tk.star;
     while (left && tk.close && stack.length) {
       const op = stack[stack.length - 1], use = op.star >= 2 && left >= 2 ? 2 : 1;
@@ -56,17 +55,17 @@ function Flip({ text, small }) {
   const views = text.split(/^## /m).map(v => v.trim()).filter(Boolean).map(v => { const nl = v.indexOf('\n'); return nl < 0 ? { label: v, body: '' } : { label: v.slice(0, nl).trim(), body: v.slice(nl + 1) }; });
   const [at, setAt] = React.useState(0);
   if (views.length < 2) return <MdBlocks text={text.replace(/^## /gm, '### ')} small={small} />;
-  const i = Math.min(at, views.length - 1), nav = `background:none;border:1px solid var(--color-line-strong);border-radius:8px;padding:5px 11px;font-size:12.5px;color:var(--color-ink-2)`;
+  const i = Math.min(at, views.length - 1), nav = 'bg-transparent border border-line-strong rounded-lg py-[5px] px-[11px] text-[12.5px] text-ink-2 disabled:opacity-40';
   return (
-    <div data-role="flip" style={css(`border:1px solid var(--color-line);border-radius:12px;background:var(--color-surface);overflow:hidden`)}>
-      <div style={css(`display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--color-line-soft);background:var(--color-surface-2)`)}>
-        {views.map((v, j) => <button key={j} onClick={() => setAt(j)} aria-pressed={j === i} style={css(`border-radius:99px;padding:4px 11px;font-size:12.5px;border:1px solid ${j === i ? 'var(--color-accent)' : 'var(--color-line)'};background:${j === i ? 'var(--color-accent)' : 'var(--color-surface)'};color:${j === i ? 'var(--color-surface)' : 'var(--color-ink-2)'}`)}>{inline(v.label)}</button>)}
+    <div data-role="flip" className="border border-line rounded-xl bg-surface overflow-hidden">
+      <div className="flex gap-1.5 flex-wrap py-2.5 px-3 border-b border-line-soft bg-surface-2">
+        {views.map((v, j) => <button key={j} onClick={() => setAt(j)} aria-pressed={j === i} className={`rounded-full py-1 px-[11px] text-[12.5px] border ${j === i ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface text-ink-2'}`}>{inline(v.label)}</button>)}
       </div>
-      <div style={css(`padding:14px 16px`)}><MdBlocks text={views[i].body} small={small} /></div>
-      <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--color-line-soft)`)}>
-        <button onClick={() => setAt(i - 1)} disabled={i === 0} style={css(nav + (i === 0 ? ';opacity:.4' : ''))}>← Back</button>
-        <span style={css(`font-size:12px;color:var(--color-muted)`)}>{i + 1} of {views.length}</span>
-        <button onClick={() => setAt(i + 1)} disabled={i === views.length - 1} data-role="flip-next" style={css(nav + (i === views.length - 1 ? ';opacity:.4' : ''))}>Next →</button>
+      <div className="py-3.5 px-4"><MdBlocks text={views[i].body} small={small} /></div>
+      <div className="flex justify-between items-center py-2 px-3 border-t border-line-soft">
+        <button onClick={() => setAt(i - 1)} disabled={i === 0} className={nav}>← Back</button>
+        <span className="text-[12px] text-muted">{i + 1} of {views.length}</span>
+        <button onClick={() => setAt(i + 1)} disabled={i === views.length - 1} data-role="flip-next" className={nav}>Next →</button>
       </div>
     </div>
   );
@@ -75,7 +74,7 @@ function Flip({ text, small }) {
 export function Md({ text, small }) {
   const parts = splitFlips(text);
   if (parts.length === 1 && parts[0].md != null) return <MdBlocks text={parts[0].md} small={small} />;
-  return <div style={css(`display:flex;flex-direction:column;gap:12px`)}>{parts.map((p, i) => (p.flip != null ? <Flip key={i} text={p.flip} small={small} /> : <MdBlocks key={i} text={p.md} small={small} />))}</div>;
+  return <div className="flex flex-col gap-3">{parts.map((p, i) => (p.flip != null ? <Flip key={i} text={p.flip} small={small} /> : <MdBlocks key={i} text={p.md} small={small} />))}</div>;
 }
 
 // Markdown doesn't need blank lines between a heading, a list, a table and a paragraph, and Claude often leaves them
@@ -94,7 +93,7 @@ function separate(text) {
 }
 
 function MdBlocks({ text, small }) {
-  const body = small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55;white-space:pre-wrap' : SERIF;
+  const body = small ? 'font-serif text-[14.5px] leading-[1.55] whitespace-pre-wrap' : SERIF;
   const parts = text.split(/```(\w*)\n([\s\S]*?)```/);
   const out = [];
   for (let i = 0; i < parts.length; i += 3) {
@@ -102,19 +101,19 @@ function MdBlocks({ text, small }) {
       const key = `${i}-${j}`;
       const tb = mdTable(b, small, key);
       if (tb) out.push(...tb);
-      else if (/^(-{3,}|\*{3,}|_{3,})$/.test(b)) out.push(<hr key={key} style={css(`border:none;border-top:1px solid var(--color-line);margin:4px 0;width:100%`)} />);
-      else if (/^#{1,3} /.test(b)) out.push(<div key={key} style={css(`font-family:Newsreader,serif;font-size:${small ? '15.5px' : '18.5px'};font-weight:600;margin-top:4px`)}>{inline(b.replace(/^#{1,3} /, ''))}</div>);
-      else if (b.split('\n').every(l => /^\d+\. /.test(l))) out.push(<ol key={key} style={css(`margin:0;padding-left:24px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.replace(/^\d+\. /, ''))}</li>)}</ol>);
-      else if (b.split('\n').every(l => /^[-*] /.test(l))) out.push(<ul key={key} style={css(`margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-family:Newsreader,serif;font-size:${small ? '14.5px' : '16.5px'};line-height:1.6`)}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.slice(2))}</li>)}</ul>);
-      else out.push(<div key={key} style={css(body)}>{inline(b)}</div>);
+      else if (/^(-{3,}|\*{3,}|_{3,})$/.test(b)) out.push(<hr key={key} className="border-0 border-t border-line my-1 mx-0 w-full" />);
+      else if (/^#{1,3} /.test(b)) out.push(<div key={key} className={`font-serif font-semibold mt-1 ${small ? 'text-[15.5px]' : 'text-[18.5px]'}`}>{inline(b.replace(/^#{1,3} /, ''))}</div>);
+      else if (b.split('\n').every(l => /^\d+\. /.test(l))) out.push(<ol key={key} className={`m-0 pl-6 flex flex-col gap-1.5 font-serif leading-[1.6] ${small ? 'text-[14.5px]' : 'text-[16.5px]'}`}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.replace(/^\d+\. /, ''))}</li>)}</ol>);
+      else if (b.split('\n').every(l => /^[-*] /.test(l))) out.push(<ul key={key} className={`m-0 pl-5.5 flex flex-col gap-1.5 font-serif leading-[1.6] ${small ? 'text-[14.5px]' : 'text-[16.5px]'}`}>{b.split('\n').map((l, k) => <li key={k}>{inline(l.slice(2))}</li>)}</ul>);
+      else out.push(<div key={key} className={body}>{inline(b)}</div>);
     });
     if (parts[i + 2] != null) out.push(
-      <div key={`c${i}`} style={css(`background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:10px;overflow:hidden`)}>
-        <div style={css(`padding:6px 12px;border-bottom:1px solid var(--color-line-soft);font-size:11px;color:var(--color-muted)`)}>{parts[i + 1] || 'code'}</div>
-        <pre style={css(`margin:0;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:${small ? '12px' : '13px'};line-height:1.6;overflow:auto;white-space:pre`)}>{parts[i + 2].replace(/\n$/, '')}</pre>
+      <div key={`c${i}`} className="bg-surface-2 border border-line rounded-[10px] overflow-hidden">
+        <div className="py-1.5 px-3 border-b border-line-soft text-[11px] text-muted">{parts[i + 1] || 'code'}</div>
+        <pre className={`m-0 py-3.5 px-4 font-mono leading-[1.6] overflow-auto whitespace-pre ${small ? 'text-[12px]' : 'text-[13px]'}`}>{parts[i + 2].replace(/\n$/, '')}</pre>
       </div>);
   }
-  return <div style={css(`display:flex;flex-direction:column;gap:12px`)}>{out}</div>;
+  return <div className="flex flex-col gap-3">{out}</div>;
 }
 
 
@@ -125,13 +124,13 @@ function mdTable(b, small, key) {
   const lines = b.split('\n'), sep = lines.findIndex(l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes('-'));
   if (sep < 1 || !lines[sep - 1].includes('|') || !lines.slice(sep - 1).every(l => l.includes('|'))) return null;
   const head = cellsOf(lines[sep - 1]), rows = lines.slice(sep + 1).map(cellsOf), before = lines.slice(0, sep - 1).join('\n').trim();
-  const cell = `padding:5px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--color-line-soft)`;
+  const cell = 'py-[5px] px-3 text-left align-top border-line-soft';
   return [
-    before && <div key={key + 'p'} style={css(small ? 'font-family:Newsreader,serif;font-size:14.5px;line-height:1.55' : SERIF)}>{inline(before)}</div>,
-    <div key={key} data-role="md-table" style={css(`border:1px solid var(--color-line);border-radius:8px;overflow:auto;background:var(--color-surface)`)}>
-      <table style={css(`border-collapse:collapse;width:100%;font-size:${small ? '12px' : '13px'};line-height:1.45`)}>
-        <thead><tr>{head.map((h, i) => <th key={i} style={css(cell + `;font-size:11px;font-weight:600;color:var(--color-muted)`)}>{inline(h)}</th>)}</tr></thead>
-        <tbody>{rows.map((r, i) => <tr key={i}>{head.map((_, j) => <td key={j} style={css(cell + (i === rows.length - 1 ? ';border-bottom:none' : ''))}>{inline(r[j] || '')}</td>)}</tr>)}</tbody>
+    before && <div key={key + 'p'} className={small ? 'font-serif text-[14.5px] leading-[1.55]' : SERIF}>{inline(before)}</div>,
+    <div key={key} data-role="md-table" className="border border-line rounded-lg overflow-auto bg-surface">
+      <table className={`border-collapse w-full leading-[1.45] ${small ? 'text-[12px]' : 'text-[13px]'}`}>
+        <thead><tr>{head.map((h, i) => <th key={i} className={`${cell} border-b text-[11px] font-semibold text-muted`}>{inline(h)}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={i}>{head.map((_, j) => <td key={j} className={`${cell} ${i === rows.length - 1 ? '' : 'border-b'}`}>{inline(r[j] || '')}</td>)}</tr>)}</tbody>
       </table>
     </div>,
   ].filter(Boolean);
@@ -140,11 +139,11 @@ function mdTable(b, small, key) {
 // What a check looked at, item by item: ✓ or ✗, with the idea you came to own marked.
 export function ItemList({ items, ownedNote = '', title }) {
   return (
-    <div data-role="items" title={title} style={css(`display:flex;flex-direction:column;gap:4px`)}>
+    <div data-role="items" title={title} className="flex flex-col gap-1">
       {items.map((it, i) => (
-        <div key={i} style={css(`display:flex;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.45;color:${it.ok ? 'var(--color-ink)' : it.unchecked ? 'var(--color-muted)' : 'var(--color-accent-text)'}`)}>
-          <span style={css(`flex:none;width:14px;color:${it.ok ? 'var(--color-good)' : it.unchecked ? 'var(--color-faint)' : 'var(--color-accent)'}`)}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
-          <span>{it.short}{it.blank ? <span style={css(`color:var(--color-muted)`)}> (left blank)</span> : null}{it.unchecked ? <span style={css(`color:var(--color-muted)`)}> (not checked: it didn't run)</span> : null}{it.judged ? <span style={css(`color:var(--color-muted)`)}> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span style={css(`font-size:12px;color:var(--color-muted)`)}> · {ownedNote}</span> : null}</span>
+        <div key={i} className={`flex gap-2 items-baseline text-[13.5px] leading-[1.45] ${it.ok ? 'text-ink' : it.unchecked ? 'text-muted' : 'text-accent-text'}`}>
+          <span className={`flex-none w-3.5 ${it.ok ? 'text-good' : it.unchecked ? 'text-faint' : 'text-accent'}`}>{it.ok ? '✓' : it.unchecked ? '–' : '✗'}</span>
+          <span>{it.short}{it.blank ? <span className="text-muted"> (left blank)</span> : null}{it.unchecked ? <span className="text-muted"> (not checked: it didn't run)</span> : null}{it.judged ? <span className="text-muted"> (judged by Claude)</span> : null}{it.owned && ownedNote ? <span className="text-[12px] text-muted"> · {ownedNote}</span> : null}</span>
         </div>
       ))}
     </div>
@@ -170,13 +169,13 @@ export function shuffled(q, rnd = Math.random) {
 }
 export function ChoiceQuestions({ qs, picked, onPick, locked }) {
   return (
-    <div style={css(`display:flex;flex-direction:column;gap:14px`)}>
+    <div className="flex flex-col gap-3.5">
       {qs.map((q, i) => (
-        <div key={q.id} data-role="choice-q" style={css(`display:flex;flex-direction:column;gap:6px`)}>
-          <div style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--color-accent-text)`)}>{i + 1}.</span> {inline(q.prompt)}</div>
+        <div key={q.id} data-role="choice-q" className="flex flex-col gap-1.5">
+          <div className="text-[14px] leading-[1.45]"><span className="text-accent-text">{i + 1}.</span> {inline(q.prompt)}</div>
           {shuffled(q).map(o => {
             const on = picked[q.id] === o.v;
-            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} style={css(`text-align:left;border:1px solid ${on ? 'var(--color-accent)' : 'var(--color-accent-border)'};background:${on ? 'var(--color-accent-soft)' : 'var(--color-surface)'};color:var(--color-ink);border-radius:9px;padding:8px 12px;font-size:13.5px;line-height:1.4`)} className={locked ? '' : 'hv3'}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
+            return <button key={o.v} disabled={locked} onClick={() => onPick(q.id, o.v)} className={`text-left border text-ink rounded-[9px] py-2 px-3 text-[13.5px] leading-[1.4] ${on ? 'border-accent bg-accent-soft' : 'border-accent-border bg-surface'} ${locked ? '' : 'hover:border-accent'}`}>{on ? '● ' : '○ '}{inline(o.l)}</button>;
           })}
         </div>
       ))}
@@ -210,42 +209,45 @@ export const OwnIcon = () => <svg {...ico}><path d="M8 4.2C6.6 3.2 4.6 2.8 2.5 3
 // Who holds the relationship: platform owns users (supply is replaceable), or supply and users bond directly.
 export function OwnDiagram({ d }) {
   const direct = d.owned === 'direct';
-  const box = dim => css(`flex:none;padding:7px 12px;border-radius:8px;font-size:13px;border:1px ${dim ? 'dashed var(--color-faint)' : 'solid var(--color-line)'};background:${dim ? 'transparent' : 'var(--color-surface)'};color:${dim ? 'var(--color-muted)' : 'var(--color-ink)'}`);
-  const line = thick => css(`flex:1;min-width:24px;border-top:${thick ? '4px solid var(--color-good)' : '1px dashed var(--color-faint)'}`);
+  const box = dim => `flex-none py-[7px] px-3 rounded-lg text-[13px] border ${dim ? 'border-dashed border-faint bg-transparent text-muted' : 'border-line bg-surface text-ink'}`;
+  const line = thick => `flex-1 min-w-6 ${thick ? 'border-t-4 border-good' : 'border-t border-dashed border-faint'}`;
   return (
-    <div data-role="own-diagram" style={css(`display:flex;flex-direction:column;gap:6px`)}>
-      <div style={css(`display:flex;align-items:center;gap:6px`)}>
-        <span style={box(false)}>{d.supply}</span><span style={line(direct)}></span>
-        <span style={box(direct)}>{d.platform}{direct ? ' (plumbing)' : ''}</span><span style={line(true)}></span>
-        <span style={box(false)}>{d.users}</span>
+    <div data-role="own-diagram" className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className={box(false)}>{d.supply}</span><span className={line(direct)}></span>
+        <span className={box(direct)}>{d.platform}{direct ? ' (plumbing)' : ''}</span><span className={line(true)}></span>
+        <span className={box(false)}>{d.users}</span>
       </div>
-      <div style={css(`font-size:12px;color:var(--color-muted)`)}>{direct ? `The thick line is the relationship: ${d.supply.toLowerCase()} and ${d.users.toLowerCase()} are bonded directly, through ${d.platform}.` : `The thick line is the owned relationship: ${d.platform} ↔ ${d.users.toLowerCase()}. ${d.supply} are replaceable (dashed).`}</div>
+      <div className="text-[12px] text-muted">{direct ? `The thick line is the relationship: ${d.supply.toLowerCase()} and ${d.users.toLowerCase()} are bonded directly, through ${d.platform}.` : `The thick line is the owned relationship: ${d.platform} ↔ ${d.users.toLowerCase()}. ${d.supply} are replaceable (dashed).`}</div>
     </div>
   );
 }
 
 
-export const SERIF = 'font-family:Newsreader,serif;font-size:16.5px;line-height:1.65;white-space:pre-wrap';
+export const SERIF = 'font-serif text-[16.5px] leading-[1.65] whitespace-pre-wrap';
 
-export const NAV = 'display:flex;align-items:center;gap:10px;background:none;border:none;border-radius:8px;padding:7px 8px;font-size:14px;color:var(--color-ink);text-align:left;width:100%';
+// No background, size or colour here: each use sets its own (a selected row, a smaller chat title, a greyed-out
+// item), so two classes for the same property never compete.
+export const NAV = 'flex items-center gap-2.5 border-none rounded-lg py-[7px] px-2 text-left w-full';
 
-export const CHIP = 'background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:99px;padding:7px 14px;font-size:13.5px;color:var(--color-ink-2)';
+export const CHIP = 'bg-surface-2 border border-line rounded-full py-[7px] px-3.5 text-[13.5px] text-ink-2';
 
 // A generic spark for the greeting (not Anthropic's logo).
 export const Spark = () => <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <rect key={i} x="14" y="2" width="2.2" height="11" rx="1.1" fill="var(--color-accent)" transform={`rotate(${i * 30} 15 15)`} />)}</svg>;
 
-export const ACT = 'background:none;border:none;border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:inherit;padding:0';
+// No background or colour here: the Own it action sets its own when it's active.
+export const ACT = 'border-none rounded-[7px] w-7 h-7 flex items-center justify-center p-0';
 
 
 export function CompareTable({ t }) {
   return (
-    <div style={css(`border:1px solid var(--color-line);border-radius:8px;overflow:hidden;background:var(--color-surface)`)}>
-      <div style={css(`display:grid;grid-template-columns:${t.cols};font-size:11px;font-weight:600;color:var(--color-muted);padding:5px 10px;border-bottom:1px solid var(--color-line-soft);gap:8px`)}>
+    <div className="border border-line rounded-lg overflow-hidden bg-surface">
+      <div className="grid text-[11px] font-semibold text-muted py-[5px] px-2.5 border-b border-line-soft gap-2" style={{ gridTemplateColumns: t.cols }}>
         {t.headers.map((h, i) => <span key={i}>{h.t}</span>)}
       </div>
       {t.rows.map((r, i) => (
-        <div key={i} style={css(`display:grid;grid-template-columns:${t.cols};font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;gap:8px;background:${r.bg || 'transparent'}`)}>
-          {r.cells.map((c, j) => <span key={j} style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${c.dim ? 'var(--color-accent-mid)' : 'var(--color-ink)'};${c.hl ? `background:${c.hl};border-radius:4px;margin:-1px -4px;padding:1px 4px;font-weight:600` : ''}`)}>{c.t}</span>)}
+        <div key={i} className={`grid font-mono text-[12px] py-1 px-2.5 gap-2 ${r.bg}`} style={{ gridTemplateColumns: t.cols }}>
+          {r.cells.map((c, j) => <span key={j} className={`whitespace-nowrap overflow-hidden text-ellipsis ${c.dim ? 'text-accent-mid' : 'text-ink'} ${c.hl ? `${c.hl} rounded-sm -my-px -mx-1 py-px px-1 font-semibold` : ''}`}>{c.t}</span>)}
         </div>
       ))}
     </div>
@@ -255,13 +257,13 @@ export function CompareTable({ t }) {
 // A "work it out" try: one labelled box per step, a number in each.
 export function StepInputs({ steps, entered, onEnter, locked }) {
   return (
-    <div data-role="steps" style={css(`display:flex;flex-direction:column;gap:10px`)}>
+    <div data-role="steps" className="flex flex-col gap-2.5">
       {steps.map((st, i) => (
-        <label key={st.id} style={css(`display:flex;flex-direction:column;gap:5px`)}>
-          <span style={css(`font-size:14px;line-height:1.45`)}><span style={css(`color:var(--color-accent-text)`)}>Step {i + 1}.</span> {st.label}</span>
-          <span style={css(`display:flex;align-items:center;gap:6px`)}>
-            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" style={css(`width:160px;border:1px solid var(--color-accent-border);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--color-surface);outline:none`)} />
-            {st.unit === '%' && <span style={css(`font-size:14px;color:var(--color-muted)`)}>%</span>}
+        <label key={st.id} className="flex flex-col gap-[5px]">
+          <span className="text-[14px] leading-[1.45]"><span className="text-accent-text">Step {i + 1}.</span> {st.label}</span>
+          <span className="flex items-center gap-1.5">
+            <input data-role="step-input" inputMode="decimal" value={entered[st.id] || ''} onChange={e => onEnter(st.id, e.target.value)} readOnly={locked} placeholder="Your number" className="w-40 border border-accent-border rounded-lg py-2 px-2.5 text-[14px] bg-surface outline-none" />
+            {st.unit === '%' && <span className="text-[14px] text-muted">%</span>}
           </span>
         </label>
       ))}

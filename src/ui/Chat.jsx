@@ -1,169 +1,168 @@
 // The main column: home, the conversation (answers, Own it cards, go-first offers, gap chats), the composer and the highlight popup. Learnings takes its place when open.
 import React from 'react';
-import { css } from '../css.js';
 import { Md, CopyIcon, SpeakIcon, RetryIcon, OwnIcon, SERIF, CHIP, Spark, ACT } from './parts.jsx';
 import Learnings from './Learnings.jsx';
 import Composer from './Composer.jsx';
 
 export default function Chat({ V }) {
   return (
-    <main style={css(`flex:1;display:flex;flex-direction:column;min-width:0;position:relative`)}>
-      <button className="nav-toggle mobile-only" data-role="nav-toggle" onClick={V.openNav} aria-label="Open the menu">☰</button>
+    <main className="flex-1 flex flex-col min-w-0 relative phone:in-[.with-sheet]:pb-16">
+      <button className="hidden phone:flex absolute top-2.5 left-2.5 z-[5] w-9.5 h-9.5 rounded-[10px] border border-line bg-page items-center justify-center text-[18px] text-ink-2" data-role="nav-toggle" onClick={V.openNav} aria-label="Open the menu">☰</button>
       {V.isLearnings ? <Learnings V={V} /> : (<>
       {!V.isEmpty && (
-        <div data-role="chat-header" style={css(`display:flex;align-items:center;justify-content:space-between;padding:14px 24px;flex:none`)}>
-          <div style={css(`display:flex;align-items:center;gap:6px;font-size:15px;color:var(--color-ink);min-width:0`)}><span style={css(`white-space:nowrap;overflow:hidden;text-overflow:ellipsis`)}>{V.chatTitle}</span><span style={css(`color:var(--color-muted);font-size:11px`)}>⌄</span></div>
-          <button aria-disabled="true" title="Not in this prototype" style={css(`background:none;border:none;font-size:13.5px;color:var(--color-ink-2);display:flex;gap:6px;align-items:center;cursor:default`)}>⇪ Share</button>
+        <div data-role="chat-header" className="flex items-center justify-between py-3.5 px-6 phone:pl-14.5 flex-none">
+          <div className="flex items-center gap-1.5 text-[15px] text-ink min-w-0"><span className="whitespace-nowrap overflow-hidden text-ellipsis">{V.chatTitle}</span><span className="text-muted text-[11px]">⌄</span></div>
+          <button aria-disabled="true" title="Not in this prototype" className="bg-transparent border-none text-[13.5px] text-ink-2 flex gap-1.5 items-center cursor-default">⇪ Share</button>
         </div>
       )}
-      <div ref={V.scrollRef} style={css(`flex:1;overflow:auto;padding:${V.isEmpty ? '0' : '12px'} 0 24px;display:flex;flex-direction:column`)}>
-        <div data-role="chat-col" style={css(`width:100%;max-width:${V.isEmpty ? '640px' : '720px'};margin:${V.isEmpty ? 'auto' : '0 auto'};padding:0 28px;display:flex;flex-direction:column;gap:24px`)}>
+      <div ref={V.scrollRef} className={`flex-1 overflow-auto pb-6 px-0 flex flex-col ${V.isEmpty ? 'pt-0' : 'pt-3'}`}>
+        <div data-role="chat-col" className={`w-full py-0 px-7 phone:px-4 flex flex-col gap-6 ${V.isEmpty ? 'max-w-160 m-auto' : 'max-w-180 my-0 mx-auto'}`}>
 
           {!!(V.isEmpty) && (
-            <div style={css(`display:flex;flex-direction:column;align-items:center;gap:26px;animation:rise .4s ease;padding-bottom:8vh`)}>
-              <h1 data-role="home-title" style={css(`display:flex;align-items:center;gap:14px;font-family:Newsreader,serif;font-weight:400;font-size:40px;line-height:1.15;margin:0;letter-spacing:-.01em`)}><Spark />Back at it</h1>
-              <div data-role="framing" style={css(`font-size:15px;color:var(--color-ink-2);text-align:center;max-width:500px;line-height:1.55;margin-top:-12px`)}>Claude's answers make things feel clear. <b style={css(`font-weight:600;color:var(--color-accent-text)`)}>Own it</b> checks whether you could do it yourself, and brings it back so it sticks.</div>
+            <div className="flex flex-col items-center gap-6.5 animate-[rise_.4s_ease] pb-[8vh]">
+              <h1 data-role="home-title" className="flex items-center gap-3.5 font-serif font-normal text-[40px] phone:text-[30px] leading-[1.15] m-0 tracking-[-.01em]"><Spark />Back at it</h1>
+              <div data-role="framing" className="text-[15px] text-ink-2 text-center max-w-125 leading-[1.55] -mt-3">Claude's answers make things feel clear. <b className="font-semibold text-accent-text">Own it</b> checks whether you could do it yourself, and brings it back so it sticks.</div>
               {<Composer V={V} home />}
-              <div style={css(`display:flex;gap:8px;flex-wrap:wrap;justify-content:center`)}>
+              <div className="flex gap-2 flex-wrap justify-center">
                 {/* Prompts, sent live. The Juno chat is a long past conversation, so it lives in the sidebar. */}
-                <button onClick={V.startLead} data-role="start-lead" style={css(CHIP)} className="hv3">Leadership · leading without a title</button>
-                <button onClick={V.startSql} data-role="start-sql" style={css(CHIP)} className="hv3">SQL · revenue per customer</button>
-                <button onClick={V.startReact} data-role="start-react" style={css(CHIP)} className="hv3">React · fetch on mount</button>
-                <button onClick={V.startRisk} data-role="start-risk" style={css(CHIP)} className="hv3">Health · a bacon and cancer headline</button>
-                <button onClick={V.startReading} data-role="start-reading" style={css(CHIP)} className="hv3">Reading · sounds out words, misses the story</button>
-                <button onClick={V.startTax} data-role="start-tax" style={css(CHIP)} className="hv3">Money · a raise into a higher tax bracket</button>
+                <button onClick={V.startLead} data-role="start-lead" className={`${CHIP} hover:border-accent`}>Leadership · leading without a title</button>
+                <button onClick={V.startSql} data-role="start-sql" className={`${CHIP} hover:border-accent`}>SQL · revenue per customer</button>
+                <button onClick={V.startReact} data-role="start-react" className={`${CHIP} hover:border-accent`}>React · fetch on mount</button>
+                <button onClick={V.startRisk} data-role="start-risk" className={`${CHIP} hover:border-accent`}>Health · a bacon and cancer headline</button>
+                <button onClick={V.startReading} data-role="start-reading" className={`${CHIP} hover:border-accent`}>Reading · sounds out words, misses the story</button>
+                <button onClick={V.startTax} data-role="start-tax" className={`${CHIP} hover:border-accent`}>Money · a raise into a higher tax bracket</button>
               </div>
-              <div style={css(`font-size:12.5px;color:var(--color-muted);text-align:center;max-width:440px;line-height:1.5`)}>Ask anything, or open a past chat like the Juno strategy chat. Under any answer, the Own it icon turns it into a try.</div>
+              <div className="text-[12.5px] text-muted text-center max-w-110 leading-normal">Ask anything, or open a past chat like the Juno strategy chat. Under any answer, the Own it icon turns it into a try.</div>
             </div>
           )}
 
           {(V.messages || []).map((m, _i) => (<React.Fragment key={_i}>
 
             {!!(m.isUser) && (<>
-              <div style={css(`align-self:flex-end;max-width:80%;background:var(--color-bubble);border-radius:16px 16px 4px 16px;padding:11px 15px;font-size:15px;line-height:1.5;white-space:pre-wrap;animation:rise .25s ease`)}>{m.text}</div>
+              <div className="self-end max-w-[80%] bg-bubble rounded-2xl rounded-br-sm py-[11px] px-[15px] text-[15px] leading-normal whitespace-pre-wrap animate-[rise_.25s_ease]">{m.text}</div>
             </>)}
 
             {!!(m.isThinking) && (<>
-              <div style={css(`display:flex;gap:5px;padding:6px 2px`)}><span style={css(`width:7px;height:7px;border-radius:50%;background:var(--color-muted);animation:blink 1.2s infinite`)}></span><span style={css(`width:7px;height:7px;border-radius:50%;background:var(--color-muted);animation:blink 1.2s .2s infinite`)}></span><span style={css(`width:7px;height:7px;border-radius:50%;background:var(--color-muted);animation:blink 1.2s .4s infinite`)}></span></div>
+              <div className="flex gap-[5px] py-1.5 px-0.5"><span className="w-[7px] h-[7px] rounded-full bg-muted animate-blink"></span><span className="w-[7px] h-[7px] rounded-full bg-muted animate-[blink_1.2s_.2s_infinite]"></span><span className="w-[7px] h-[7px] rounded-full bg-muted animate-[blink_1.2s_.4s_infinite]"></span></div>
             </>)}
 
             {!!(m.isAssistant) && (<>
-              <div data-msg-id={m.id} data-owning={m.owning || undefined} style={css(`display:flex;flex-direction:column;gap:12px;animation:rise .3s ease;border-radius:12px;transition:box-shadow .3s;${m.flash ? 'box-shadow:0 0 0 3px var(--color-accent-border),0 0 0 10px var(--color-accent-soft)' : ''}`)}>
-                {!!(m.hasIntro) && (<><div style={css(SERIF)}>{m.intro}</div></>)}
+              <div data-msg-id={m.id} data-owning={m.owning || undefined} className={`flex flex-col gap-3 animate-rise rounded-xl transition-shadow duration-300 ${m.flash ? 'shadow-[0_0_0_3px_var(--color-accent-border),0_0_0_10px_var(--color-accent-soft)]' : ''}`}>
+                {!!(m.hasIntro) && (<><div className={SERIF}>{m.intro}</div></>)}
                 {!!(m.hasCode) && (<>
-                  <div onMouseUp={m.onMouseUp} data-answer-body="true" style={css(m.plain ? `position:relative` : `position:relative;background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:10px;overflow:hidden`)}>
-                    {!m.plain && <div style={css(`display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-bottom:1px solid var(--color-line-soft);font-size:11px;color:var(--color-muted)`)}><span>{m.lang}</span></div>}
+                  <div onMouseUp={m.onMouseUp} data-answer-body="true" className={m.plain ? 'relative' : 'relative bg-surface-2 border border-line rounded-[10px] overflow-hidden'}>
+                    {!m.plain && <div className="flex justify-between items-center py-1.5 px-3 border-b border-line-soft text-[11px] text-muted"><span>{m.lang}</span></div>}
                     {!!(m.isMd) && <Md text={m.code} />}
-                    {!!(m.isCodeBlock) && (<><pre style={css(`margin:0;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;overflow:auto;white-space:pre`)}>{m.code}</pre></>)}
-                    {!!(m.isProse) && (<><pre style={css(`margin:0;padding:${m.plain ? '0' : '16px 18px'};font-family:${m.plain ? 'Newsreader,serif' : "'Instrument Sans',system-ui,sans-serif"};font-size:${m.plain ? '16.5px' : '14.5px'};line-height:${m.plain ? '1.65' : '1.7'};white-space:pre-wrap`)}>{m.code}</pre></>)}
+                    {!!(m.isCodeBlock) && (<><pre className="m-0 py-3.5 px-4 font-mono text-[13px] leading-[1.6] overflow-auto whitespace-pre">{m.code}</pre></>)}
+                    {!!(m.isProse) && (<><pre className={`m-0 whitespace-pre-wrap ${m.plain ? 'p-0 text-[16.5px] leading-[1.65]' : 'py-4 px-4.5 text-[14.5px] leading-[1.7]'} ${m.plain ? 'font-serif' : 'font-sans'}`}>{m.code}</pre></>)}
                   </div>
                 </>)}
-                {!!(m.hasOutro) && (<><div style={css(SERIF)}>{m.outro}</div></>)}
+                {!!(m.hasOutro) && (<><div className={SERIF}>{m.outro}</div></>)}
                 {/* Claude's action row: copy · read aloud · retry, then Own it in the same quiet style, then the time. */}
-                {!m.streaming && <div style={css(`display:flex;align-items:center;gap:2px;margin-top:-4px;color:var(--color-muted)`)}>
-                  <button onClick={m.onCopy} aria-label="Copy" title={m.copied ? 'Copied' : 'Copy'} style={css(ACT)} className="hv4">{m.copied ? <span style={css(`font-size:11px`)}>✓</span> : <CopyIcon />}</button>
-                  <button onClick={m.onSpeak} aria-label="Read aloud" title="Read aloud" style={css(ACT)} className="hv4"><SpeakIcon /></button>
-                  <button aria-label="Retry (not in this prototype)" title="Retry (not in this prototype)" aria-disabled="true" style={css(ACT + `;opacity:.45;cursor:default`)}><RetryIcon /></button>
-                  {!!(m.showOwnHint && m.ownExpanded) && <button onClick={m.ownAll} data-role="own-all" data-expanded="true" title="You're digging into this. Test yourself on it" style={css(`display:flex;align-items:center;gap:6px;background:var(--color-accent);color:var(--color-on-accent);border:none;border-radius:99px;padding:5px 12px 5px 9px;font-size:12.5px;margin-left:2px;animation:ownexpand .35s ease-out, ownglow 1.6s ease-out .35s 2`)}><OwnIcon />Own it · about 2 min</button>}
+                {!m.streaming && <div className="flex items-center gap-0.5 -mt-1 text-muted">
+                  <button onClick={m.onCopy} aria-label="Copy" title={m.copied ? 'Copied' : 'Copy'} className={`${ACT} bg-transparent text-inherit hover:bg-accent-soft`}>{m.copied ? <span className="text-[11px]">✓</span> : <CopyIcon />}</button>
+                  <button onClick={m.onSpeak} aria-label="Read aloud" title="Read aloud" className={`${ACT} bg-transparent text-inherit hover:bg-accent-soft`}><SpeakIcon /></button>
+                  <button aria-label="Retry (not in this prototype)" title="Retry (not in this prototype)" aria-disabled="true" className={`${ACT} bg-transparent text-inherit opacity-45 cursor-default`}><RetryIcon /></button>
+                  {!!(m.showOwnHint && m.ownExpanded) && <button onClick={m.ownAll} data-role="own-all" data-expanded="true" title="You're digging into this. Test yourself on it" className="flex items-center gap-1.5 bg-accent text-on-accent border-none rounded-full py-[5px] pr-3 pl-[9px] text-[12.5px] ml-0.5 animate-[ownexpand_.35s_ease-out,_ownglow_1.6s_ease-out_.35s_2]"><OwnIcon />Own it · about 2 min</button>}
                   {!!(m.showOwnHint && !m.ownExpanded) && <button onClick={m.ownAll} data-role="own-all" aria-label={m.ownActive ? 'Owning this response (open in the side panel)' : m.ownAllLabel} aria-pressed={m.ownActive} aria-disabled={m.ownBlocked || undefined}
                     title={m.ownActive ? 'Owning this · open in the side panel' : m.ownBlocked ? 'Close the current Own it first' : `${m.ownAllLabel} · or highlight any part`}
-                    style={css(ACT + (m.ownActive ? `;background:var(--color-accent);color:var(--color-on-accent)` : m.ownBlocked ? `;color:var(--color-faint);cursor:default` : `;color:var(--color-accent-text)`))} className={m.ownActive || m.ownBlocked ? '' : 'hv4'}><OwnIcon /></button>}
-                  {!!(m.when) && <span style={css(`font-size:12.5px;color:var(--color-muted);margin-left:6px`)}>{m.when}</span>}
+                    className={`${ACT} ${m.ownActive ? 'bg-accent text-on-accent' : m.ownBlocked ? 'bg-transparent text-faint cursor-default' : 'bg-transparent text-accent-text hover:bg-accent-soft'}`}><OwnIcon /></button>}
+                  {!!(m.when) && <span className="text-[12.5px] text-muted ml-1.5">{m.when}</span>}
                 </div>}
                 {!!(m.checkChip) && (
-                  <div style={css(`display:flex;gap:8px;margin-top:-2px`)}>
-                    <button onClick={m.checkChip} data-role="gap-check-chip" style={css(`background:var(--color-surface);border:1px solid var(--color-accent-border);border-radius:99px;padding:6px 13px;font-size:13px;color:var(--color-accent-text)`)} className="hv3">I think I've got it: check me</button>
+                  <div className="flex gap-2 -mt-0.5">
+                    <button onClick={m.checkChip} data-role="gap-check-chip" className="bg-surface border border-accent-border rounded-full py-1.5 px-[13px] text-[13px] text-accent-text hover:border-accent">I think I've got it: check me</button>
                   </div>
                 )}
                 {!!(m.showTip) && (
-                  <div data-role="own-tip" style={css(`align-self:flex-start;display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.45;color:var(--color-accent-deep);background:var(--color-accent-soft);border:1px solid var(--color-accent-soft-2);border-radius:10px;padding:8px 10px 8px 12px;margin-top:-4px;animation:rise .3s ease`)}>
-                    <span style={css(`color:var(--color-accent);display:flex`)}><OwnIcon /></span>
-                    <span>Want to actually learn part of this? Highlight it, or use <span style={css(`color:var(--color-accent)`)}>this icon</span> to own the whole answer. You'll try it yourself and see what stuck.</span>
-                    <button onClick={V.dismissTip} aria-label="Dismiss tip" style={css(`background:none;border:none;color:var(--color-accent-mid);font-size:15px;padding:0 2px`)}>×</button>
+                  <div data-role="own-tip" className="self-start flex items-center gap-2.5 text-[13px] leading-[1.45] text-accent-deep bg-accent-soft border border-accent-soft-2 rounded-[10px] py-2 pr-2.5 pl-3 -mt-1 animate-rise">
+                    <span className="text-accent flex"><OwnIcon /></span>
+                    <span>Want to actually learn part of this? Highlight it, or use <span className="text-accent">this icon</span> to own the whole answer. You'll try it yourself and see what stuck.</span>
+                    <button onClick={V.dismissTip} aria-label="Dismiss tip" className="bg-transparent border-none text-accent-mid text-[15px] py-0 px-0.5">×</button>
                   </div>
                 )}
               </div>
             </>)}
 
             {!!(m.isGoAsk) && (
-              <div data-role="go-ask" style={css(`display:flex;flex-direction:column;gap:14px;animation:rise .3s ease`)}>
-                <div style={css(SERIF)}>This one uses something you own: <b>{m.ownedName || m.owned}</b>. Want to go first? Write your answer, then I'll show you mine.</div>
+              <div data-role="go-ask" className="flex flex-col gap-3.5 animate-rise">
+                <div className={SERIF}>This one uses something you own: <b>{m.ownedName || m.owned}</b>. Want to go first? Write your answer, then I'll show you mine.</div>
                 {m.phase === 'offer' && (
-                  <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
-                    <button onClick={m.onFirst} style={css(`background:var(--color-accent);color:var(--color-on-accent);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>I'll go first</button>
-                    <button onClick={m.onAnswer} style={css(`background:none;border:1px solid var(--color-line-strong);border-radius:9px;padding:8px 13px;font-size:13px;color:var(--color-ink-2)`)} className="hv6">Just answer this time</button>
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={m.onFirst} className="bg-accent text-on-accent border-none rounded-[9px] py-[9px] px-3.5 text-[13.5px]">I'll go first</button>
+                    <button onClick={m.onAnswer} className="bg-transparent border border-line-strong rounded-[9px] py-2 px-[13px] text-[13px] text-ink-2 hover:bg-sunken">Just answer this time</button>
                   </div>
                 )}
                 {m.inPanel !== undefined && m.phase !== 'offer' && m.phase !== 'answered' && (
-                  <div data-role="go-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-muted)`)}>
+                  <div data-role="go-pointer" className="flex gap-2.5 items-center text-[13px] text-muted">
                     <span>{m.phase === 'done' ? 'Your go is in the side panel. Here\'s mine:' : 'Your go is in the side panel. My answer waits until you\'ve tried.'}</span>
-                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:var(--color-accent-text);text-decoration:underline;text-underline-offset:2px`)}>Open it</button>}
+                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" className="bg-transparent border-none p-0 text-[13px] text-accent-text underline underline-offset-[2px]">Open it</button>}
                   </div>
                 )}
-                {m.phase === 'answered' && <div style={css(`font-size:12.5px;color:var(--color-muted)`)}>No problem: noted in Learnings that you let me take this one.</div>}
-                {m.showReply && (m.replyText ? <Md text={m.replyText} /> : <span style={css(`font-size:12.5px;color:var(--color-muted);animation:blink 1.2s infinite`)}>writing my answer…</span>)}
+                {m.phase === 'answered' && <div className="text-[12.5px] text-muted">No problem: noted in Learnings that you let me take this one.</div>}
+                {m.showReply && (m.replyText ? <Md text={m.replyText} /> : <span className="text-[12.5px] text-muted animate-blink">writing my answer…</span>)}
               </div>
             )}
 
             {!!(m.isGo) && (
-              <div data-role="go-first" style={css(`display:flex;flex-direction:column;gap:14px;animation:rise .3s ease`)}>
-                <div style={css(SERIF)}>You own <b>{m.goOwned}</b>{m.goWas ? ` (${m.goWas})` : ''}. This new question uses the same idea. Want to answer it yourself first? I'll check yours, then show you mine.</div>
+              <div data-role="go-first" className="flex flex-col gap-3.5 animate-rise">
+                <div className={SERIF}>You own <b>{m.goOwned}</b>{m.goWas ? ` (${m.goWas})` : ''}. This new question uses the same idea. Want to answer it yourself first? I'll check yours, then show you mine.</div>
                 {m.phase === 'offer' && (
-                  <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
-                    <button onClick={m.goFirst} style={css(`background:var(--color-accent);color:var(--color-on-accent);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`)}>I'll go first</button>
-                    <button onClick={m.goAnswer} style={css(`background:none;border:1px solid var(--color-line-strong);border-radius:9px;padding:8px 13px;font-size:13px;color:var(--color-ink-2)`)} className="hv6">Just answer this time</button>
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={m.goFirst} className="bg-accent text-on-accent border-none rounded-[9px] py-[9px] px-3.5 text-[13.5px]">I'll go first</button>
+                    <button onClick={m.goAnswer} className="bg-transparent border border-line-strong rounded-[9px] py-2 px-[13px] text-[13px] text-ink-2 hover:bg-sunken">Just answer this time</button>
                   </div>
                 )}
                 {m.inPanel !== undefined && m.phase !== 'offer' && m.phase !== 'answered' && (
-                  <div data-role="go-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-muted)`)}>
+                  <div data-role="go-pointer" className="flex gap-2.5 items-center text-[13px] text-muted">
                     <span>{m.phase === 'done' ? 'Your go is in the side panel. Here\'s mine:' : 'Your go is in the side panel. My answer waits until you\'ve tried.'}</span>
-                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:var(--color-accent-text);text-decoration:underline;text-underline-offset:2px`)}>Open it</button>}
+                    {!m.inPanel && <button onClick={m.onOpenPanel} data-role="go-open" className="bg-transparent border-none p-0 text-[13px] text-accent-text underline underline-offset-[2px]">Open it</button>}
                   </div>
                 )}
                 {(m.phase === 'done' || m.phase === 'answered') && (
-                  <div style={css(`display:flex;flex-direction:column;gap:12px;animation:rise .3s ease`)}>
-                    {m.phase === 'answered' && <div style={css(`font-size:12.5px;color:var(--color-muted)`)}>No problem: noted in Learnings that you let me take this one.</div>}
-                    {!!m.go.answer.intro && <div style={css(SERIF)}>{m.go.answer.intro}</div>}
-                    {m.go.prose ? <div style={css(SERIF)}>{m.go.answer.code}</div> : <pre style={css(`margin:0;padding:14px 16px;background:var(--color-surface-2);border:1px solid var(--color-line);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;white-space:pre`)}>{m.go.answer.code}</pre>}
-                    {!!m.go.answer.outro && <div style={css(SERIF)}>{m.go.answer.outro}</div>}
+                  <div className="flex flex-col gap-3 animate-rise">
+                    {m.phase === 'answered' && <div className="text-[12.5px] text-muted">No problem: noted in Learnings that you let me take this one.</div>}
+                    {!!m.go.answer.intro && <div className={SERIF}>{m.go.answer.intro}</div>}
+                    {m.go.prose ? <div className={SERIF}>{m.go.answer.code}</div> : <pre className="m-0 py-3.5 px-4 bg-surface-2 border border-line rounded-[10px] font-mono text-[13px] leading-[1.6] whitespace-pre">{m.go.answer.code}</pre>}
+                    {!!m.go.answer.outro && <div className={SERIF}>{m.go.answer.outro}</div>}
                   </div>
                 )}
               </div>
             )}
 
             {!!(m.isGapBanner) && (
-              <div data-role="gap-banner" style={css(`display:flex;gap:12px;align-items:center;border-left:3px solid ${m.gapClosed ? 'var(--color-good)' : 'var(--color-accent-mid)'};padding:4px 0 4px 12px`)}>
-                <div style={css(`display:flex;flex-direction:column;gap:3px;min-width:0`)}>
-                  <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:${m.gapClosed ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>{m.gapClosed ? '✓ Gap closed' : 'Closing a gap'}</div>
-                  <div style={css(`font-size:14.5px;color:var(--color-ink)`)}>{m.gap.topic}</div>
-                  <div style={css(`font-size:12px;color:var(--color-muted)`)}>{m.gapClosed ? "It's now something you own. It comes back for recall in 3 days." : `Found ${m.gap.origin}. Talk it through with Claude; check yourself whenever you're ready.`}</div>
+              <div data-role="gap-banner" className={`flex gap-3 items-center border-l-[3px] py-1 pr-0 pl-3 ${m.gapClosed ? 'border-good' : 'border-accent-mid'}`}>
+                <div className="flex flex-col gap-[3px] min-w-0">
+                  <div className={`text-[11px] font-semibold tracking-[.05em] uppercase ${m.gapClosed ? 'text-good-text' : 'text-accent-text'}`}>{m.gapClosed ? '✓ Gap closed' : 'Closing a gap'}</div>
+                  <div className="text-[14.5px] text-ink">{m.gap.topic}</div>
+                  <div className="text-[12px] text-muted">{m.gapClosed ? "It's now something you own. It comes back for recall in 3 days." : `Found ${m.gap.origin}. Talk it through with Claude; check yourself whenever you're ready.`}</div>
                 </div>
               </div>
             )}
 
             {!!(m.isGapCheck) && (
-              <div data-role="gap-check-pointer" style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-muted);flex-wrap:wrap`)}>
+              <div data-role="gap-check-pointer" className="flex gap-2.5 items-center text-[13px] text-muted flex-wrap">
                 {m.phase === 'done'
-                  ? <span style={css(`color:${m.result.closed ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>{m.result.closed ? '✓ Gap closed. It comes back for recall in 3 days.' : 'Not closed yet. Keep talking it through, then check again.'}</span>
+                  ? <span className={`${m.result.closed ? 'text-good-text' : 'text-accent-text'}`}>{m.result.closed ? '✓ Gap closed. It comes back for recall in 3 days.' : 'Not closed yet. Keep talking it through, then check again.'}</span>
                   : <span>Your check is in the side panel.</span>}
-                {!m.inPanel && <button onClick={m.onOpenPanel} data-role="gap-open" style={css(`background:none;border:none;padding:0;font-size:13px;color:var(--color-accent-text);text-decoration:underline;text-underline-offset:2px`)}>{m.phase === 'done' ? 'See the check' : 'Open it'}</button>}
+                {!m.inPanel && <button onClick={m.onOpenPanel} data-role="gap-open" className="bg-transparent border-none p-0 text-[13px] text-accent-text underline underline-offset-[2px]">{m.phase === 'done' ? 'See the check' : 'Open it'}</button>}
               </div>
             )}
 
             {m.type === 'gap' && (
-              <div style={css(`align-self:center;font-size:12px;color:var(--color-muted);font-style:italic;border-top:1px dashed var(--color-line-strong);border-bottom:1px dashed var(--color-line-strong);padding:6px 14px`)}>{m.text}</div>
+              <div className="self-center text-[12px] text-muted italic border-t border-dashed border-line-strong border-b border-dashed border-line-strong py-1.5 px-3.5">{m.text}</div>
             )}
 
             {!!(m.isOwnDone) && (<>
-              <div style={css(`border:1px solid var(--color-line);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--color-ink-2);display:flex;gap:12px;align-items:center;background:var(--color-surface-2)`)}>
-                <span style={css(`font-family:Newsreader,serif;font-size:15px;color:var(--color-ink)`)}>{m.doneLabel || 'Owned'}</span><span>{m.summary}</span>
+              <div className="border border-line rounded-xl py-3 px-4 text-[13px] text-ink-2 flex gap-3 items-center bg-surface-2">
+                <span className="font-serif text-[15px] text-ink">{m.doneLabel || 'Owned'}</span><span>{m.summary}</span>
               </div>
             </>)}
 
             {!!(m.isOwn) && (
-              <button onClick={V.focusPanel} data-role="own-chip" style={css(`align-self:flex-start;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--color-accent-border);background:var(--color-accent-soft);border-radius:12px;padding:10px 16px 10px 12px`)} className="hv3">
-                <span style={css(`width:34px;height:34px;border-radius:8px;background:var(--color-accent);color:var(--color-on-accent);display:flex;align-items:center;justify-content:center;font-family:Newsreader,serif;font-size:18px;flex:none`)}>O</span>
-                <span style={css(`display:flex;flex-direction:column;gap:2px`)}><span style={css(`font-size:14px;color:var(--color-ink)`)}>{V.ownEntryLabel} · {V.ownTitle}</span><span style={css(`font-size:12px;color:var(--color-muted)`)}>{V.ownPhaseLabel} · In the side panel</span></span>
+              <button onClick={V.focusPanel} data-role="own-chip" className="self-start flex items-center gap-3 text-left border border-accent-border bg-accent-soft rounded-xl py-2.5 pr-4 pl-3 hover:border-accent">
+                <span className="w-8.5 h-8.5 rounded-lg bg-accent text-on-accent flex items-center justify-center font-serif text-[18px] flex-none">O</span>
+                <span className="flex flex-col gap-0.5"><span className="text-[14px] text-ink">{V.ownEntryLabel} · {V.ownTitle}</span><span className="text-[12px] text-muted">{V.ownPhaseLabel} · In the side panel</span></span>
               </button>
             )}
 
@@ -172,17 +171,17 @@ export default function Chat({ V }) {
       </div>
 
       {!V.isEmpty && (
-        <div style={css(`padding:8px 28px 12px;flex:none`)}>
-          <div style={css(`max-width:720px;margin:0 auto`)}>{<Composer V={V} home={false} />}</div>
+        <div className="pt-2 pb-3 px-7 flex-none">
+          <div className="max-w-180 mx-auto">{<Composer V={V} home={false} />}</div>
         </div>
       )}
 
       </>)}
       {!!(V.hasSel) && (<>
-        <div id="own-sel" style={css(`position:fixed;left:${V.selX};top:${V.selY};transform:translate(-50%,-110%);display:flex;background:var(--color-inverse);border-radius:99px;padding:3px;gap:2px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:20;animation:rise .15s ease`)}>
-          <button onClick={V.askSelection} data-role="ask-sel" title="Quote this into the chat and ask about it" style={css(`background:none;color:var(--color-on-inverse);border:none;border-radius:99px;padding:5px 12px;font-size:13px`)}>Ask Claude</button>
-          <span style={css(`width:1px;background:var(--color-ink-2);margin:5px 0`)}></span>
-          <button id="own-sel-btn" onClick={V.ownSelection} title="Test yourself on this" style={css(`background:none;color:var(--color-on-inverse);border:none;border-radius:99px;padding:5px 12px;font-size:13px`)}>Own it</button>
+        <div id="own-sel" className="fixed -translate-x-1/2 -translate-y-[110%] flex bg-inverse rounded-full p-[3px] gap-0.5 shadow-[0_4px_14px_rgba(0,0,0,.18)] z-[20] animate-[rise_.15s_ease]" style={{ left: V.selX, top: V.selY }}>
+          <button onClick={V.askSelection} data-role="ask-sel" title="Quote this into the chat and ask about it" className="bg-transparent text-on-inverse border-none rounded-full py-[5px] px-3 text-[13px]">Ask Claude</button>
+          <span className="w-[1px] bg-ink-2 my-[5px]"></span>
+          <button id="own-sel-btn" onClick={V.ownSelection} title="Test yourself on this" className="bg-transparent text-on-inverse border-none rounded-full py-[5px] px-3 text-[13px]">Own it</button>
         </div>
       </>)}
     </main>

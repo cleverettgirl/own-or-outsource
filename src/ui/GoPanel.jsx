@@ -3,20 +3,19 @@
 // m is the go-first message's view (App.jsx): type goFirst (a hand-written question from Learnings, checked against a
 // key) or goAsk (your own new question, compared with Claude's answer).
 import React from 'react';
-import { css } from '../css.js';
 import { ItemList, ChoiceQuestions, Md, inline } from './parts.jsx';
 
-const LABEL = `font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--color-muted)`;
-const DARK = `background:var(--color-inverse);color:var(--color-on-inverse);border:none;border-radius:9px;padding:9px 14px;font-size:13.5px`;
-const QUIET = `background:none;border:1px solid var(--color-line-strong);border-radius:9px;padding:8px 13px;font-size:13px;color:var(--color-ink-2)`;
+const LABEL = 'text-[11px] font-semibold tracking-[.06em] text-muted';
+const DARK = 'bg-inverse text-on-inverse border-none rounded-[9px] py-[9px] px-3.5 text-[13.5px]';
+const QUIET = 'bg-transparent border border-line-strong rounded-[9px] py-2 px-[13px] text-[13px] text-ink-2 hover:bg-sunken';
 
 function Stepper({ steps }) {
   return (
-    <div data-role="stepper" style={css(`display:flex;align-items:center;font-size:13px`)}>
+    <div data-role="stepper" className="flex items-center text-[13px] phone:text-[11.5px] phone:*:mx-[3px] phone:*:not-has-[i]:min-w-1.5">
       {steps.map((st, i) => <React.Fragment key={i}>
-        {i > 0 && <span style={css(`flex:1;min-width:12px;height:1px;background:${st.done || st.cur ? 'var(--color-good-mid)' : 'var(--color-line-strong)'};margin:0 10px`)}></span>}
-        <span style={css(`display:flex;align-items:center;gap:6px;white-space:nowrap;color:${st.cur ? 'var(--color-ink)' : st.done ? 'var(--color-good-mid)' : 'var(--color-muted)'};font-weight:${st.cur ? 600 : st.done ? 500 : 400}`)}>
-          <i style={css(`width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-style:normal;${st.done ? 'background:var(--color-good-mid);color:var(--color-on-accent)' : st.cur ? 'background:var(--color-accent);color:var(--color-on-accent)' : 'border:1px solid var(--color-line-strong)'}`)}>{st.done ? '✓' : i + 1}</i>{st.label}
+        {i > 0 && <span className={`flex-1 min-w-3 h-[1px] my-0 mx-2.5 ${st.done || st.cur ? 'bg-good-mid' : 'bg-line-strong'}`}></span>}
+        <span className={`flex items-center gap-1.5 whitespace-nowrap ${st.cur ? 'text-ink' : st.done ? 'text-good-mid' : 'text-muted'} ${st.cur ? 'font-semibold' : st.done ? 'font-medium' : 'font-normal'}`}>
+          <i className={`w-4.5 h-4.5 rounded-full grid place-items-center text-[11px] not-italic ${st.done ? 'bg-good-mid text-on-accent' : st.cur ? 'bg-accent text-on-accent' : 'border border-line-strong'}`}>{st.done ? '✓' : i + 1}</i>{st.label}
         </span>
       </React.Fragment>)}
     </div>
@@ -29,37 +28,37 @@ export default function GoPanel({ m }) {
   const at = order.indexOf(m.phase === 'checking' ? 'try' : m.phase);
   const steps = order.map((p, i) => ({ label: { predict: 'Predict', try: 'Try it', done: 'Reveal' }[p], cur: i === at, done: i < at }));
   return (
-    <aside data-role="go-panel" style={css(`width:46%;min-width:420px;max-width:760px;flex:none;border-left:1px solid var(--color-line);background:var(--color-page);display:flex;flex-direction:column;animation:slidein .25s ease`)}>
-      <div style={css(`display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 28px;border-bottom:1px solid var(--color-line);flex:none`)}>
-        <span style={css(`font-family:Newsreader,Georgia,serif;font-size:24px`)}>You go first</span>
-        <button onClick={m.onClosePanel} data-role="go-close" aria-label="Close, back to chat" title="Close, back to chat" style={css(`background:none;border:none;font-size:20px;line-height:1;color:var(--color-muted);padding:4px 6px;border-radius:6px`)} className="hv4">×</button>
+    <aside data-role="go-panel" className="w-[46%] min-w-105 max-w-190 flex-none border-l border-line bg-page flex flex-col animate-slidein">
+      <div className="flex items-center justify-between gap-3 py-4.5 px-7 border-b border-line flex-none">
+        <span className="font-serif text-[24px]">You go first</span>
+        <button onClick={m.onClosePanel} data-role="go-close" aria-label="Close, back to chat" title="Close, back to chat" className="bg-transparent border-none text-[20px] leading-none text-muted py-1 px-1.5 rounded-md hover:bg-accent-soft">×</button>
       </div>
-      <div style={css(`flex:1;overflow:auto;padding:24px 28px 32px;display:flex;flex-direction:column;gap:18px`)}>
+      <div className="flex-1 overflow-auto pt-6 pb-8 px-7 flex flex-col gap-4.5">
         <Stepper steps={steps} />
-        <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
-          <span style={css(LABEL)}>USING WHAT YOU OWN</span>
-          <span style={css(`font-family:Newsreader,Georgia,serif;font-size:26px;line-height:1.2`)}>{ask ? m.ownedName || m.owned : m.goOwned}</span>
-          {!ask && !!m.goWas && <span style={css(`font-size:13px;color:var(--color-muted)`)}>Last time {m.goWas}.</span>}
+        <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>USING WHAT YOU OWN</span>
+          <span className="font-serif text-[26px] leading-[1.2]">{ask ? m.ownedName || m.owned : m.goOwned}</span>
+          {!ask && !!m.goWas && <span className="text-[13px] text-muted">Last time {m.goWas}.</span>}
         </div>
-        <div style={css(`display:flex;flex-direction:column;gap:6px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:12px;padding:14px 18px`)}>
-          <span style={css(LABEL)}>THE QUESTION</span>
-          <div style={css(`font-size:14.5px;line-height:1.5`)}>{ask ? m.question : m.go.question}</div>
+        <div className="flex flex-col gap-1.5 bg-surface border border-line rounded-xl py-3.5 px-4.5">
+          <span className={LABEL}>THE QUESTION</span>
+          <div className="text-[14.5px] leading-normal">{ask ? m.question : m.go.question}</div>
         </div>
 
         {!ask && m.phase === 'predict' && (
-          <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
+          <div className="flex flex-col gap-3">
             {m.goTopics.length > 0 && (
-              <div data-role="go-topics" style={css(`font-size:13px;color:var(--color-ink-2);display:flex;flex-direction:column;gap:4px`)}>
+              <div data-role="go-topics" className="text-[13px] text-ink-2 flex flex-col gap-1">
                 <span>{m.goN} {m.goKind}{m.goN === 1 ? '' : 's'}, on:</span>
-                <ul style={css(`margin:0;padding-left:18px;line-height:1.6`)}>{m.goTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>
+                <ul className="m-0 pl-4.5 leading-[1.6]">{m.goTopics.map((t, i) => <li key={i}>{t}</li>)}</ul>
               </div>
             )}
-            <div style={css(`font-size:20px;font-weight:500;line-height:1.3`)}>{m.goN === 1 ? 'Will you get it right on your own?' : `How many of the ${m.goN} will you get right on your own?`}</div>
-            <div style={css(`display:grid;grid-template-columns:repeat(${m.goN + 1},1fr);gap:10px`)}>
+            <div className="text-[20px] font-medium leading-[1.3]">{m.goN === 1 ? 'Will you get it right on your own?' : `How many of the ${m.goN} will you get right on your own?`}</div>
+            <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${m.goN + 1},1fr)` }}>
               {Array.from({ length: m.goN + 1 }, (_, k) => (
-                <button key={k} onClick={() => m.goPredict(k)} data-role="go-predict" data-n={k} style={css(`background:var(--color-surface);border:1px solid var(--color-line-strong);border-radius:12px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px`)} className="hv3">
-                  <span style={css(`font-family:Newsreader,Georgia,serif;font-size:28px`)}>{k}</span>
-                  <span style={css(`font-size:12px;color:var(--color-muted)`)}>{k === 0 ? 'none' : k === m.goN ? 'all' : `of ${m.goN}`}</span>
+                <button key={k} onClick={() => m.goPredict(k)} data-role="go-predict" data-n={k} className="bg-surface border border-line-strong rounded-xl h-19 flex flex-col items-center justify-center gap-1 hover:border-accent">
+                  <span className="font-serif text-[28px]">{k}</span>
+                  <span className="text-[12px] text-muted">{k === 0 ? 'none' : k === m.goN ? 'all' : `of ${m.goN}`}</span>
                 </button>
               ))}
             </div>
@@ -67,61 +66,61 @@ export default function GoPanel({ m }) {
         )}
 
         {!ask && (m.phase === 'try' || m.phase === 'done') && (
-          <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-accent-text)`)}>Your go · predicted {m.prediction} of {m.goN}</div>
-            {!!m.go.task && <div style={css(`font-size:14.5px`)}>{inline(m.go.task)}</div>}
-            {!!m.go.schema && <pre style={css(`margin:0;padding:8px 12px;background:var(--color-sunken);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--color-ink-2);white-space:pre-wrap`)}>{m.go.schema}</pre>}
+          <div className="flex flex-col gap-3">
+            <div className="text-[11px] font-semibold tracking-[.05em] uppercase text-accent-text">Your go · predicted {m.prediction} of {m.goN}</div>
+            {!!m.go.task && <div className="text-[14.5px]">{inline(m.go.task)}</div>}
+            {!!m.go.schema && <pre className="m-0 py-2 px-3 bg-sunken rounded-lg font-mono text-[12px] text-ink-2 whitespace-pre-wrap">{m.go.schema}</pre>}
             {m.go.check.type === 'choice'
               ? <ChoiceQuestions qs={m.go.check.questions} picked={m.picked} onPick={m.goPick} locked={m.phase === 'done'} />
-              : <textarea data-role="go-text" value={m.text} onChange={m.goText} readOnly={m.phase === 'done'} placeholder={m.go.placeholder} style={css(`width:100%;min-height:${m.go.lang === 'sql' ? '130px' : '72px'};resize:vertical;border:1px solid var(--color-accent-border);border-radius:10px;padding:10px 12px;font-family:${m.go.lang === 'sql' ? "'JetBrains Mono',monospace" : 'inherit'};font-size:13.5px;background:var(--color-surface);box-sizing:border-box`)} />}
-            {m.phase === 'try' && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={m.goCheck} style={css(DARK)}>Check mine</button>{!!m.checking && <span style={css(`font-size:12.5px;color:var(--color-accent-text);animation:blink 1.2s infinite`)}>checking…</span>}</div>}
+              : <textarea data-role="go-text" value={m.text} onChange={m.goText} readOnly={m.phase === 'done'} placeholder={m.go.placeholder} className={`w-full resize-y border border-accent-border rounded-[10px] py-2.5 px-3 text-[13.5px] bg-surface box-border ${m.go.lang === 'sql' ? 'min-h-32.5 font-mono' : 'min-h-18 font-[inherit]'}`} />}
+            {m.phase === 'try' && <div className="flex gap-2 items-center"><button onClick={m.goCheck} className={DARK}>Check mine</button>{!!m.checking && <span className="text-[12.5px] text-accent-text animate-blink">checking…</span>}</div>}
             {m.phase === 'done' && (
-              <div data-role="go-result" style={css(`display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-line);padding-top:14px`)}>
-                <div style={css(`font-family:Newsreader,serif;font-size:19px`)}>{m.goResult}</div>
+              <div data-role="go-result" className="flex flex-col gap-2 border-t border-line pt-3.5">
+                <div className="font-serif text-[19px]">{m.goResult}</div>
                 {m.goItems.length > 0 && <ItemList items={m.goItems} />}
-                {!!m.grade.worked && <div style={css(`font-size:13.5px;color:var(--color-ink-2)`)}><b style={css(`color:var(--color-good-text)`)}>What held:</b> {inline(m.grade.worked)}</div>}
-                {!!m.grade.gap && <div style={css(`font-size:13.5px;color:var(--color-ink-2)`)}><b style={css(`color:var(--color-accent-text)`)}>What to look at:</b> {inline(m.grade.gap)}</div>}
+                {!!m.grade.worked && <div className="text-[13.5px] text-ink-2"><b className="text-good-text">What held:</b> {inline(m.grade.worked)}</div>}
+                {!!m.grade.gap && <div className="text-[13.5px] text-ink-2"><b className="text-accent-text">What to look at:</b> {inline(m.grade.gap)}</div>}
               </div>
             )}
           </div>
         )}
 
         {ask && (
-          <div style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-accent-text)`)}>Your go</div>
-            <textarea data-role="go-ask-text" value={m.text} onChange={m.onText} readOnly={m.phase !== 'try'} placeholder="Your answer, in your own words or code. No looking anything up." style={css(`width:100%;min-height:110px;resize:vertical;border:1px solid var(--color-accent-border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13.5px;background:var(--color-surface);box-sizing:border-box`)} />
-            {m.phase === 'try' && <div><button onClick={m.onSubmit} style={css(DARK)}>Show me yours</button></div>}
-            {m.phase === 'checking' && <span style={css(`font-size:12.5px;color:var(--color-accent-text);animation:blink 1.2s infinite`)}>comparing…</span>}
+          <div className="flex flex-col gap-3">
+            <div className="text-[11px] font-semibold tracking-[.05em] uppercase text-accent-text">Your go</div>
+            <textarea data-role="go-ask-text" value={m.text} onChange={m.onText} readOnly={m.phase !== 'try'} placeholder="Your answer, in your own words or code. No looking anything up." className="w-full min-h-27.5 resize-y border border-accent-border rounded-[10px] py-2.5 px-3 font-[inherit] text-[13.5px] bg-surface box-border" />
+            {m.phase === 'try' && <div><button onClick={m.onSubmit} className={DARK}>Show me yours</button></div>}
+            {m.phase === 'checking' && <span className="text-[12.5px] text-accent-text animate-blink">comparing…</span>}
             {m.phase === 'done' && !!m.verdict && (
-              <div data-role="go-ask-verdict" data-verdict={m.verdict} style={css(`border-top:1px solid var(--color-line);padding-top:12px;display:flex;gap:10px;align-items:flex-start`)}>
-                <span style={css(`flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:2px;background:${m.verdict === 'yes' ? 'var(--color-good-soft)' : 'var(--color-accent-soft)'};color:${m.verdict === 'yes' ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>{m.verdict === 'yes' ? '✓' : m.verdict === 'partly' ? '~' : '✗'}</span>
-                <div style={css(`display:flex;flex-direction:column;gap:3px`)}>
-                  <div style={css(`font-size:14px;font-weight:600`)}>{m.verdict === 'yes' ? 'You applied what you own' : m.verdict === 'partly' ? 'You partly applied what you own' : "What you own didn't carry over yet"}</div>
-                  {!!m.verdictLine && <div style={css(`font-size:13.5px;line-height:1.5;color:var(--color-ink-2)`)}>{inline(m.verdictLine)}</div>}
+              <div data-role="go-ask-verdict" data-verdict={m.verdict} className="border-t border-line pt-3 flex gap-2.5 items-start">
+                <span className={`flex-none w-5 h-5 rounded-full flex items-center justify-center text-[11px] mt-0.5 ${m.verdict === 'yes' ? 'bg-good-soft text-good-text' : 'bg-accent-soft text-accent-text'}`}>{m.verdict === 'yes' ? '✓' : m.verdict === 'partly' ? '~' : '✗'}</span>
+                <div className="flex flex-col gap-[3px]">
+                  <div className="text-[14px] font-semibold">{m.verdict === 'yes' ? 'You applied what you own' : m.verdict === 'partly' ? 'You partly applied what you own' : "What you own didn't carry over yet"}</div>
+                  {!!m.verdictLine && <div className="text-[13.5px] leading-normal text-ink-2">{inline(m.verdictLine)}</div>}
                 </div>
               </div>
             )}
-            {m.phase === 'done' && !!m.note && <div data-role="go-ask-note" style={css(`${m.verdict ? '' : 'border-top:1px solid var(--color-line);padding-top:12px'}`)}><Md text={m.note} small /></div>}
+            {m.phase === 'done' && !!m.note && <div data-role="go-ask-note" className={m.verdict ? '' : 'border-t border-line pt-3'}><Md text={m.note} small /></div>}
             {m.phase === 'done' && (m.deeper || []).length > 0 && (
-              <div data-role="go-deeper" style={css(`display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-line);padding-top:12px`)}>
-                <div style={css(`font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-muted)`)}>Worth going deeper on</div>
+              <div data-role="go-deeper" className="flex flex-col gap-2 border-t border-line pt-3">
+                <div className="text-[11px] font-semibold tracking-[.05em] uppercase text-muted">Worth going deeper on</div>
                 {m.deeper.map((d, i) => (
-                  <button key={i} onClick={() => m.onDeeper(d)} data-role="go-deeper-item" style={css(`text-align:left;background:var(--color-surface);border:1px solid var(--color-line);border-radius:10px;padding:9px 12px;font-size:13.5px;color:var(--color-ink);display:flex;justify-content:space-between;gap:10px;align-items:center`)} className="hv3"><span>{inline(d)}</span><span style={css(`flex:none;font-size:12.5px;color:var(--color-accent-text)`)}>Ask Claude →</span></button>
+                  <button key={i} onClick={() => m.onDeeper(d)} data-role="go-deeper-item" className="text-left bg-surface border border-line rounded-[10px] py-[9px] px-3 text-[13.5px] text-ink flex justify-between gap-2.5 items-center hover:border-accent"><span>{inline(d)}</span><span className="flex-none text-[12.5px] text-accent-text">Ask Claude →</span></button>
                 ))}
-                <div style={css(`font-size:12px;color:var(--color-muted)`)}>Not saved to Learnings. Own it after Claude explains, if you want to keep it.</div>
+                <div className="text-[12px] text-muted">Not saved to Learnings. Own it after Claude explains, if you want to keep it.</div>
               </div>
             )}
           </div>
         )}
 
         {m.phase === 'done' && (
-          <div style={css(`display:flex;gap:10px;align-items:center;flex-wrap:wrap`)}>
-            <button onClick={m.onAskAbout} data-role="ask-claude" style={css(`background:none;border:1px solid var(--color-accent-border);border-radius:9px;padding:8px 13px;font-size:13px;color:var(--color-accent-text)`)} className="hv4">Ask Claude about this</button>
-            <button onClick={m.onClosePanel} style={css(DARK)}>Back to chat</button>
-            <span style={css(`font-size:13px;color:var(--color-muted)`)}>Claude's answer is in the chat.</span>
+          <div className="flex gap-2.5 items-center flex-wrap">
+            <button onClick={m.onAskAbout} data-role="ask-claude" className="bg-transparent border border-accent-border rounded-[9px] py-2 px-[13px] text-[13px] text-accent-text hover:bg-accent-soft">Ask Claude about this</button>
+            <button onClick={m.onClosePanel} className={DARK}>Back to chat</button>
+            <span className="text-[13px] text-muted">Claude's answer is in the chat.</span>
           </div>
         )}
-        {m.phase !== 'done' && <div><button onClick={m.onClosePanel} style={css(QUIET)} className="hv6">Back to chat</button></div>}
+        {m.phase !== 'done' && <div><button onClick={m.onClosePanel} className={QUIET}>Back to chat</button></div>}
       </div>
     </aside>
   );
@@ -133,39 +132,39 @@ export function GapPanel({ m }) {
   const done = m.phase === 'done', r = m.result;
   const steps = [{ label: 'Answer it', cur: !done, done }, { label: 'Reveal', cur: done, done: false }];
   return (
-    <aside data-role="gap-panel" style={css(`width:46%;min-width:420px;max-width:760px;flex:none;border-left:1px solid var(--color-line);background:var(--color-page);display:flex;flex-direction:column;animation:slidein .25s ease`)}>
-      <div style={css(`display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 28px;border-bottom:1px solid var(--color-line);flex:none`)}>
-        <span style={css(`font-family:Newsreader,Georgia,serif;font-size:24px`)}>Close the gap</span>
-        <button onClick={m.onClosePanel} data-role="gap-close" aria-label="Close, back to chat" title="Close, back to chat" style={css(`background:none;border:none;font-size:20px;line-height:1;color:var(--color-muted);padding:4px 6px;border-radius:6px`)} className="hv4">×</button>
+    <aside data-role="gap-panel" className="w-[46%] min-w-105 max-w-190 flex-none border-l border-line bg-page flex flex-col animate-slidein">
+      <div className="flex items-center justify-between gap-3 py-4.5 px-7 border-b border-line flex-none">
+        <span className="font-serif text-[24px]">Close the gap</span>
+        <button onClick={m.onClosePanel} data-role="gap-close" aria-label="Close, back to chat" title="Close, back to chat" className="bg-transparent border-none text-[20px] leading-none text-muted py-1 px-1.5 rounded-md hover:bg-accent-soft">×</button>
       </div>
-      <div style={css(`flex:1;overflow:auto;padding:24px 28px 32px;display:flex;flex-direction:column;gap:18px`)}>
+      <div className="flex-1 overflow-auto pt-6 pb-8 px-7 flex flex-col gap-4.5">
         <Stepper steps={steps} />
-        <div style={css(`display:flex;flex-direction:column;gap:6px`)}>
-          <span style={css(LABEL)}>THE GAP</span>
-          <span style={css(`font-family:Newsreader,Georgia,serif;font-size:26px;line-height:1.2`)}>{m.gapTopic}</span>
+        <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>THE GAP</span>
+          <span className="font-serif text-[26px] leading-[1.2]">{m.gapTopic}</span>
         </div>
-        {m.phase === 'loading' && <div style={css(`font-size:13px;color:var(--color-accent-text);animation:blink 1.2s infinite`)}>Writing a question for you…</div>}
+        {m.phase === 'loading' && <div className="text-[13px] text-accent-text animate-blink">Writing a question for you…</div>}
         {m.phase !== 'loading' && (
-          <div data-role="gap-check" style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            <div style={css(`font-size:15px;line-height:1.5`)}>{inline(m.check.question)}</div>
-            <textarea data-role="gap-answer" value={m.text} onChange={m.onText} readOnly={done} placeholder="In your own words. No looking back." style={css(`width:100%;min-height:110px;resize:vertical;border:1px solid var(--color-accent-border);border-radius:10px;padding:10px 12px;font-size:14px;background:var(--color-surface);outline:none;font-family:inherit;box-sizing:border-box`)}></textarea>
-            {m.phase === 'ask' && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={m.onSubmit} style={css(DARK)}>Check my answer</button>{!!m.judging && <span style={css(`font-size:12.5px;color:var(--color-accent-text);animation:blink 1.2s infinite`)}>reading it…</span>}</div>}
+          <div data-role="gap-check" className="flex flex-col gap-3">
+            <div className="text-[15px] leading-normal">{inline(m.check.question)}</div>
+            <textarea data-role="gap-answer" value={m.text} onChange={m.onText} readOnly={done} placeholder="In your own words. No looking back." className="w-full min-h-27.5 resize-y border border-accent-border rounded-[10px] py-2.5 px-3 text-[14px] bg-surface outline-none font-[inherit] box-border"></textarea>
+            {m.phase === 'ask' && <div className="flex gap-2 items-center"><button onClick={m.onSubmit} className={DARK}>Check my answer</button>{!!m.judging && <span className="text-[12.5px] text-accent-text animate-blink">reading it…</span>}</div>}
             {done && (
-              <div data-role="gap-result" style={css(`display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-line);padding-top:14px`)}>
-                <div style={css(`font-family:Newsreader,serif;font-size:19px;color:${r.closed ? 'var(--color-good-text)' : 'var(--color-accent-text)'}`)}>{r.closed ? '✓ Gap closed' : 'Not closed yet'}</div>
-                {r.points.map((p, i) => <div key={i} style={css(`display:flex;gap:8px;font-size:13.5px;color:var(--color-ink-2);line-height:1.45`)}><span style={css(`color:${p.ok ? 'var(--color-good-text)' : 'var(--color-faint)'}`)}>{p.ok ? '✓' : '○'}</span><span>{inline(p.point)}</span></div>)}
-                {!!r.feedback && <div style={css(`font-size:13.5px;color:var(--color-ink-2);line-height:1.5`)}>{inline(r.feedback)}</div>}
+              <div data-role="gap-result" className="flex flex-col gap-2 border-t border-line pt-3.5">
+                <div className={`font-serif text-[19px] ${r.closed ? 'text-good-text' : 'text-accent-text'}`}>{r.closed ? '✓ Gap closed' : 'Not closed yet'}</div>
+                {r.points.map((p, i) => <div key={i} className="flex gap-2 text-[13.5px] text-ink-2 leading-[1.45]"><span className={`${p.ok ? 'text-good-text' : 'text-faint'}`}>{p.ok ? '✓' : '○'}</span><span>{inline(p.point)}</span></div>)}
+                {!!r.feedback && <div className="text-[13.5px] text-ink-2 leading-normal">{inline(r.feedback)}</div>}
                 {r.closed
-                  ? <div style={css(`font-size:13px;color:var(--color-good-text)`)}>It's now in what you own on Learnings, and comes back for recall in 3 days.</div>
-                  : <div style={css(`font-size:13px;color:var(--color-muted)`)}>Keep talking it through with Claude in the chat, then check again.</div>}
+                  ? <div className="text-[13px] text-good-text">It's now in what you own on Learnings, and comes back for recall in 3 days.</div>
+                  : <div className="text-[13px] text-muted">Keep talking it through with Claude in the chat, then check again.</div>}
               </div>
             )}
           </div>
         )}
-        <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
-          <button onClick={m.onClosePanel} style={css(done ? DARK : QUIET)} className={done ? '' : 'hv6'}>Back to chat</button>
-          {done && !r.closed && <button onClick={m.onAgain} style={css(QUIET)} className="hv6">Check me again</button>}
-          {done && <button onClick={m.onAskAbout} data-role="ask-claude" style={css(`background:none;border:1px solid var(--color-accent-border);border-radius:9px;padding:8px 13px;font-size:13px;color:var(--color-accent-text)`)} className="hv4">Ask Claude about this</button>}
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={m.onClosePanel} className={done ? DARK : QUIET}>Back to chat</button>
+          {done && !r.closed && <button onClick={m.onAgain} className={QUIET}>Check me again</button>}
+          {done && <button onClick={m.onAskAbout} data-role="ask-claude" className="bg-transparent border border-accent-border rounded-[9px] py-2 px-[13px] text-[13px] text-accent-text hover:bg-accent-soft">Ask Claude about this</button>}
         </div>
       </div>
     </aside>

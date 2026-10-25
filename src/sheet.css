@@ -1,0 +1,12 @@
+/* On a phone the side panels become a sheet that slides up over the chat, as claude.ai shows artifacts on mobile;
+   ⌄ tucks it down to a bar so the chat can be read, ⌃ brings it back. On a wide screen the wrapper has no effect on
+   layout. Plain CSS because it styles the panel by its place in the sheet and the sheet's state, not one element;
+   being outside Tailwind's layers, it wins over the panels' own classes. Everything else for phones is phone: classes. */
+.sheet{display:contents}
+@keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
+@media (max-width: 760px){
+  .sheet{display:block;position:fixed;inset:0;z-index:40;transition:transform .25s ease;animation:sheetup .28s ease}
+  .sheet.min{transform:translateY(calc(100% - 64px))}
+  .sheet > aside{width:100%;min-width:0;max-width:none;height:100%;border-left:none;border-radius:16px 16px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.14);animation:none}
+  .sheet > aside > div{padding-left:16px;padding-right:16px}
+}

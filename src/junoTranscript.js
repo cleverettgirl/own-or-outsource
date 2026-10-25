@@ -3,7 +3,7 @@
 // weren't pasted is marked as a gap rather than invented.
 // The Juno starter replays it; any part of any answer can be owned.
 export const JUNO_TURNS = [
-  { user: 'I\'m trying to prep for a meeting that i have later today. Can you help me with explaining certian things  i paste from these articles and helping me really understand what they\'re saying. checking my undrestanding so i can go into this meeting with insights and confidence.' },
+  { user: 'I\'m trying to prep for a meeting that i have later today. Can you help me with explaining certain things  i paste from these articles and helping me really understand what they\'re saying. checking my understanding so i can go into this meeting with insights and confidence.' },
   { gap: 'Earlier turns aren’t shown: the article passages and the first part of the Airbnb discussion.' },
   { claude: `Right, and one small refinement worth keeping straight for the meeting: “commoditizing trust” is the mechanism — it’s the specific thing Airbnb had to solve in the lodging vertical. “Owning the user relationship” is the result — you have an account with Airbnb, you pay Airbnb, you complain to Airbnb if something’s wrong, not the host. Those are two different concepts that happen to be connected in this example.
 
@@ -12,7 +12,7 @@ That distinction matters because every other company in the framework had to com
 So the general pattern you’re building toward is: find what used to require an expensive, trusted, scarce intermediary → figure out how to make that thing cheap/abundant/digital → whoever does that first captures the user relationship and wins.
 
 What’s next — are you moving into the main 2015 piece’s argument about the value chain (suppliers/distributors/consumers), or sticking with the Airbnb-specific article a bit longer?` },
-  { user: 'wehn you say "own the user relationship" how exactly are they doing this? or what do you mean' },
+  { user: 'when you say "own the user relationship" how exactly are they doing this? or what do you mean' },
   { claude: `Good question to stop on — it’s a little abstract until you ground it in mechanics. “Owning the user relationship” means the platform, not the supplier, controls the things that make you keep coming back to them specifically:
 
 You have an account with Airbnb — your login, your payment method on file, your booking history, your saved searches and wishlists. When something goes wrong, you contact Airbnb support, not the host directly. Airbnb holds your money in escrow and pays the host after the fact. Airbnb’s app is the thing you open when you want to travel — not “let me go find Sarah’s personal website to see if her apartment is still available.” Even the review you leave lives on Airbnb’s platform, building Airbnb’s trust system, not portable reputation that follows you if you decided to book directly with that same host next time.
@@ -22,11 +22,12 @@ The test Thompson uses later (in the 2017 piece) is basically: if the supplier d
 So “owning the user relationship” isn’t a metaphor — it’s very literally: who has your account, your payment info, your habitual attention, and your recourse when something breaks.
 
 Does that land? Keep going with the piece?` },
-  { user: 'yes that lands, thank you. I want to hink about Juno in this regard and what are our scarce thing is' },
+  { user: 'yes that lands, thank you. I want to think about Juno in this regard and what are our scarce thing is' },
   { claude: `Nice — let’s build it the same way. Before you get to Juno specifically, think one step back: pre-internet (and even early internet), if you wanted to read something worth your time, what stood between you and a pile of random writing? What did newspapers, magazines, and book publishers used to have to do — expensively — to make you trust a piece of writing was worth reading?
 
 Take a stab at naming that scarce thing, the same way we named “trust” for Airbnb, and then we’ll see if Juno found a way to commoditize it.` },
-  { user: `before the internet, i would probbaly use word of mouth or some sort of book store curated list or something to handle all the different options and reduce the noise to choose.
+  {
+    user: `before the internet, i would probably use word of mouth or some sort of book store curated list or something to handle all the different options and reduce the noise to choose.
 
 reviews or nyt bestsellers etc also helped.` },
   { claude: `Exactly right — the scarce thing was editorial curation: an editor reading a manuscript and deciding it’s worth printing, a bookstore buyer deciding what gets shelf space, a bestseller list distilling millions of options into a short trustworthy signal. That gatekeeping was expensive and slow, and it existed because print has hard limits — a magazine has finite pages, a bookstore has finite shelves, so someone has to decide what’s worth the scarce slot.
