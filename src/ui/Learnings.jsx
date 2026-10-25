@@ -61,7 +61,7 @@ function Map({ L }) {
           <span className={`rounded-full ${it.due ? 'w-7.5 h-7.5 bg-accent animate-[mappulse_1.8s_ease-out_infinite]' : 'w-5.5 h-5.5 bg-good-mid'} ${it.id === L.justOwned ? 'shadow-[0_0_0_4px_var(--color-surface),0_0_0_6px_var(--color-accent)]' : ''}`}></span>
           {it.id === L.justOwned && <span data-role="just-owned" className="text-[10.5px] font-semibold tracking-[.05em] text-accent">JUST OWNED</span>}
           <span className="text-[12.5px] font-medium text-center max-w-37.5 leading-[1.3] text-ink">{shortTitle(it.title)}</span>
-          <span className="text-[11px] text-muted">{shortFrom(it.from)}</span>
+          <span className="text-[11px] text-muted max-w-27 truncate">{shortFrom(it.from)}</span>
         </button>
       ))}
       {kids.map((k, i) => (

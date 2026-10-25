@@ -97,7 +97,9 @@ export const TASKS = {
 
   // ---- recall ----
   recallTask: { kind: 'json', json: true, system: 'Strict JSON only.',
-    user: i => `Write a short unassisted recall task (one sentence, starts with "From memory:") testing ${i.title ? `"${s(i.title)}"` : `the same concept as this ${s(i.lang)} code`}, plus a reference answer. Return ONLY JSON {"task": string, "reference": string}.\n${s(i.code)}` },
+    // Recall applies the idea to a new case, like the try (§8f invariants 2-3, log 42): days later, nobody should
+    // need to remember Claude's wording, lists or labels to answer it.
+    user: i => `Someone owned ${i.title ? `"${s(i.title)}"` : `the idea in this ${s(i.lang)} code`} a few days ago, from the answer below. Write a short unassisted recall task that checks they can still USE the idea: a new concrete situation, from the same part of life as the answer (work stays at work, home stays at home), with different people and details, then one question asking what they would do or say, or what is going on, and why. It must make sense on its own to someone who doesn't remember the answer's wording: never ask them to recall a term, a named approach, a list, a number of steps or signs, or anything the answer said. Under 60 words, starting "From memory:". Also give a reference answer: what a good answer does, in 1-2 sentences. Return ONLY JSON {"task": string, "reference": string}.\nThe answer:\n${s(i.code)}` },
 
   gapRecall: { kind: 'json', json: true, system: 'Strict JSON only.',
     user: i => `Write one new question that checks, from memory, whether someone still understands "${s(i.topic)}" by applying it to a different concrete case than before (${s(i.before)}). Return ONLY JSON {"question": string}` },
