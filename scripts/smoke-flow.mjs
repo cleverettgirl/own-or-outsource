@@ -72,7 +72,7 @@ step('home: greeting, composer without an upfront toggle, typed starters as chip
 step('home: seeded chats are past chats in the sidebar', document.querySelectorAll('[data-role=past-chat]').length === 2);
 step('recall: an item from a few days ago is ready, shown on Learnings', document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') === '1 to recall');
 
-step('home: the quick starts are prompts: leadership, SQL, React, risk, reading, tax; Juno is a past chat', ['Leadership · leading without a title', 'SQL · revenue per customer', 'React · fetch on mount', 'Health · a bacon and cancer headline', 'Reading · sounds out words, misses the story', 'Money · a raise into a higher tax bracket'].every(l => buttons().some(b => b.textContent === l)) && !buttons().some(b => /Start here/.test(b.textContent)));
+step('home: the quick starts are prompts: leadership, SQL, React, risk, parenting, tax; Juno is a past chat', ['Leadership · leading without a title', 'SQL · revenue per customer', 'React · fetch on mount', 'Health · a bacon and cancer headline', 'Parenting · a meltdown leaving the park', 'Money · a raise into a higher tax bracket'].every(l => buttons().some(b => b.textContent === l)) && !buttons().some(b => /Start here/.test(b.textContent)));
 await click('SQL · revenue per customer');
 await wait(50);
 step('a quick start sends its prompt as your message; offline, the saved answer stands in, labelled', text().includes('Write me a SQL query for revenue per customer') && text().includes("this is Claude's saved answer to the same question"));
@@ -729,8 +729,8 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   await click('×');
 }
 
-// ---- The reading and tax starters are live prompts with no saved answer: offline, they say so instead of standing in.
-for (const [chip, prompt] of [['Reading · sounds out words, misses the story', "My 6-year-old can sound out words fine"], ['Money · a raise into a higher tax bracket', 'moves me into a higher tax bracket']]) {
+// ---- The parenting and tax starters are live prompts with no saved answer: offline, they say so instead of standing in.
+for (const [chip, prompt] of [['Parenting · a meltdown leaving the park', "melts down every time we have to leave the park"], ['Money · a raise into a higher tax bracket', 'moves me into a higher tax bracket']]) {
   await click('New chat');
   globalThis.fetch = offline;
   await click(chip); await wait(150);
@@ -757,6 +757,31 @@ for (const [chip, prompt] of [['Reading · sounds out words, misses the story', 
   globalThis.fetch = offline;
   step("sam: on an idea (not code), Sam asks what the idea is, never about code", text().includes("What's the main idea, in plain words") && !text().includes('what this code is for'));
   await click('Done, back to chat');
+}
+
+// ---- A generated choice try whose right answers are the longest options is asked for again (the length giveaway).
+{
+  await click('New chat');
+  const q = (prompt, right, wrong1, wrong2) => ({ prompt, short: prompt, options: [{ label: right, correct: true }, { label: wrong1, correct: false, gap: 'No.' }, { label: wrong2, correct: false, gap: 'No.' }] });
+  const lopsided = { format: 'choice', task: 'Now a new situation: LOPSIDED speed cameras.', questions: [
+    q('Why did crashes drop?', 'A record year is partly bad luck, and that luck tends not to repeat the next year', 'Drivers got careful', 'Roads aged'),
+    q('What would show the cameras worked?', 'Compare with similar high-crash intersections that got no cameras at all', 'Wait a year', 'Ask drivers')] };
+  const balanced = { format: 'choice', task: 'Now a new situation: BALANCED speed cameras.', questions: [
+    q('Why did crashes drop?', 'A bad year is partly luck that fades', 'Drivers got more careful in general', 'Old roads get safer as they age'),
+    q('What would show the cameras worked?', 'Compare similar sites without cameras', 'Watch the same sites for a few years', 'Survey drivers about the cameras')] };
+  let tries = 0;
+  globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body);
+    const text = b.task === 'chat' ? 'Probably not: a bad game is partly bad luck, so the next one is usually better whatever the coach does.'
+      : b.task === 'focusOptions' ? JSON.stringify({ personal: false, spot: '', options: [{ label: 'Spotting regression to the mean', mode: 'concept' }] })
+      : b.task === 'writeTask' ? JSON.stringify(++tries === 1 ? lopsided : balanced)
+      : '{}';
+    return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ text }) }; };
+  await click('Parenting · a meltdown leaving the park'); await wait(150);
+  await ownAll(); await wait(100);
+  await click('Spotting regression to the mean'); await wait(150);
+  globalThis.fetch = offline;
+  step('length giveaway: a try where the longest option is right twice is asked for again, and the balanced one is used', tries === 2 && text().includes('BALANCED speed cameras') && !text().includes('LOPSIDED'));
+  await click('×');
 }
 
 // ---- A personal topic has no answer key: recognition practice on made-up people, nothing scored (research §13).

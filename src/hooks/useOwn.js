@@ -1,6 +1,7 @@
 import { ask, complete } from '../claude.js';
 import { SQL_TARGETS } from '../targets.js';
 import { normalizeSpot, spotSummary } from '../spot.js';
+import { longestIsRight } from '../choiceCheck.js';
 import { ruleNotes, keepQuoted } from '../notes.js';
 import { tally } from '../scoring.js';
 import { isColdStart } from '../gaps.js';
@@ -231,7 +232,12 @@ export function useOwn(app) {
     if (sc && sc.writeTask && (!o.focus || o.focus.whole)) { setOwn(cur => ({ write: { ...cur.write, task: sc.writeTask, ref: sc.writeRef, schema: sc.schema, requirements: sc.writeRequirements || null } })); return; }
     setOwn(cur => ({ write: { ...cur.write, loading: true } }));
     try {
-      const r = await ask('writeTask', { label: o.focus ? o.focus.label : '', code: o.code, fullCode: o.fullCode });
+      const input = { label: o.focus ? o.focus.label : '', code: o.code, fullCode: o.fullCode };
+      let r = await ask('writeTask', input);
+      // A choice try where the longest option is right in 2+ questions can be passed without the idea: ask once more,
+      // and keep whichever gives less away (a retry that fails or comes back worse leaves the first one).
+      const tells = x => x.format === 'choice' ? longestIsRight(x.questions) : 0;
+      if (tells(r) >= 2) { try { const again = await ask('writeTask', input); if (tells(again) < tells(r)) r = again; } catch (e) { /* keep the first */ } }
       const fmt = ['code', 'choice', 'explain', 'steps'].includes(r.format) ? r.format : 'explain';
       let patch = { task: r.task, schema: String(r.context || '').trim(), format: fmt, loading: false, orderMatters: !!r.orderIsInsight };
       if (fmt === 'code') patch = { ...patch, ref: r.reference || '', requirements: (r.requirements || []).filter(Boolean).slice(0, 4) };

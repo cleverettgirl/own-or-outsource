@@ -8,7 +8,6 @@ export default function Sidebar({ V }) {
     <aside data-role="sidebar" onClickCapture={e => { if (e.target.closest && e.target.closest('button')) V.closeNav(); }} className="w-65 flex-none bg-sidebar border-r border-line flex flex-col py-4 px-3 gap-4.5 overflow-auto phone:fixed phone:inset-y-0 phone:left-0 phone:z-60 phone:w-[min(300px,84vw)] phone:-translate-x-[102%] phone:[transition:translate_.22s_ease] phone:shadow-[0_0_40px_rgba(0,0,0,.18)] phone:in-[.nav-open]:translate-x-0">
       <div className="flex items-center justify-between px-1.5">
         <span className="font-serif text-[23px] tracking-[-.01em]">Claude</span>
-        <span className="w-4.5 h-3.5 border-[1.4px] border-muted rounded-[3px]"></span>
       </div>
       <div className="flex bg-line rounded-[10px] p-[3px]">
         <span className="flex-1 text-center bg-surface rounded-lg py-1.5 text-[13.5px] shadow-[0_1px_2px_rgba(0,0,0,.08)]">Chat</span>

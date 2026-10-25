@@ -13,9 +13,11 @@ export const LEAD_QUESTION = "I'm not a manager, but I want to grow as a leader 
 // the way a person would. Relative vs absolute risk is what the answer has to teach; owning a calculation in it gets a
 // generated "work it out" try (log 63).
 export const RISK_QUESTION = 'I just saw a headline saying that eating 50g of processed meat a day, about two slices of bacon, raises your risk of bowel cancer by 18%. Should I stop eating meat?';
-// Two more topics nobody prepared targets for (§13): a parent's question (decoding vs comprehension) and a money one
-// (marginal vs effective rate). Only the person's question is written here; the try is generated, as for leadership.
-export const READING_QUESTION = "My 6-year-old can sound out words fine but often can't tell me what the story was about. What's going on, and how can I help at home?";
+// Two more topics nobody prepared targets for (§13): a parenting strategy and marginal vs effective tax rate. Each question
+// reports something the person believes or already tried, so the answer corrects them and there's a move to own.
+// Tried and cut: reading development (advice, nothing to own) and a coach who yells (not how a parent would ask).
+// Only the person's question is written here; the try is generated.
+export const PARK_QUESTION = "My 6-year-old melts down every time we have to leave the park, and when I explain why we have to go it just gets worse. I've been reading The Whole-Brain Child. How do I actually use 'connect and redirect' in the moment?";
 export const TAX_QUESTION = 'I just got a raise that moves me into a higher tax bracket. Will I actually take home less?';
 // Names userId, as the recorded component and its walkthrough do (asked with "id", live answers used `id`).
 export const REACT_LIVE_QUESTION = 'How do I fetch a user by userId in a React component when it mounts, and refetch when userId changes?';

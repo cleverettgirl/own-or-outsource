@@ -28,3 +28,16 @@ export function checkChoice(check, picked) {
   const gap = [firstGap, skipped ? `${skipped} question${skipped > 1 ? 's' : ''} left blank.` : ''].filter(Boolean).join(' ');
   return { score, why: WHY[score], worked, gap, corrections: [], items };
 }
+
+// How many questions give the answer away by length: the right option is the longest by a clear margin (a few
+// characters either way is noise). Generated tries had this in about 2 of 3 questions despite the prompt's rule
+// (eval-generated.mjs; live runs 2026-10-25), and anyone picking the longest option would pass without the idea.
+// questions: as Claude returns them, [{ options: [{ label, correct }] }]
+export function longestIsRight(questions) {
+  return (questions || []).filter(q => {
+    const opts = (q.options || []).filter(o => o && o.label), right = opts.find(o => o.correct);
+    if (!right || opts.length < 2) return false;
+    const longestOther = Math.max(...opts.filter(o => o !== right).map(o => o.label.length));
+    return right.label.length > longestOther + 3;
+  }).length;
+}

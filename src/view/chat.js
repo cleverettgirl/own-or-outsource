@@ -38,7 +38,7 @@ export function renderVals(app) {
     hasCalibration: cal.items > 0, calibrationText: cal.text, calibrationTitle: cal.title,
     composerPlaceholder: o ? 'Reply to Claude…' : 'Ask Claude anything…',
     onComposer: e => app.chat.set({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); app.chat.send(); } },
-    send: app.chat.send, newChat: app.chat.newChat, startLead: app.chat.startLead, startRisk: app.chat.startRisk, startReading: app.chat.startReading, startTax: app.chat.startTax, startSql: app.chat.startSql, startReact: app.chat.startReact,
+    send: app.chat.send, newChat: app.chat.newChat, startLead: app.chat.startLead, startRisk: app.chat.startRisk, startPark: app.chat.startPark, startTax: app.chat.startTax, startSql: app.chat.startSql, startReact: app.chat.startReact,
     composerRef: app.composerRef, hasSel: !!S.sel, selX: S.sel ? S.sel.x + 'px' : '0px', selY: S.sel ? S.sel.y + 'px' : '0px', ownSelection: app.chat.ownSelection, askSelection: app.chat.askSelection, scrollRef: app.scrollRef,
   };
   return o ? { ...V, ...ownVals(app, o) } : V;

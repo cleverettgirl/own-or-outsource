@@ -8,7 +8,7 @@ import { JUNO_TURNS } from '../junoTranscript.js';
 import { REACT_TURNS } from '../reactTranscript.js';
 import { SQL_TURNS, SQL_QUESTION } from '../sqlTranscript.js';
 import { isColdStart, COLD_START } from '../gaps.js';
-import { SQL, REACT, BOOK, JUNO, REACT_TIMING, isReactTiming, LEAD_QUESTION, RISK_QUESTION, READING_QUESTION, TAX_QUESTION, REACT_LIVE_QUESTION } from '../scenarios.js';
+import { SQL, REACT, BOOK, JUNO, REACT_TIMING, isReactTiming, LEAD_QUESTION, RISK_QUESTION, PARK_QUESTION, TAX_QUESTION, REACT_LIVE_QUESTION } from '../scenarios.js';
 import { quote, answerText, ownsWhole } from '../util.js';
 import { useMergeState } from './useMergeState.js';
 
@@ -72,7 +72,7 @@ export function useChat(app) {
   }
   const startLead = () => startLive(LEAD_QUESTION);
   const startRisk = () => startLive(RISK_QUESTION);
-  const startReading = () => startLive(READING_QUESTION);
+  const startPark = () => startLive(PARK_QUESTION);
   const startTax = () => startLive(TAX_QUESTION);
   const startSql = () => startLive(SQL_QUESTION, SQL, SQL_TURNS[0].claude);
   const startReact = () => startLive(REACT_LIVE_QUESTION, REACT, REACT_TURNS[0].claude);
@@ -241,6 +241,6 @@ export function useChat(app) {
     if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); set({ flashMsg: o.msgId }); setTimeout(() => set({ flashMsg: null }), 1600); }
   }
 
-  return { state, ref, set, markOwnedText, focusPanel, newChat, openLearnings, seeInLearnings, backFromLearnings, startLead, startRisk, startReading, startTax, startSql, startReact,
+  return { state, ref, set, markOwnedText, focusPanel, newChat, openLearnings, seeInLearnings, backFromLearnings, startLead, startRisk, startPark, startTax, startSql, startReact,
     startBook, startJuno, send, answer, fetchReply, showReply, checkLanded, copyAnswer, speakAnswer, setGo, onCodeMouseUp, askSelection, ownSelection, prefillChat, rereadChat };
 }

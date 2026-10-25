@@ -30,7 +30,7 @@ export default function Chat({ V }) {
                 <button onClick={V.startSql} data-role="start-sql" className={`${CHIP} hover:border-accent`}>SQL · revenue per customer</button>
                 <button onClick={V.startReact} data-role="start-react" className={`${CHIP} hover:border-accent`}>React · fetch on mount</button>
                 <button onClick={V.startRisk} data-role="start-risk" className={`${CHIP} hover:border-accent`}>Health · a bacon and cancer headline</button>
-                <button onClick={V.startReading} data-role="start-reading" className={`${CHIP} hover:border-accent`}>Reading · sounds out words, misses the story</button>
+                <button onClick={V.startPark} data-role="start-park" className={`${CHIP} hover:border-accent`}>Parenting · a meltdown leaving the park</button>
                 <button onClick={V.startTax} data-role="start-tax" className={`${CHIP} hover:border-accent`}>Money · a raise into a higher tax bracket</button>
               </div>
               <div className="text-[12.5px] text-muted text-center max-w-110 leading-normal">Ask anything, or open a past chat like the Juno strategy chat. Under any answer, the Own it icon turns it into a try.</div>
