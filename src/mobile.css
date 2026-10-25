@@ -13,7 +13,7 @@
   [data-role=sidebar]{position:fixed !important;top:0;bottom:0;left:0;z-index:60;width:min(300px,84vw) !important;transform:translateX(-102%);transition:transform .22s ease;box-shadow:0 0 40px rgba(0,0,0,.18)}
   .nav-open [data-role=sidebar]{transform:none}
   .nav-backdrop{position:fixed;inset:0;z-index:55;background:rgba(31,29,26,.35)}
-  .nav-toggle{position:absolute;top:10px;left:10px;z-index:5;width:38px;height:38px;border-radius:10px;border:1px solid #E3DFD6;background:#F6F4EF;align-items:center;justify-content:center;font-size:18px;color:#514C44}
+  .nav-toggle{position:absolute;top:10px;left:10px;z-index:5;width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--bg);align-items:center;justify-content:center;font-size:18px;color:var(--text-2)}
   [data-role=chat-header]{padding-left:58px !important}
 
   /* Chat and Learnings: less padding */
@@ -29,7 +29,7 @@
   .sheet > aside{width:100% !important;min-width:0 !important;max-width:none !important;height:100%;border-left:none !important;border-radius:16px 16px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.14);animation:none !important}
   .sheet > aside > div{padding-left:16px !important;padding-right:16px !important}
   .sheet.min{transform:translateY(calc(100% - 64px))}
-  .sheet-toggle{position:absolute;top:13px;right:56px;width:38px;height:38px;border-radius:10px;border:none;background:none;align-items:center;justify-content:center;font-size:18px;color:#8A8477;z-index:2}
+  .sheet-toggle{position:absolute;top:13px;right:56px;width:38px;height:38px;border-radius:10px;border:none;background:none;align-items:center;justify-content:center;font-size:18px;color:var(--muted);z-index:2}
   .with-sheet main{padding-bottom:64px}
   [data-role=predict-option]{height:72px !important}
   [data-role=stepper]{font-size:11.5px !important}

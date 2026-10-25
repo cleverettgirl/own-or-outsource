@@ -5,9 +5,9 @@ import React from 'react';
 import { css } from '../css.js';
 import { ChoiceQuestions } from './parts.jsx';
 
-const INK = '#1F1E1B', MUTE = '#6B665C', FAINT = '#8A8477', LINE = '#E2DCD0', ORANGE = '#C4613C', GREEN = '#7FA394';
+const INK = 'var(--text)', MUTE = 'var(--muted)', FAINT = 'var(--muted)', LINE = 'var(--border)', ORANGE = 'var(--accent)', GREEN = 'var(--good-mid)';
 const SERIF = 'Newsreader,Georgia,serif';
-const pill = { pred: 'background:#FBEDE4;color:#A85331', act: 'background:#E3EFEA;color:#3D6B5A', mute: 'background:#EFEAE0;color:#6B665C', next: `border:1px dashed #B8B1A3;color:${MUTE}` };
+const pill = { pred: 'background:var(--accent-soft);color:var(--accent-hover)', act: 'background:var(--good-soft);color:var(--good-text)', mute: 'background:var(--sunken);color:var(--muted)', next: `border:1px dashed var(--faint);color:${MUTE}` };
 // "Predicted 3 of 3", "Real work · let Claude answer", "Recall 3 days ago: 3 of 3".
 const pillText = st => /^Recall · /.test(st.label) ? `Recall ${st.label.slice(9)}: ${st.v}` : /^\d/.test(st.v) ? `${st.label} ${st.v}` : `${st.label} · ${st.v}`;
 const Pill = ({ st }) => <span style={css(`padding:4px 9px;border-radius:99px;font-size:12px;${pill[st.tone]}`)}>{pillText(st)}</span>;
@@ -17,13 +17,13 @@ const inDays = d => (d <= 0 ? 'Recall due now' : `Recall in ${Math.max(1, Math.r
 
 // A cover for each card, from the chat it came from.
 function Cover({ it, height = 120 }) {
-  const mono = t => <span style={css(`font-family:'JetBrains Mono',Menlo,monospace;color:#fff;font-size:14px`)}>{t}</span>;
-  const c = it.sc === 'BOOK' ? ['#E8906A', <span style={css(`width:40px;height:40px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:600`)}>5</span>]
-    : it.sc === 'SQL' ? ['#6A9BD8', mono({ onwhere: 'ON ≠ WHERE', joins: 'LEFT JOIN', whole: 'SELECT …' }[it.target] || 'SQL')]
-    : it.sc === 'JUNO' ? ['#A9C0B5', <span style={css(`display:flex;gap:6px`)}>{[0, 1, 2].map(i => <i key={i} style={css(`width:10px;height:10px;border-radius:50%;background:#fff;display:block`)}></i>)}</span>]
-    : it.sc === 'REACT' ? ['#9B8AC4', mono('useEffect')]
-    : it.sc === 'GAP' ? ['#F1D9C9', <span style={css(`font-size:13px;color:#A85331;font-weight:600`)}>gap closed ✓</span>]
-    : ['#ECE6DA', <span style={css(`font-family:${SERIF};font-size:26px;color:${INK}`)}>{String(it.title).split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}</span>];
+  const mono = t => <span style={css(`font-family:'JetBrains Mono',Menlo,monospace;color:var(--on-accent);font-size:14px`)}>{t}</span>;
+  const c = it.sc === 'BOOK' ? ['var(--accent-mid)', <span style={css(`width:40px;height:40px;border-radius:50%;border:2px solid var(--surface);display:grid;place-items:center;color:var(--on-accent);font-size:12px;font-weight:600`)}>5</span>]
+    : it.sc === 'SQL' ? ['var(--blue)', mono({ onwhere: 'ON ≠ WHERE', joins: 'LEFT JOIN', whole: 'SELECT …' }[it.target] || 'SQL')]
+    : it.sc === 'JUNO' ? ['var(--good-mid)', <span style={css(`display:flex;gap:6px`)}>{[0, 1, 2].map(i => <i key={i} style={css(`width:10px;height:10px;border-radius:50%;background:var(--surface);display:block`)}></i>)}</span>]
+    : it.sc === 'REACT' ? ['var(--purple)', mono('useEffect')]
+    : it.sc === 'GAP' ? ['var(--accent-soft-2)', <span style={css(`font-size:13px;color:var(--accent-hover);font-weight:600`)}>gap closed ✓</span>]
+    : ['var(--border)', <span style={css(`font-family:${SERIF};font-size:26px;color:${INK}`)}>{String(it.title).split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}</span>];
   return <div style={css(`height:${height}px;background:${c[0]};display:grid;place-items:center;flex:none`)}>{c[1]}</div>;
 }
 
@@ -41,25 +41,25 @@ function Map({ L }) {
   const at = (x, y) => `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px`;
   const chats = new Set(L.items.map(it => shortFrom(it.from))).size;
   return (
-    <div data-role="map" style={css(`position:relative;background:#fff;border:1px solid ${LINE};border-radius:14px;height:${H}px;overflow:hidden;min-width:0`)}>
+    <div data-role="map" style={css(`position:relative;background:var(--surface);border:1px solid ${LINE};border-radius:14px;height:${H}px;overflow:hidden;min-width:0`)}>
       <div style={css(`position:absolute;top:18px;left:22px;right:22px;display:flex;justify-content:space-between;gap:12px;font-size:12px;color:${MUTE};z-index:1`)}>
-        <span style={css(`font-weight:600;color:#3A3732;font-size:13px`)}>Your map · {n} {n === 1 ? 'concept' : 'concepts'} across {chats} {chats === 1 ? 'chat' : 'chats'}</span>
+        <span style={css(`font-weight:600;color:var(--text-2);font-size:13px`)}>Your map · {n} {n === 1 ? 'concept' : 'concepts'} across {chats} {chats === 1 ? 'chat' : 'chats'}</span>
         <span style={css(`display:flex;gap:14px`)}>
           <span style={css(`display:flex;gap:6px;align-items:center`)}><i style={css(`width:10px;height:10px;border-radius:50%;background:${ORANGE};display:inline-block`)}></i>due</span>
           <span style={css(`display:flex;gap:6px;align-items:center`)}><i style={css(`width:10px;height:10px;border-radius:50%;background:${GREEN};display:inline-block`)}></i>owned</span>
           <span style={css(`display:flex;gap:6px;align-items:center`)}><i style={css(`width:10px;height:10px;border-radius:50%;border:1.5px dashed ${FAINT};display:inline-block;box-sizing:border-box`)}></i>not tried</span>
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={css(`position:absolute;inset:0;width:100%;height:100%`)} fill="none" stroke="#DDD6C8" strokeWidth="1.5">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={css(`position:absolute;inset:0;width:100%;height:100%`)} fill="none" stroke="var(--border-strong)" strokeWidth="1.5">
         <ellipse cx={cx} cy={cy} rx={rIn * 1.75} ry={rIn * 0.98} />
         <ellipse cx={cx} cy={cy} rx={rOut * 1.75} ry={rOut * 0.98} />
         {L.items.map(it => <line key={it.id} x1={cx} y1={cy} x2={pos[it.id].x} y2={pos[it.id].y} />)}
         {kids.map((k, i) => <line key={'k' + i} x1={k.px} y1={k.py} x2={k.x} y2={k.y} strokeDasharray="4 5" />)}
       </svg>
-      <div style={css(at(cx, cy) + `;width:64px;height:64px;border-radius:50%;background:${INK};color:#fff;display:grid;place-items:center;font-size:11px;font-weight:500`)}>you</div>
+      <div style={css(at(cx, cy) + `;width:64px;height:64px;border-radius:50%;background:var(--inverse);color:var(--inverse-text);display:grid;place-items:center;font-size:11px;font-weight:500`)}>you</div>
       {L.items.map(it => (
         <button key={it.id} onClick={it.due && !it.recall ? it.onRecall : undefined} title={it.title} style={css(at(pos[it.id].x, pos[it.id].y) + `;background:none;border:none;padding:0;cursor:${it.due ? 'pointer' : 'default'}`)}>
-          <span style={css(`width:${it.due ? 30 : 22}px;height:${it.due ? 30 : 22}px;border-radius:50%;background:${it.due ? ORANGE : GREEN};${it.due ? 'animation:mappulse 1.8s ease-out infinite' : ''}${it.id === L.justOwned ? `;box-shadow:0 0 0 4px #fff,0 0 0 6px ${ORANGE}` : ''}`)}></span>
+          <span style={css(`width:${it.due ? 30 : 22}px;height:${it.due ? 30 : 22}px;border-radius:50%;background:${it.due ? ORANGE : GREEN};${it.due ? 'animation:mappulse 1.8s ease-out infinite' : ''}${it.id === L.justOwned ? `;box-shadow:0 0 0 4px var(--surface),0 0 0 6px ${ORANGE}` : ''}`)}></span>
           {it.id === L.justOwned && <span data-role="just-owned" style={css(`font-size:10.5px;font-weight:600;letter-spacing:.05em;color:${ORANGE}`)}>JUST OWNED</span>}
           <span style={css(`font-size:12.5px;font-weight:500;text-align:center;max-width:150px;line-height:1.3;color:${INK}`)}>{shortTitle(it.title)}</span>
           <span style={css(`font-size:11px;color:${FAINT}`)}>{shortFrom(it.from)}</span>
@@ -79,7 +79,7 @@ function Map({ L }) {
 export default function Learnings({ V }) {
   const L = V.learn;
   const first = L.dueItems[0];
-  const card = `background:#fff;border:1px solid ${LINE};border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px`;
+  const card = `background:var(--surface);border:1px solid ${LINE};border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px`;
   const head = (title, note, color = INK) => <div style={css(`display:flex;gap:10px;align-items:baseline;flex-wrap:wrap`)}><span style={css(`font-size:18px;font-weight:600;color:${color}`)}>{title}</span>{!!note && <span style={css(`font-size:13px;color:${FAINT}`)}>{note}</span>}</div>;
   const outline = `background:none;border:1px solid ${ORANGE};color:${ORANGE};border-radius:99px;padding:7px 12px;font-size:13px;font-weight:500`;
   const SAMPLE = [
@@ -88,7 +88,7 @@ export default function Learnings({ V }) {
     { title: 'Why a P/E ratio can mislead', from: 'Reading an earnings report', steps: [{ label: 'Predicted', v: '3 of 3', tone: 'pred' }, { label: 'First try', v: '2 of 3', tone: 'act' }, { label: '3 days later', v: '3 of 3', tone: 'act' }] },
   ];
   return (
-    <div data-role="learnings" style={css(`flex:1;overflow:auto;padding:40px 48px 56px;background:#F7F4EE`)}>
+    <div data-role="learnings" style={css(`flex:1;overflow:auto;padding:40px 48px 56px;background:var(--bg)`)}>
       <div style={css(`max-width:1124px;margin:0 auto;display:flex;flex-direction:column;gap:28px`)}>
         <div style={css(`display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap`)}>
           <div>
@@ -97,34 +97,34 @@ export default function Learnings({ V }) {
             <p style={css(`margin:0;font-size:16px;color:${MUTE}`)}>What you chose to own, how your predictions compared, and what stuck.</p>
           </div>
           <div style={css(`display:flex;gap:10px;align-items:center;font-size:13px;color:${FAINT};flex-wrap:wrap`)}>
-            <button onClick={L.skipAhead} data-role="skip-ahead" style={css(`background:none;border:1px dashed #B8B1A3;border-radius:8px;padding:7px 12px;color:#3A3732;font-size:13px;white-space:nowrap`)} className="hv2">⏩ Skip ahead 3 days</button>
+            <button onClick={L.skipAhead} data-role="skip-ahead" style={css(`background:none;border:1px dashed var(--faint);border-radius:8px;padding:7px 12px;color:var(--text-2);font-size:13px;white-space:nowrap`)} className="hv2">⏩ Skip ahead 3 days</button>
             <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · {L.isDemo ? 'sample data' : 'saved in this browser'}</span>
             <button onClick={L.resetDemo} data-role="reset-demo" style={css(`background:none;border:none;padding:0;font-size:13px;color:${FAINT};text-decoration:underline;text-underline-offset:2px`)}>Reset demo</button>
           </div>
         </div>
 
         {L.empty ? (
-          <div style={css(card + ';font-size:15px;color:#3A3732;line-height:1.5')}>Nothing yet. Use the <span style={css(`color:${ORANGE}`)}>Own it</span> icon under any answer, or open a past chat in the sidebar and own what you learned there.</div>
+          <div style={css(card + ';font-size:15px;color:var(--text-2);line-height:1.5')}>Nothing yet. Use the <span style={css(`color:${ORANGE}`)}>Own it</span> icon under any answer, or open a past chat in the sidebar and own what you learned there.</div>
         ) : (
           <div data-role="learn-top" style={css(`display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px`)}>
             <Map L={L} />
             <div style={css(`display:flex;flex-direction:column;gap:16px`)}>
               {first ? (
-                <div data-role="recall-rail" style={css(`background:${ORANGE};color:#fff;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:12px;flex:1`)}>
+                <div data-role="recall-rail" style={css(`background:${ORANGE};color:var(--on-accent);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:12px;flex:1`)}>
                   <span style={css(`font-size:12px;font-weight:600;letter-spacing:.04em;opacity:.85`)}>READY TO RECALL{L.dueItems.length > 1 ? ` · ${L.dueItems.length} DUE` : ''}</span>
                   <span style={css(`font-family:${SERIF};font-size:24px;line-height:1.25`)}>{first.title}</span>
                   <span style={css(`font-size:13px;line-height:1.5;opacity:.9`)}>A quick check from memory, no looking back.{first.firstLine ? ` You ${first.firstLine}.` : ''}</span>
-                  {!first.recall && <button onClick={first.onRecall} style={css(`margin-top:auto;align-self:flex-start;background:#fff;color:${ORANGE};border:none;border-radius:99px;padding:10px 18px;font-size:14px;font-weight:600`)}>Recall now · about a minute</button>}
+                  {!first.recall && <button onClick={first.onRecall} style={css(`margin-top:auto;align-self:flex-start;background:var(--surface);color:${ORANGE};border:none;border-radius:99px;padding:10px 18px;font-size:14px;font-weight:600`)}>Recall now · about a minute</button>}
                   {!!first.recall && <span style={css(`margin-top:auto;font-size:13px;opacity:.9`)}>Recalling below ↓</span>}
                 </div>
               ) : (
-                <div data-role="recall-rail" style={css(`background:#EFEAE0;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px;flex:1`)}>
+                <div data-role="recall-rail" style={css(`background:var(--sunken);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px;flex:1`)}>
                   <span style={css(`font-size:12px;font-weight:600;letter-spacing:.04em;color:${FAINT}`)}>NOTHING DUE</span>
                   <span style={css(`font-family:${SERIF};font-size:21px;line-height:1.3;color:${INK}`)}>{L.nextUp ? L.nextUp.title : 'All caught up'}</span>
                   {!!L.nextUp && <span style={css(`font-size:13px;color:${MUTE}`)}>{inDays(L.nextUp.daysToDue).replace('Recall in', 'Comes back in')}.</span>}
                 </div>
               )}
-              <div style={css(`background:#EFEAE0;border-radius:14px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;font-size:12px;color:${MUTE}`)}>
+              <div style={css(`background:var(--sunken);border-radius:14px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;font-size:12px;color:${MUTE}`)}>
                 {L.stats.map((st, i) => <span key={i}><b style={css(`display:block;font-family:${SERIF};font-weight:400;font-size:26px;color:${INK}`)}>{st.n}</b>{st.label}</span>)}
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function Learnings({ V }) {
         )}
 
         {!!V.hasCalibration && (
-          <div data-role="calibration" title={V.calibrationTitle} style={css(`display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.5;color:#3A3732`)}>
+          <div data-role="calibration" title={V.calibrationTitle} style={css(`display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.5;color:var(--text-2)`)}>
             {L.calPct != null && <span style={css(`font-family:${SERIF};font-size:32px;color:${ORANGE};flex:none`)}>{L.calPct}%</span>}
             <span>{V.calibrationText}</span>
           </div>
@@ -141,7 +141,7 @@ export default function Learnings({ V }) {
         {!!L.recalling && (
           <section style={css(`display:flex;flex-direction:column;gap:10px`)}>
             {head('Recall', L.recalling.title, ORANGE)}
-            <div style={css(card + `;border-color:#E8C9BA`)}><Recall it={L.recalling} L={L} /></div>
+            <div style={css(card + `;border-color:var(--accent-border)`)}><Recall it={L.recalling} L={L} /></div>
           </section>
         )}
 
@@ -153,7 +153,7 @@ export default function Learnings({ V }) {
             </div>
             <div style={css(`display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px`)}>
               {L.sorted.map(it => (
-                <div key={it.id} data-role={it.due ? 'due-item' : 'learning'} data-just-owned={it.id === L.justOwned || undefined} style={css(`background:#fff;border:${it.id === L.justOwned ? `2px solid ${ORANGE}` : `1px solid ${it.due ? '#E8C9BA' : LINE}`};border-radius:12px;overflow:hidden;display:flex;flex-direction:column`)}>
+                <div key={it.id} data-role={it.due ? 'due-item' : 'learning'} data-just-owned={it.id === L.justOwned || undefined} style={css(`background:var(--surface);border:${it.id === L.justOwned ? `2px solid ${ORANGE}` : `1px solid ${it.due ? 'var(--accent-border)' : LINE}`};border-radius:12px;overflow:hidden;display:flex;flex-direction:column`)}>
                   <Cover it={it} />
                   <div style={css(`padding:16px;display:flex;flex-direction:column;gap:10px;flex:1`)}>
                     <span style={css(`font-size:15px;font-weight:600;line-height:1.3`)}>{it.title}</span>
@@ -174,13 +174,13 @@ export default function Learnings({ V }) {
 
         {L.openGaps.length > 0 && (
           <section data-role="open-gaps" style={css(`display:flex;flex-direction:column;gap:12px`)}>
-            {head('Open gaps', "things you found you don't know yet. Explore one with Claude, then check yourself to close it.", '#A85331')}
+            {head('Open gaps', "things you found you don't know yet. Explore one with Claude, then check yourself to close it.", 'var(--accent-hover)')}
             <div style={css(`display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px`)}>
               {L.openGaps.map(g => (
-                <div key={g.id} data-role="open-gap" style={css(card + `;border-color:#E8C9BA`)}>
+                <div key={g.id} data-role="open-gap" style={css(card + `;border-color:var(--accent-border)`)}>
                   <div style={css(`display:flex;justify-content:space-between;gap:12px;align-items:baseline`)}><span style={css(`font-size:15px;font-weight:600`)}>{g.topic}</span><span style={css(`font-size:12px;color:${FAINT};flex:none`)}>found {g.when}</span></div>
                   <div style={css(`font-size:13px;color:${MUTE};line-height:1.5`)}>It came up {g.origin}.{g.quote ? <> You said <i>“{g.quote}”</i></> : null}</div>
-                  <button onClick={g.onExplore} style={css(`align-self:flex-start;background:${ORANGE};color:#fff;border:none;border-radius:99px;padding:8px 16px;font-size:13.5px;font-weight:500`)}>Explore it with Claude</button>
+                  <button onClick={g.onExplore} style={css(`align-self:flex-start;background:${ORANGE};color:var(--on-accent);border:none;border-radius:99px;padding:8px 16px;font-size:13.5px;font-weight:500`)}>Explore it with Claude</button>
                 </div>
               ))}
             </div>
@@ -214,23 +214,23 @@ function Recall({ it, L }) {
   return (
     <div data-role="recall" style={css(`display:flex;flex-direction:column;gap:10px`)}>
       <div style={css(`font-size:15px;line-height:1.5`)}>{r.task || 'Preparing a question…'}</div>
-      {!!r.schema && <pre style={css(`margin:0;padding:8px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap;color:#514C44`)}>{r.schema}</pre>}
-      {!!r.before && <pre style={css(`margin:0;padding:8px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre-wrap;color:#8A847A`)}>{r.before}</pre>}
+      {!!r.schema && <pre style={css(`margin:0;padding:8px 12px;background:var(--sunken);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap;color:var(--text-2)`)}>{r.schema}</pre>}
+      {!!r.before && <pre style={css(`margin:0;padding:8px 12px;background:var(--sunken);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre-wrap;color:var(--muted)`)}>{r.before}</pre>}
       {choice ? <ChoiceQuestions qs={r.check.questions} picked={r.picked} onPick={L.onRecallPick} locked={!!r.grade} />
-        : <textarea data-role="recall-text" value={r.text} onChange={L.onRecallText} readOnly={!!r.grade} placeholder={r.placeholder || 'From memory. No looking back.'} style={css(`width:100%;min-height:72px;resize:vertical;border:1px solid #E3C9B8;border-radius:8px;padding:10px 12px;font-family:${r.lang === 'sql' ? "'JetBrains Mono',monospace" : 'inherit'};font-size:13.5px;background:#fff;outline:none`)}></textarea>}
-      {!!r.after && <pre style={css(`margin:0;padding:8px 12px;background:#F4F1EA;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre-wrap;color:#8A847A`)}>{r.after}</pre>}
-      {!r.grade && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={L.submitRecall} style={css(`background:${INK};color:#F6F4EF;border:none;border-radius:99px;padding:9px 16px;font-size:13.5px`)}>Check it</button><button onClick={L.closeRecall} style={css(`background:none;border:none;font-size:13px;color:${FAINT}`)}>Not now</button>{!!r.loading && <span style={css(`font-size:12.5px;color:#9E4B2A;animation:pulse 1.2s infinite`)}>checking…</span>}</div>}
+        : <textarea data-role="recall-text" value={r.text} onChange={L.onRecallText} readOnly={!!r.grade} placeholder={r.placeholder || 'From memory. No looking back.'} style={css(`width:100%;min-height:72px;resize:vertical;border:1px solid var(--accent-border);border-radius:8px;padding:10px 12px;font-family:${r.lang === 'sql' ? "'JetBrains Mono',monospace" : 'inherit'};font-size:13.5px;background:var(--surface);outline:none`)}></textarea>}
+      {!!r.after && <pre style={css(`margin:0;padding:8px 12px;background:var(--sunken);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre-wrap;color:var(--muted)`)}>{r.after}</pre>}
+      {!r.grade && <div style={css(`display:flex;gap:8px;align-items:center`)}><button onClick={L.submitRecall} style={css(`background:var(--inverse);color:var(--inverse-text);border:none;border-radius:99px;padding:9px 16px;font-size:13.5px`)}>Check it</button><button onClick={L.closeRecall} style={css(`background:none;border:none;font-size:13px;color:${FAINT}`)}>Not now</button>{!!r.loading && <span style={css(`font-size:12.5px;color:var(--accent-text);animation:pulse 1.2s infinite`)}>checking…</span>}</div>}
       {!!r.grade && (
         <div data-role="recall-result" style={css(`display:flex;flex-direction:column;gap:6px`)}>
           <div style={css(`font-family:${SERIF};font-size:20px`)}>{r.gapMode ? (r.full ? 'Still closed.' : 'It slipped a little.') : <>{it.then} → today: {r.right} of {r.n}</>}</div>
-          <div style={css(`font-size:13.5px;color:#514C44;line-height:1.5`)}>{r.grade.note}</div>
-          <div style={css(`font-size:13px;color:${r.full ? '#3D6B5A' : '#A85331'}`)}>{r.full ? 'It stuck. ' : "Not quite yet, so it'll come back sooner. "}{it.next ? it.next.replace('next recall', 'Next recall') + '.' : ''}</div>
+          <div style={css(`font-size:13.5px;color:var(--text-2);line-height:1.5`)}>{r.grade.note}</div>
+          <div style={css(`font-size:13px;color:${r.full ? 'var(--good-text)' : 'var(--accent-hover)'}`)}>{r.full ? 'It stuck. ' : "Not quite yet, so it'll come back sooner. "}{it.next ? it.next.replace('next recall', 'Next recall') + '.' : ''}</div>
           <div style={css(`display:flex;gap:8px;flex-wrap:wrap`)}>
-            {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.exploreRecallGap} style={css(`background:${ORANGE};color:#fff;border:none;border-radius:99px;padding:7px 14px;font-size:12.5px`)}>Explore this gap with Claude</button>}
-            {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.saveRecallGap} style={css(`background:none;border:1px solid #E3C9B8;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#A85331`)} className="hv4">Save as a gap</button>}
-            {!r.full && L.gapTopics.includes(it.title) && <span style={css(`font-size:12.5px;color:#3D6B5A;align-self:center`)}>✓ Saved as an open gap</span>}
-            <button onClick={L.askAboutRecall} data-role="recall-ask" style={css(`background:none;border:1px solid #E3C9B8;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#A85331`)} className="hv4">Ask Claude about this</button>
-            <button onClick={L.closeRecall} style={css(`background:none;border:1px solid #D9D4CA;border-radius:99px;padding:7px 14px;font-size:12.5px;color:#514C44`)}>Done</button>
+            {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.exploreRecallGap} style={css(`background:${ORANGE};color:var(--on-accent);border:none;border-radius:99px;padding:7px 14px;font-size:12.5px`)}>Explore this gap with Claude</button>}
+            {!r.full && !L.gapTopics.includes(it.title) && <button onClick={L.saveRecallGap} style={css(`background:none;border:1px solid var(--accent-border);border-radius:99px;padding:7px 14px;font-size:12.5px;color:var(--accent-hover)`)} className="hv4">Save as a gap</button>}
+            {!r.full && L.gapTopics.includes(it.title) && <span style={css(`font-size:12.5px;color:var(--good-text);align-self:center`)}>✓ Saved as an open gap</span>}
+            <button onClick={L.askAboutRecall} data-role="recall-ask" style={css(`background:none;border:1px solid var(--accent-border);border-radius:99px;padding:7px 14px;font-size:12.5px;color:var(--accent-hover)`)} className="hv4">Ask Claude about this</button>
+            <button onClick={L.closeRecall} style={css(`background:none;border:1px solid var(--border-strong);border-radius:99px;padding:7px 14px;font-size:12.5px;color:var(--text-2)`)}>Done</button>
           </div>
         </div>
       )}

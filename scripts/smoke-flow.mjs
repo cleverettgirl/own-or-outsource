@@ -622,6 +622,20 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   step('go first on ask: ON vs WHERE has a general name for new questions, free of the paid example', /ON vs WHERE/.test(idea) && !/paid|status|customer|order/i.test(idea), idea);
 }
 
+// ---- Colours are tokens (src/theme.css), so light and dark are two lists of values; a hard-coded colour would
+// stay the same in both themes.
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const files = ['src', 'src/ui'].flatMap(d => readdirSync(d).filter(f => /\.(jsx?|css)$/.test(f) && f !== 'theme.css').map(f => `${d}/${f}`));
+  const stray = files.flatMap(f => (readFileSync(f, 'utf8').match(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b(?![-\w])/g) || []).map(h => `${f} ${h}`));
+  step('theme: no hard-coded colours outside theme.css', stray.length === 0, stray.slice(0, 5).join(', '));
+  const opt = m => document.querySelector(`[data-theme-option=${m}]`);
+  await act(async () => { opt('dark').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  step('theme: Dark sets the theme and remembers it', document.documentElement.dataset.theme === 'dark' && window.localStorage.getItem('own-it:theme') === 'dark' && opt('dark').getAttribute('aria-checked') === 'true');
+  await act(async () => { opt('system').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  step('theme: System goes back to the OS setting', !document.documentElement.dataset.theme && window.localStorage.getItem('own-it:theme') === null);
+}
+
 // ---- Markdown emphasis: nested and adjacent bold/italic render with no stray asterisks (spec B2).
 {
   const { inline } = await vite.ssrLoadModule('/src/ui/parts.jsx');

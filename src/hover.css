@@ -1,10 +1,10 @@
 /* Hover states from the design (style-hover); !important beats the inline base styles. */
-.hv1:hover{background:#E6E1D7 !important}
-.hv2:hover{border-color:#2F8F86 !important;color:#1F6B64 !important}
-.hv3:hover{border-color:#C4613A !important}
-.hv4:hover{background:#FFF1E8 !important}
-.hv5:hover{box-shadow:inset 0 0 0 1px #C4613A !important}
-.hv6:hover{background:#F1EDE5 !important}
-.hv7:hover{border-color:#C4613A !important;background:#FFF1E8 !important}
-.hv8:hover{border-color:#8A847A !important}
-.hv9:hover{background:#9E4B2A !important}
+.hv1:hover{background:var(--hover) !important}
+.hv2:hover{border-color:var(--good) !important;color:var(--good-text) !important}
+.hv3:hover{border-color:var(--accent) !important}
+.hv4:hover{background:var(--accent-soft) !important}
+.hv5:hover{box-shadow:inset 0 0 0 1px var(--accent) !important}
+.hv6:hover{background:var(--sunken) !important}
+.hv7:hover{border-color:var(--accent) !important;background:var(--accent-soft) !important}
+.hv8:hover{border-color:var(--muted) !important}
+.hv9:hover{background:var(--accent-text) !important}

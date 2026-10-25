@@ -1,0 +1,64 @@
+/* Colour tokens. Every colour in the app is one of these, by role, so light and dark are two lists of values.
+   Light follows claude.ai's current light mode (white page, light grey sidebar, near-black text); the clay accent
+   and the teal for "owned" are the app's own. Dark follows the system setting unless the sidebar toggle picks one. */
+:root {
+  color-scheme: light;
+  --bg: #FFFFFF;            /* the page behind the chat */
+  --sidebar: #F8F8F6;
+  --surface: #FFFFFF;       /* cards, panels, inputs */
+  --surface-2: #FAFAF8;     /* a quieter card: code blocks, chips */
+  --sunken: #F3F3F0;        /* inline code, wells, quiet hovers */
+  --bubble: #F0EFEB;        /* your messages */
+  --hover: #ECECE8;
+  --border-soft: #F0EFEB;
+  --border: #E6E5E0;
+  --border-strong: #D5D4CE;
+  --text: #141413;
+  --text-2: #3D3D3A;
+  --muted: #73726C;
+  --faint: #A9A8A1;
+  --inverse: #141413;       /* dark buttons and the highlight popover */
+  --inverse-text: #FFFFFF;
+  --on-accent: #FFFFFF;     /* text on clay or teal */
+  --accent: #C4613A;
+  --accent-hover: #A85331;
+  --accent-text: #9E4B2A;
+  --accent-deep: #5A3A2A;
+  --accent-mid: #E3A88A;
+  --accent-border: #EBCDBD;
+  --accent-soft-2: #FADCCB;
+  --accent-soft: #FCEEE7;
+  --good: #2F8F86;
+  --good-text: #1F6B64;
+  --good-mid: #7FA394;
+  --good-border: #CFE3DE;
+  --good-soft: #E4F2EF;
+  --olive: #5B7F3C;
+  --blue: #6A9BD8;
+  --purple: #9B8AC4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #262624; --sidebar: #1F1E1D; --surface: #30302E; --surface-2: #2B2B29; --sunken: #1F1E1D; --bubble: #141413;
+    --hover: #3A3936; --border-soft: #34332F; --border: #3E3D3A; --border-strong: #4D4C48;
+    --text: #F5F4EF; --text-2: #D9D7CF; --muted: #A6A39A; --faint: #76746D;
+    --inverse: #F5F4EF; --inverse-text: #1F1E1D; --on-accent: #FFFFFF;
+    --accent: #D97757; --accent-hover: #E08A6D; --accent-text: #EE9B7A; --accent-deep: #F0CDBB; --accent-mid: #B5674A;
+    --accent-border: #6B4434; --accent-soft-2: #5A3426; --accent-soft: #3A2A22;
+    --good: #3FA89D; --good-text: #7CCFC4; --good-mid: #6E9A88; --good-border: #2E5550; --good-soft: #1E3532;
+    --olive: #9DBB7A; --blue: #7FA8DE; --purple: #A898D0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #262624; --sidebar: #1F1E1D; --surface: #30302E; --surface-2: #2B2B29; --sunken: #1F1E1D; --bubble: #141413;
+  --hover: #3A3936; --border-soft: #34332F; --border: #3E3D3A; --border-strong: #4D4C48;
+  --text: #F5F4EF; --text-2: #D9D7CF; --muted: #A6A39A; --faint: #76746D;
+  --inverse: #F5F4EF; --inverse-text: #1F1E1D; --on-accent: #FFFFFF;
+  --accent: #D97757; --accent-hover: #E08A6D; --accent-text: #EE9B7A; --accent-deep: #F0CDBB; --accent-mid: #B5674A;
+  --accent-border: #6B4434; --accent-soft-2: #5A3426; --accent-soft: #3A2A22;
+  --good: #3FA89D; --good-text: #7CCFC4; --good-mid: #6E9A88; --good-border: #2E5550; --good-soft: #1E3532;
+  --olive: #9DBB7A; --blue: #7FA8DE; --purple: #A898D0;
+}

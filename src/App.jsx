@@ -1295,7 +1295,7 @@ export default class App extends React.Component {
       ],
       messages, ledger, ledgerEmpty: !S.ledger.length && !S.exits.length, exits: S.exits, hasExits: !!S.exits.length, chatTitle: S.chatTitle, isEmpty: !S.messages.length, composer: S.composer,
       hasCalibration: cal.items > 0, calibrationText: cal.text, calibrationTitle: cal.title,
-      composerBorder: '#D9D4CA', composerPlaceholder: 'Ask Claude anything…',
+      composerBorder: 'var(--border-strong)', composerPlaceholder: 'Ask Claude anything…',
       onComposer: e => this.setState({ composer: e.target.value }), onComposerKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }, send: this.send, newChat: this.newChat, startLead: this.startLead, startRisk: this.startRisk, startSql: this.startSql, startReact: this.startReact, startBook: this.startBook, startJuno: this.startJuno,
             composerRef: this.composerRef, hasSel: !!S.sel, selX: S.sel ? S.sel.x + 'px' : '0px', selY: S.sel ? S.sel.y + 'px' : '0px', ownSelection: this.ownSelection, askSelection: this.askSelection, scrollRef: this.scrollRef,
     };
@@ -1308,7 +1308,7 @@ export default class App extends React.Component {
     const stepper = phases.map(ph => ({ label: phaseName[ph], cur: ph === curPhase, done: phases.indexOf(ph) < phases.indexOf(curPhase) }));
     const phaseLabels = Object.fromEntries(phases.map(ph => [ph, ph === 'ladder' && o.step === 'assemble' ? 'Try it · warming up with the pieces' : ph === 'ladder' && o.step !== 'write' ? 'Try it · seeing it visually' : phaseName[ph]]).concat([['teach', 'Optional · teach Sam']]));
     const goStep = s => () => { if (this.state.own.phase === 'ladder' && this.state.own.step === s) return; this.setOwn({ phase: 'ladder' }, () => this.enterStep(s)); };
-    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), bg: cur ? '#C4613A' : done ? '#F1E3D8' : 'transparent', fg: cur ? '#fff' : done ? '#9E4B2A' : '#716C64' }; });
+    const ladderNav = L.map(s => { const cur = o.step === s && o.phase === 'ladder', done = !!o.visited[s] && !cur; return { label: stepLabel(o, s), onClick: goStep(s), bg: cur ? 'var(--accent)' : done ? 'var(--accent-soft-2)' : 'transparent', fg: cur ? 'var(--surface)' : done ? 'var(--accent-text)' : 'var(--muted)' }; });
     const nextOf = s => L[L.indexOf(s) + 1];
     const nextLabel = { see: 'see it run →', assemble: 'assemble it →', compare: 'compare it →', write: 'now write one yourself →' };
     Object.assign(V, {
@@ -1363,12 +1363,12 @@ export default class App extends React.Component {
     Object.assign(V, {
             seeIntro: isSqlSee ? 'The query, run on six customers and twelve orders, in the order the database actually runs it. Two side steps show what would go wrong with a plain JOIN, and with the filter in WHERE.' : o.scenario === this.REACT ? 'The component, run through a mount, two quick id changes, and a late response. Two side steps show what breaks without the cleanup, and with an empty dependency array.' : 'The code, run step by step in the order things actually happen.',
       seeLoading: o.seeLoading, seeReady: !!see && !o.timeline, seeTimeline: !!o.timeline,
-      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, bg: i === idx ? (s.contrast ? '#8A847A' : '#C4613A') : i < idx ? (s.contrast ? '#EEEAE2' : '#F1E3D8') : '#F4F1EA', fg: i === idx ? '#fff' : i < idx ? (s.contrast ? '#716C64' : '#9E4B2A') : '#8A847A', italic: s.contrast ? 'italic' : 'normal' })) : [],
+      seeClauses: see ? see.map((s, i) => ({ text: s.clause, order: s.contrast ? '↳' : see.slice(0, i + 1).filter(x => !x.contrast).length, bg: i === idx ? (s.contrast ? 'var(--muted)' : 'var(--accent)') : i < idx ? (s.contrast ? 'var(--border-soft)' : 'var(--accent-soft-2)') : 'var(--sunken)', fg: i === idx ? 'var(--surface)' : i < idx ? (s.contrast ? 'var(--muted)' : 'var(--accent-text)') : 'var(--muted)', italic: s.contrast ? 'italic' : 'normal' })) : [],
       seeStepTitle: cur ? cur.title : '', seeStepNote: cur ? cur.note : '', seeHasTable: !!(cur && cur.rows),
       seeIsContrast: !!(cur && cur.contrast), seeStepKicker: cur && cur.contrast ? 'What would go wrong' : 'What happens',
       seeCols: cur && cur.headers ? cur.headers.map(() => 'minmax(0,1fr)').join(' ') : '1fr',
       seeHeaders: cur && cur.headers ? cur.headers.map(t => ({ t })) : [],
-      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), bg: r.dim ? '#FFF1E8' : '#fff', fg: r.dim ? '#B58A74' : '#1F1D1A', deco: r.dim ? 'line-through' : 'none' })) : [],
+      seeRows: cur && cur.rows ? cur.rows.map(r => ({ cells: r.cells.map(t => ({ t: String(t) })), bg: r.dim ? 'var(--accent-soft)' : 'var(--surface)', fg: r.dim ? 'var(--accent-mid)' : 'var(--text)', deco: r.dim ? 'line-through' : 'none' })) : [],
       seeRowCount: cur && cur.rows ? (cur.rows.filter(r => !r.dim).length + ' rows' + (cur.rows.some(r => r.dim) ? ', ' + cur.rows.filter(r => r.dim).length + (cur.contrast ? ' would be lost' : ' dropped') : '')) : '',
       seePrev: this.seePrev, seeNext: this.seeNext, seeHasNext: !!see && idx < see.length - 1, seeAtEnd: !!see && idx === see.length - 1,
       hasBridges: !!(o.bridges && o.bridges.length), bridges: (o.bridges || []).map(t => ({ t }))
@@ -1381,7 +1381,7 @@ export default class App extends React.Component {
       const g = cm.guesses[cm.idx];
       Object.assign(V, {
         cmpLoading: !!cm.loading, cmpIntro: cm.intro || '', cmpHasCases: cm.cases.length > 0,
-        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), bg: i === cm.idx ? '#C4613A' : cm.revealed[i] ? '#F1E3D8' : '#F4F1EA', fg: i === cm.idx ? '#fff' : cm.revealed[i] ? '#9E4B2A' : '#716C64' })),
+        cmpTabs: cm.cases.map((x, i) => ({ label: x.label, onClick: () => this.setCmp({ idx: i }), bg: i === cm.idx ? 'var(--accent)' : cm.revealed[i] ? 'var(--accent-soft-2)' : 'var(--sunken)', fg: i === cm.idx ? 'var(--surface)' : cm.revealed[i] ? 'var(--accent-text)' : 'var(--muted)' })),
         cmpHasSource: !!cm.source, cmpSource: cm.source ? [['customers', cm.source.customers], ['orders', cm.source.orders]].map(([name, t]) => ({ name, ...table(t.headers, t.rows) })) : [],
         cmpCode: k ? k.code : '', cmpIsTable: !!(k && k.rows), cmpIsPick: !!(k && k.options), cmpShown: shown, cmpHidden: !!k && !shown,
         cmpPickOptions: k && k.options ? k.options.map(x => ({ l: x.l, onPick: () => this.cmpGuess(cm.idx, x.v) })) : [],
@@ -1404,7 +1404,7 @@ export default class App extends React.Component {
       const byId = {}; a.pieces.forEach(p => byId[p.id] = p);
       Object.assign(V, {
         asmBank: a.bank.map(id => ({ text: byId[id].text, onClick: () => this.asmAdd(id) })), asmBankEmpty: !a.bank.length,
-        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), bg: a.lastWrong.includes(id) ? '#FFF1E8' : '#fff', border: a.lastWrong.includes(id) ? '#C4613A' : '#E3DFD6' })),
+        asmSeq: a.seq.map(id => ({ text: byId[id].text, onClick: () => this.asmRemove(id), up: () => this.asmMove(id, -1), down: () => this.asmMove(id, 1), bg: a.lastWrong.includes(id) ? 'var(--accent-soft)' : 'var(--surface)', border: a.lastWrong.includes(id) ? 'var(--accent)' : 'var(--border)' })),
         asmFeedback: !!a.feedback, asmFeedbackText: a.feedback, asmNotCorrect: !a.correct, asmCorrect: a.correct, asmLoading: a.loading, checkAsm: this.checkAsm,
         asmWhyPrompt: (this.targetOf(o) && this.targetOf(o).assemble && this.targetOf(o).assemble.why) || 'In one line: what would break if you swapped two of these lines?', asmHasDecoy: !!(a.pieces.some(p => p.id === 'dx')), asmWhy: a.why, onAsmWhy: e => this.setAsm({ why: e.target.value })
       });
@@ -1438,7 +1438,7 @@ export default class App extends React.Component {
       revealNodes: order.map((s, i) => {
         const v = o.visited[s] || 0; const skipped = i < startI && !v;
         let detail = skipped ? 'optional, not opened' : s === 'see' ? (v > 1 ? 'watched ' + v + '×' : 'watched it run') : s === 'assemble' ? (a ? (a.attempts === 1 ? 'right first try' : a.attempts + ' tries' + (a.usedDistractor ? ', filter in WHERE' : '')) : '') : s === 'compare' ? (cmGuessed ? cmRight + ' of ' + cmGuessed + ' guesses right' : 'compared') : (t1.right + ' of ' + N + (w.attempts > 1 ? ' → ' + tn.right + ' on try ' + w.attempts : '') + (w.hints.length ? ', ' + w.hints.length + ' hint' + (w.hints.length > 1 ? 's' : '') : ', no hints'));
-        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dotBg: skipped ? '#F6F4EF' : s === 'write' ? '#2F8F86' : '#C4613A', dotBorder: skipped ? '#D9D4CA' : s === 'write' ? '#2F8F86' : '#C4613A', fg: skipped ? '#B5AFA4' : '#1F1D1A' };
+        return { label: labels[s], detail, above: i === startI ? 'started here · predicted ' + o.prediction : '', mark: skipped ? '' : '✓', dotBg: skipped ? 'var(--bg)' : s === 'write' ? 'var(--good)' : 'var(--accent)', dotBorder: skipped ? 'var(--border-strong)' : s === 'write' ? 'var(--good)' : 'var(--accent)', fg: skipped ? 'var(--faint)' : 'var(--text)' };
       }),
       revealCols: `repeat(${order.length},1fr)`, predLeft: pct(o.prediction), actLeft: pct(t1.right), gapLeft: pct(lo), gapWidth: (N ? (hi - lo) / N * 100 : 0) + '%', ownPredictionN: o.prediction, actualN: t1.right, revealN: N,
       // The ✓/✗ list already says what held for picked answers; the explanation line is for runs and written answers.
@@ -1446,7 +1446,7 @@ export default class App extends React.Component {
       revealNotes: [...(g.worked && !(w.check && ['choice', 'steps'].includes(w.check.type)) ? [{ kind: 'nice', quote: '', text: g.worked }] : []), ...(w.notes || [])], notesLoading: !!w.notesLoading,
       revealScale: g1.judgedByClaude ? "It didn't run, so Claude judged each item from your query, quoting it as evidence" : w.check && SCALES[w.check.type] ? SCALES[w.check.type] : 'Checked by Claude against each requirement, quoting your attempt as evidence',
       revealCorrection: correctionNote(g.corrections),
-      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', '#FBE9E1'], ['What it should return', g.table.expected, 'missing', '#E2F1EE']].map(([title, t, mark, bg]) => ({
+      revealTables: g.table ? [['What yours returns', g.table.yours, 'extra', 'var(--accent-soft)'], ['What it should return', g.table.expected, 'missing', 'var(--good-soft)']].map(([title, t, mark, bg]) => ({
         title, empty: !t.rows.length, cols: t.cols.map(() => 'minmax(0,1fr)').join(' ') || '1fr', headers: t.cols.map(c => ({ t: c })),
         rows: t.rows.map(r => ({ cells: r.cells.map((c, j) => ({ t: c, dim: c === 'NULL', hl: (r.diffs || []).includes(j) ? bg : '' })), bg: r.mark === mark ? bg : '' })),
         legend: [t.rows.some(r => r.mark === mark) ? (mark === 'extra' ? 'highlighted rows: should not be there' : 'highlighted rows: yours is missing them') : '', t.rows.some(r => r.mark === 'near') ? 'highlighted cells: the difference' : '', mark === 'extra' && g.table.dropped && g.table.dropped.length ? `extra columns left out: ${g.table.dropped.join(', ')}` : ''].filter(Boolean).join(' · ') })) : [],
@@ -1457,7 +1457,7 @@ export default class App extends React.Component {
     // teach
     const t = o.teach;
     Object.assign(V, {
-      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', align: m.role === 'sam' ? 'flex-start' : 'flex-end', bg: m.role === 'sam' ? '#fff' : '#E9E4DA' })),
+      teachMsgs: t.msgs.map(m => ({ text: m.text, isSam: m.role === 'sam', align: m.role === 'sam' ? 'flex-start' : 'flex-end', bg: m.role === 'sam' ? 'var(--surface)' : 'var(--bubble)' })),
       teachLoading: t.loading, teachOpen: t.turns < 3 && !t.debrief, teachDebrief: t.debrief || null, teachDebriefLoading: !!t.debriefLoading, wrapTeach: this.debriefTeach, canWrap: t.turns >= 1 && !t.debrief,
       exploreTeachGap: u => this.exploreGap(this.teachGap(u)), saveTeachGap: u => this.teachGap(u), gapTopics: S.gaps.map(g => g.topic), teachInput: t.input, onTeachInput: e => this.setOwn({ teach: { ...this.state.own.teach, input: e.target.value } }), onTeachKey: e => { if (e.key === 'Enter') this.sendTeach(); }, sendTeach: this.sendTeach
     });
