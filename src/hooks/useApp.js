@@ -53,7 +53,7 @@ export function useApp() {
     if (!prev) return;
     // A newly opened panel starts open, not tucked away (phones).
     if (S.sheetMin && panelKey(prev) !== panelKey(S) && panelKey(S)) app.chat.set({ sheetMin: false });
-    if (['ledger', 'gaps', 'asked', 'exits', 'timeShift', 'tipDismissed'].some(k => prev[k] !== S[k])) saveProgress(app.storeKey, S, app.uid);
+    if (['ledger', 'gaps', 'asked', 'exits', 'practised', 'timeShift', 'tipDismissed'].some(k => prev[k] !== S[k])) saveProgress(app.storeKey, S, app.uid);
     if (prev.messages !== S.messages || (S.own && prev.own !== S.own && prev.own && prev.own.phase !== S.own.phase)) {
       const el = app.scrollRef.current; if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
     }

@@ -72,12 +72,18 @@ export const JUNO_TARGETS = {
       task: `From memory, a new situation. ${PALLET}`,
       check: { type: 'choice', questions: [
         { id: 'scarce', short: 'the scarce thing', prompt: 'What scarce thing did Pallet make cheap?', answer: 'trust', options: [
-          { v: 'trust', l: 'Finding home-cooked food you can trust from a stranger' },
-          { v: 'delivery', l: 'Cars for delivery', gap: 'Cars were never the scarce intermediary; trust in a stranger\'s cooking was.' },
+          { v: 'trust', l: "Knowing which stranger's home cooking is safe and good" },
+          { v: 'delivery', l: 'Getting a meal driven from a home kitchen to your door', gap: "Drivers were never the scarce intermediary; trust in a stranger's cooking was." },
+          { v: 'kitchen', l: 'Renting a licensed kitchen to cook meals in for sale', gap: "Pallet's cooks use their own kitchens. What used to need a restaurant's name was trusting the cook." },
         ] },
         { id: 'kind', short: 'mechanism vs result', prompt: '"Customers pay Pallet and complain to Pallet." This is the…', answer: 'result', options: [
           { v: 'result', l: 'Result' },
           { v: 'mechanism', l: 'Mechanism', gap: 'That is the owned relationship: the result.' },
+        ] },
+        { id: 'rival', short: 'what a rival owns', prompt: 'A rival app signs up only a few famous chefs, and customers search for them by name. Compared with Pallet, the rival…', answer: 'less', options: [
+          { v: 'less', l: 'Owns its customers less: they follow the chefs, who can take them along' },
+          { v: 'more', l: 'Owns its customers more, since famous chefs bring bigger audiences', gap: "A famous chef's audience belongs to the chef. Nothing about the app is why they came, so nothing stops them leaving with the chef." },
+          { v: 'same', l: 'Owns them just as much, since customers still order and pay in the app', gap: 'Paying through the app is the result only when any one chef is replaceable. Here the chef is the reason customers came.' },
         ] },
       ] },
     },

@@ -1,18 +1,19 @@
 import { SQL_TARGETS } from './targets.js';
-import { BOOK_TARGETS } from './bookTargets.js';
 import { JUNO_TARGETS } from './junoTargets.js';
 import { REACT_TARGETS } from './reactTargets.js';
 import { COLD_START } from './gaps.js';
-import { SQL, REACT, BOOK, JUNO } from './scenarios.js';
+import { SQL, REACT, JUNO } from './scenarios.js';
 import { DAY } from './util.js';
 
 // Spaced recall: owned things come due after 3 days; recalled right → a week, then 3 weeks; missed → tomorrow.
-// One item is seeded from the Rule of Five chat, owned "3 days ago", so the loop is visible from the start.
+// One item is seeded from the Juno chat, owned "3 days ago", so the loop is visible from the start. It's the mechanism,
+// not which side to own: a grader walking Juno owns that, and recalling it first would give the try away. (It was the
+// Rule of Five, whose recall felt thin: Christine, "less likely to ask me what the exact percentage chance…")
 export function seedLedger() {
-  const t = Date.now(), label = BOOK_TARGETS.rule.label;
-  return [{ id: 'seed-rule', title: label, predicted: 3, actual: 2, n: 3, fixed: null, hints: 0, realWork: [], reviews: [],
+  const t = Date.now(), label = JUNO_TARGETS.mechanism.label;
+  return [{ id: 'seed-mechanism', title: label, predicted: 3, actual: 2, n: 3, fixed: null, hints: 0, realWork: [], reviews: [],
     ownedAt: t - 3 * DAY, dueAt: t - 60 * 60 * 1000,
-    own: { scenario: BOOK, focus: { label, mode: 'concept', target: 'rule' }, lang: 'statistics', code: '', write: { schema: '' } } }];
+    own: { scenario: JUNO, focus: { label, mode: 'concept', target: 'mechanism' }, lang: 'strategy', code: '', write: { schema: '' } } }];
 }
 // The ?demo sample: what a few days of real use looks like, built on the real targets so recall, "try a new
 // question" and the gap actions all work on it. Times are relative to now, so something is always due.
@@ -24,7 +25,7 @@ export function demoState() {
   const open = { id: 'demo-g2', topic: 'When to push back on a team decision, and when to commit', question: "But if you disagree with the plan and you're not the manager, do you still have to go along with it?", quote: "I guess you just say it once and then do it anyway?", source: 'teach', origin: 'while you were explaining “Helping generously without burning out” to Sam', from: 'Helping generously without burning out', at: t - 3 * H, status: 'open', context: '' };
   return {
     ledger: [
-      entry('demo-1', BOOK_TARGETS.rule.label, 3, 2, 3, 4, -2 * H / DAY, own(BOOK, { label: BOOK_TARGETS.rule.label, mode: 'concept', target: 'rule' }, 'statistics')),
+      entry('demo-1', JUNO_TARGETS.mechanism.label, 3, 2, 3, 4, -2 * H / DAY, own(JUNO, { label: JUNO_TARGETS.mechanism.label, mode: 'concept', target: 'mechanism' }, 'strategy')),
       entry('demo-2', JUNO_TARGETS.ownside.label, 2, 3, 3, 9, 5, own(JUNO, { label: JUNO_TARGETS.ownside.label, mode: 'concept', target: 'ownside' }, 'strategy'),
         { reviews: [{ at: t - 2 * DAY, right: 3, n: 3 }], realWork: [{ predicted: 1, actual: 2, n: 2 }] }),
       entry('demo-3', SQL_TARGETS.onwhere.label, 1, 1, 2, 1, 2, own(SQL, { label: SQL_TARGETS.onwhere.label, mode: 'concept', target: 'onwhere' }, 'sql'),

@@ -36,6 +36,7 @@ export function learningsVals(app) {
     isDemo: app.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => app.chat.set(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
     recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
     calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
+    practised: (S.practised || []).slice().reverse().map(p => ({ ...p, when: rel(p.at, now) })),
     openGaps: S.gaps.filter(g => g.status === 'open').map(g => ({ ...g, when: rel(g.at, now), onExplore: () => app.gaps.exploreGap(g.id) })),
     saveRecallGap: () => app.recall.recallGap(), exploreRecallGap: () => app.gaps.exploreGap(app.recall.recallGap()), gapTopics: S.gaps.map(g => g.topic),
     items, empty: !items.length, dueItems: items.filter(it => it.due),

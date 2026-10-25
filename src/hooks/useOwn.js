@@ -82,6 +82,9 @@ export function useOwn(app) {
   const spotChat = () => { cancelOwn(); const el = app.composerRef.current; if (el) el.focus(); };
   function finishSpot(picked) {
     const o = app.state.own, summary = spotSummary(o.spot.label, picked, o.spot.scenarios || []);
+    // Learnings keeps only the topic, how many scenarios and when: nothing you picked, and no score (research §13).
+    const n = (o.spot.scenarios || []).filter(sc => picked[sc.id] != null).length;
+    app.progress.set(s => ({ practised: s.practised.filter(p => p.topic !== o.spot.label).concat([{ id: o.id, topic: o.spot.label, n: n + (s.practised.find(p => p.topic === o.spot.label) || { n: 0 }).n, at: app.now() }]) }));
     set({ own: null });
     app.chat.set({ messages: app.state.messages.map(m => m.id === o.id ? { ...m, type: 'ownDone', doneLabel: 'Practised', summary } : m) });
   }

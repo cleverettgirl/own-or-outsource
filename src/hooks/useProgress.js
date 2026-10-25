@@ -7,7 +7,7 @@ import { useMergeState } from './useMergeState.js';
 // What you own, your gaps, what you asked about, where you stepped away and the demo clock: the state that is
 // kept in this browser (progress.js saves it after each change, see useApp).
 export function useProgress(app) {
-  const [state, set, ref] = useMergeState({ ledger: [], exits: [], gaps: [], asked: [], timeShift: 0, tipDismissed: false }, app.afterCommit);
+  const [state, set, ref] = useMergeState({ ledger: [], exits: [], gaps: [], asked: [], practised: [], timeShift: 0, tipDismissed: false }, app.afterCommit);
 
   useLayoutEffect(() => {
     const saved = loadProgress(app.storeKey);
@@ -18,7 +18,7 @@ export function useProgress(app) {
     if (!window.confirm(app.isDemo ? 'Reset the sample data to how it started?' : 'Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
     try { window.localStorage.removeItem(app.storeKey); } catch (e) { /* nothing saved */ }
     app.uid = 0;
-    set({ ledger: seedLedger(), exits: [], gaps: [], asked: [], ...(app.isDemo ? demoState() : {}), timeShift: 0, tipDismissed: false });
+    set({ ledger: seedLedger(), exits: [], gaps: [], asked: [], practised: [], ...(app.isDemo ? demoState() : {}), timeShift: 0, tipDismissed: false });
     app.chat.set({ messages: [], activeGap: null, chatTitle: 'New chat', view: 'chat', composer: '' });
     app.own.set({ own: null });
     app.recall.set({ recall: null });

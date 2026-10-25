@@ -427,12 +427,21 @@ await click('×');
 await act(async () => { document.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
 await wait(30);
 const dueTitles = () => [...document.querySelectorAll('[data-role=due-item]')].map(d => d.textContent);
-// The book run above owned the Rule of Five again: one card, with the seeded attempt folded in as "Earlier", and
-// today's attempt setting the schedule (just practised, so it comes back in 3 days, not now).
+// The seeded item (Juno's mechanism, owned "3 days ago") is the one thing due; recalling it is a new made-up company.
+const seedDue = () => [...document.querySelectorAll('[data-role=due-item]')].find(d => d.textContent.includes('Mechanism vs result'));
+step('recall: the seeded Juno item is the only thing due', dueTitles().length === 1 && !!seedDue() && seedDue().textContent.includes('Juno'));
+await act(async () => { [...seedDue().querySelectorAll('button')].find(b => b.textContent.includes('Recall now')).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+await wait(30);
+step('recall: the seeded item is a new company, three questions about the idea, not a number', text().includes('Pallet (made up)') && text().includes("What scarce thing did Pallet make cheap?") && text().includes('Compared with Pallet, the rival'));
+await click("Knowing which stranger's home cooking is safe and good");
+await click('Result');
+await click('Owns its customers more, since famous chefs bring bigger audiences');
+await click('Check it');
+await wait(50);
+step('recall: a wrong pick on the seeded item is explained', text().includes("A famous chef's audience belongs to the chef"));
+await click('Done');
 const ruleCards = () => [...document.querySelectorAll('[data-role=learning], [data-role=due-item]')].filter(d => d.textContent.includes('The Rule of Five'));
-step('repeat: owning the same thing again is one card, with the earlier attempt on it', ruleCards().length === 1 && ruleCards()[0].textContent.includes('Earlier, 3 days ago · predicted 3, got 2 of 3') && ruleCards()[0].textContent.includes('owned today'));
-step('repeat: the map shows it once', [...document.querySelectorAll('[data-role=map] button')].filter(b => b.textContent.includes('The Rule of Five')).length === 1);
-step('repeat: nothing is due yet, so there is no indicator', !document.querySelector('[data-role=recall-badge]') && dueTitles().length === 0);
+step('repeat: nothing is due now, so there is no indicator', !document.querySelector('[data-role=recall-badge]') && dueTitles().length === 0);
 await click('⏩ Skip ahead 3 days');
 step('recall: 3 days later, what you owned today comes due', dueTitles().length >= 3 && /to recall$/.test(document.querySelector('[data-role=recall-badge]')?.getAttribute('aria-label') || ''));
 await act(async () => { [...ruleCards()[0].querySelectorAll('button')].find(b => b.textContent.includes('Recall now')).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
@@ -496,6 +505,11 @@ await click('Check my version');
 await wait(50);
 step('calibration: 1 right and 2 blank is 1 of 3, never "line up" with a prediction of 3', text().includes('You said 3 of 3, and got 1') && (text().match(/\(left blank\)/g) || []).length === 2 && !text().includes('accurate here'));
 await click('Back to chat');
+await openLearnings();
+// The Juno run above owned "which side" already: owning it again is one card, with the first attempt folded in.
+const sideCards = () => [...document.querySelectorAll('[data-role=learning], [data-role=due-item]')].filter(d => d.textContent.startsWith('Which side an aggregator owns'));
+step('repeat: owning the same thing again is one card, with the earlier attempt on it', sideCards().length === 1 && sideCards()[0].textContent.includes('predicted 0, got 2 of 3') && sideCards()[0].textContent.includes('Earlier, '));
+step('repeat: the map shows it once', [...document.querySelectorAll('[data-role=map] button')].filter(b => b.textContent.startsWith('Which side an aggregator owns')).length === 1);
 
 // ---- Saved in this browser: a refresh keeps what you own and when it comes back.
 await openLearnings();
@@ -688,10 +702,10 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   const bclick = label => act(async () => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.trim() === label) || [...box.querySelectorAll('button')].find(x => x.textContent.includes(label)); b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await bclick('Recall now · about a minute'); await wait(30);
   step('demo: no "Ask Claude about this" on a recall before you answer', !box.querySelector('[data-role=recall-ask]'));
-  await bclick('More likely'); await bclick('Only if all 6 houses'); await bclick('You only looked at houses'); await bclick('Check it'); await wait(50);
+  await bclick("Knowing which stranger's home cooking"); await bclick('Result'); await bclick('Owns its customers less'); await bclick('Check it'); await wait(50);
   await act(async () => { box.querySelector('[data-role=recall-ask]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
   const draft = box.querySelector('main textarea')?.value || '';
-  step('recall ask: the recall is quoted into a new chat, the question left to you', draft.startsWith('About my recall on “The Rule of Five') && draft.includes('> Question: ') && draft.includes('> My answer: ') && draft.endsWith('\n\n'));
+  step('recall ask: the recall is quoted into a new chat, the question left to you', draft.startsWith('About my recall on “Mechanism vs result') && draft.includes('> Question: ') && draft.includes('> My answer: ') && draft.endsWith('\n\n'));
   const tasks = [];
   globalThis.fetch = async (url, opts) => { const b = JSON.parse(opts.body); tasks.push(b.task); return { ok: true, status: 200, json: async () => ({ text: b.task === 'inferLearning' ? '{"learning": true, "topic": "Why the range only misses when all land on one side"}' : 'Because missing needs every house on the same side of the median.' }) }; };
   await act(async () => { const el = box.querySelector('main textarea'); const set = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set; set.call(el, draft + 'why does it only miss when all six are on one side?'); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
@@ -806,6 +820,9 @@ for (const [chip, prompt] of [['Parenting · a meltdown leaving the park', "melt
   await click('Done'); await wait(50);
   globalThis.fetch = offline;
   step('personal: the chat says practised, not scored, and no score is shown', text().includes('Practised') && text().includes('shame vs conviction · practised 2 scenarios, not scored') && !/predicted \d/.test(text().split('Practised')[1] || ''));
+  await openLearnings();
+  const pr = document.querySelector('[data-role=practised]');
+  step('personal: Learnings lists it under practised, not scored, with the topic and count only', !!pr && pr.textContent.includes('Shame vs conviction') && pr.textContent.includes('Spotted it in 2 scenarios') && !pr.textContent.includes('Priya') && !pr.textContent.includes('Conviction still at work'));
 }
 
 // ---- Hybrid SQL check: a query that doesn't run is judged by Claude on the same items, and says so.

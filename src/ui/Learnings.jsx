@@ -104,7 +104,7 @@ export default function Learnings({ V }) {
         </div>
 
         {L.empty ? (
-          <div className={`${card} border-line text-[15px] text-ink-2 leading-normal`}>Nothing yet. Use the <span className="text-accent">Own it</span> icon under any answer, or open a past chat in the sidebar and own what you learned there.</div>
+          <div className={`${card} border-line text-[15px] text-ink-2 leading-normal`}><p className="m-0">Nothing owned yet. Use the <span className="text-accent">Own it</span> icon under any answer, or open a past chat in the sidebar and own what you learned there.</p></div>
         ) : (
           <div data-role="learn-top" className="grid grid-cols-[minmax(0,1fr)_340px] phone:grid-cols-1 gap-4">
             <Map L={L} />
@@ -181,6 +181,20 @@ export default function Learnings({ V }) {
                   <div className="flex justify-between gap-3 items-baseline"><span className="text-[15px] font-semibold">{g.topic}</span><span className="text-[12px] flex-none text-muted">found {g.when}</span></div>
                   <div className="text-[13px] leading-normal text-muted">It came up {g.origin}.{g.quote ? <> You said <i>“{g.quote}”</i></> : null}</div>
                   <button onClick={g.onExplore} className="self-start text-on-accent border-none rounded-full py-2 px-4 text-[13.5px] font-medium bg-accent">Explore it with Claude</button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {L.practised.length > 0 && (
+          <section data-role="practised" className="flex flex-col gap-3">
+            {head('Practised, not scored', "personal topics have no answer key, so only the topic is kept here: nothing you picked, and no score.")}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+              {L.practised.map(p => (
+                <div key={p.id} className={`${card} border-line`}>
+                  <span className="text-[15px] font-semibold">{p.topic[0].toUpperCase() + p.topic.slice(1)}</span>
+                  <span className="text-[12px] text-muted">Spotted it in {p.n} scenario{p.n === 1 ? '' : 's'} · {p.when}</span>
                 </div>
               ))}
             </div>
