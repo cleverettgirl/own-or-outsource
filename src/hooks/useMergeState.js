@@ -8,7 +8,10 @@ export function useMergeState(initial, afterCommit) {
   const ref = useRef(state);
   ref.current = state;
   const set = useRef((patch, cb) => {
-    setState(s => ({ ...s, ...(typeof patch === 'function' ? patch(s) : patch) }));
+    setState(s => ({
+      ...s,
+      ...(typeof patch === 'function' ? patch(s) : patch),
+    }));
     if (cb) afterCommit(cb);
   }).current;
   return [state, set, ref];

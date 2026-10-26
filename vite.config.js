@@ -13,8 +13,13 @@ function devApi() {
         let raw = '';
         for await (const chunk of req) raw += chunk;
         let body = {};
-        try { body = JSON.parse(raw || '{}'); } catch { /* handled as bad request below */ }
-        if (req.method === 'POST') return serve({ ip: req.socket.remoteAddress || 'local', body, res });
+        try {
+          body = JSON.parse(raw || '{}');
+        } catch {
+          /* handled as bad request below */
+        }
+        if (req.method === 'POST')
+          return serve({ ip: req.socket.remoteAddress || 'local', body, res });
         res.statusCode = 405;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'POST only' }));

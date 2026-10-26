@@ -1,7 +1,8 @@
 // Claude's real answer to the SQL starter question (Christine ran it on claude.ai, 2026-10-23).
 // Verbatim; only the formatting the paste dropped is restored, as it appears in her screenshot of the same
 // answer: the code fence, inline code for SQL terms, bold labels, bullet markers.
-export const SQL_QUESTION = "Write me a SQL query for revenue per customer from paid orders, highest first. Tables: customers(id, name) and orders(id, customer_id, total, status). Customers who haven't bought anything yet should still show up with $0.";
+export const SQL_QUESTION =
+  "Write me a SQL query for revenue per customer from paid orders, highest first. Tables: customers(id, name) and orders(id, customer_id, total, status). Customers who haven't bought anything yet should still show up with $0.";
 
 export const SQL_TURNS = [
   {

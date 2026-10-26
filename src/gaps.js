@@ -9,7 +9,8 @@
 // The prompts for the loop (the gap chat, the check, the judge) are in prompts.js, with the rest.
 
 // ---- the cold-start gap (from teaching Sam about Juno), hand-written ----
-const COLD = /cold.?start|get(s|ting)? started|first (writers|readers|users|ones)|chicken|day one|neither side|loop (gets )?start/i;
+const COLD =
+  /cold.?start|get(s|ting)? started|first (writers|readers|users|ones)|chicken|day one|neither side|loop (gets )?start/i;
 export const isColdStart = g => COLD.test(`${g.topic} ${g.question || ''}`);
 
 export const COLD_START = {
@@ -26,21 +27,38 @@ The common moves:
 
 For Juno: which side would you get first, and with which move?`,
   check: {
-    question: 'In your own words: how does a platform like Juno get its first writers and readers when neither exists yet? Name at least one concrete move it could make.',
-    keyPoints: ["It's a chicken-and-egg problem: each side waits for the other", 'A concrete way to start one side first (seed or pay writers, bring existing content, start in a small niche, or make writing valuable on its own)'],
+    question:
+      'In your own words: how does a platform like Juno get its first writers and readers when neither exists yet? Name at least one concrete move it could make.',
+    keyPoints: [
+      "It's a chicken-and-egg problem: each side waits for the other",
+      'A concrete way to start one side first (seed or pay writers, bring existing content, start in a small niche, or make writing valuable on its own)',
+    ],
   },
 };
 
 // Offline judge for the cold-start check: both ideas must show up in some form.
 export function judgeColdStartOffline(answer) {
   const a = answer.toLowerCase();
-  const p1 = /chicken|egg|each side|both sides|neither|wait(s|ing)? for|nobody|no one|empty|no readers|no writers/.test(a);
-  const p2 = /seed|subsid|pay|invite|recruit|import|existing|already|niche|small|one (city|school|campus|group)|tool|on (its|their) own|without readers|first writers|bring/.test(a);
+  const p1 =
+    /chicken|egg|each side|both sides|neither|wait(s|ing)? for|nobody|no one|empty|no readers|no writers/.test(
+      a,
+    );
+  const p2 =
+    /seed|subsid|pay|invite|recruit|import|existing|already|niche|small|one (city|school|campus|group)|tool|on (its|their) own|without readers|first writers|bring/.test(
+      a,
+    );
   return {
-    points: [{ point: COLD_START.check.keyPoints[0], evidence: p1 ? 'yes' : null }, { point: COLD_START.check.keyPoints[1], evidence: p2 ? 'yes' : null }],
-    feedback: p1 && p2 ? 'You named the problem and a concrete way out of it. That gap is closed.'
-      : p2 ? "You've got a concrete move. What makes this hard in the first place: why can't the loop just start by itself?"
-      : p1 ? "You've named why it's hard. What's one concrete thing Juno could do to get one side there first?"
-      : 'Think about day one: what does each side need before it shows up, and how could Juno give one side that without the other?',
+    points: [
+      { point: COLD_START.check.keyPoints[0], evidence: p1 ? 'yes' : null },
+      { point: COLD_START.check.keyPoints[1], evidence: p2 ? 'yes' : null },
+    ],
+    feedback:
+      p1 && p2
+        ? 'You named the problem and a concrete way out of it. That gap is closed.'
+        : p2
+          ? "You've got a concrete move. What makes this hard in the first place: why can't the loop just start by itself?"
+          : p1
+            ? "You've named why it's hard. What's one concrete thing Juno could do to get one side there first?"
+            : 'Think about day one: what does each side need before it shows up, and how could Juno give one side that without the other?',
   };
 }

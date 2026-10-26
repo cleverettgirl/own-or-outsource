@@ -16,16 +16,40 @@ const WHY = {
 export function checkChoice(check, picked) {
   const qs = check.questions;
   const answered = qs.filter(q => picked[q.id] != null);
-  const items = qs.map(q => ({ short: q.short || q.prompt, ok: picked[q.id] === q.answer, blank: picked[q.id] == null, owned: !!q.owned }));
-  if (!answered.length) return { score: 1, why: WHY[1], worked: '', gap: 'Pick an answer for each question, then check.', corrections: [], items };
+  const items = qs.map(q => ({
+    short: q.short || q.prompt,
+    ok: picked[q.id] === q.answer,
+    blank: picked[q.id] == null,
+    owned: !!q.owned,
+  }));
+  if (!answered.length)
+    return {
+      score: 1,
+      why: WHY[1],
+      worked: '',
+      gap: 'Pick an answer for each question, then check.',
+      corrections: [],
+      items,
+    };
   const right = qs.filter(q => picked[q.id] === q.answer);
-  const wrong = qs.filter(q => picked[q.id] != null && picked[q.id] !== q.answer);
+  const wrong = qs.filter(
+    q => picked[q.id] != null && picked[q.id] !== q.answer,
+  );
   const skipped = qs.length - answered.length;
   const score = right.length === qs.length ? 5 : right.length ? 3 : 2;
-  const worked = right.length ? `${right.length} of ${qs.length} right: ${right.map(q => q.short).join(', ')}.` : '';
+  const worked = right.length
+    ? `${right.length} of ${qs.length} right: ${right.map(q => q.short).join(', ')}.`
+    : '';
   // The first wrong pick's own explanation is the most useful thing to read next.
-  const firstGap = wrong.map(q => q.options.find(o => o.v === picked[q.id]).gap).find(Boolean);
-  const gap = [firstGap, skipped ? `${skipped} question${skipped > 1 ? 's' : ''} left blank.` : ''].filter(Boolean).join(' ');
+  const firstGap = wrong
+    .map(q => q.options.find(o => o.v === picked[q.id]).gap)
+    .find(Boolean);
+  const gap = [
+    firstGap,
+    skipped ? `${skipped} question${skipped > 1 ? 's' : ''} left blank.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
   return { score, why: WHY[score], worked, gap, corrections: [], items };
 }
 
@@ -35,9 +59,12 @@ export function checkChoice(check, picked) {
 // questions: as Claude returns them, [{ options: [{ label, correct }] }]
 export function longestIsRight(questions) {
   return (questions || []).filter(q => {
-    const opts = (q.options || []).filter(o => o && o.label), right = opts.find(o => o.correct);
+    const opts = (q.options || []).filter(o => o && o.label),
+      right = opts.find(o => o.correct);
     if (!right || opts.length < 2) return false;
-    const longestOther = Math.max(...opts.filter(o => o !== right).map(o => o.label.length));
+    const longestOther = Math.max(
+      ...opts.filter(o => o !== right).map(o => o.label.length),
+    );
     return right.label.length > longestOther + 3;
   }).length;
 }

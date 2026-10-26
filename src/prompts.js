@@ -21,88 +21,183 @@ export function gapSystem(g) {
     `Help them close it. Start from their guess: say what's right in it, then explain the missing idea concretely, with one or two real examples, in under 200 words of markdown.`,
     `End with ONE short question that asks them to apply the idea${g.context ? ` to ${s(g.context)}` : ' to their own situation'}.`,
     `In later turns, respond to what they actually say, briefly; don't lecture. Don't quiz them formally: the app checks their understanding when they say they're ready.`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // What this chat can show, for follow-ups only: when someone asks to have it explained another way, Claude picks the
 // form that fits, within what the app renders (markdown with tables, lists and code blocks, no images or widgets).
 // The first answer doesn't get it, so it stays Claude's own answer and "explain it another way" is where the
 // flip-through shows up (log 87).
-const SHOWS = ' This chat renders markdown, including tables, lists and fenced code blocks, but not images, diagrams or interactive widgets. When you explain how something works step by step, show the concrete state at each step in the form that fits: a table of rows for data, a numbered sequence of events for code that runs over time, the same lines before and after for a change, small worked numbers for a calculation. Prefer these over long paragraphs.'
-  + ' When the reader would understand it better by looking at a few views one at a time (the steps of a process, or two or three versions side by side to compare), you may put those views in a flip-through block, which the app shows as tabs with Back and Next:\n:::flip\n## Short label\nmarkdown for this view\n## Short label\nmarkdown for this view\n:::\nUse 2 to 5 views, each with a label under 30 characters and its own concrete content (a table, a code block, a short list). Never nest one block in another. Use at most one per answer, and only when flipping helps; otherwise plain markdown is better.';
+const SHOWS =
+  ' This chat renders markdown, including tables, lists and fenced code blocks, but not images, diagrams or interactive widgets. When you explain how something works step by step, show the concrete state at each step in the form that fits: a table of rows for data, a numbered sequence of events for code that runs over time, the same lines before and after for a change, small worked numbers for a calculation. Prefer these over long paragraphs.' +
+  ' When the reader would understand it better by looking at a few views one at a time (the steps of a process, or two or three versions side by side to compare), you may put those views in a flip-through block, which the app shows as tabs with Back and Next:\n:::flip\n## Short label\nmarkdown for this view\n## Short label\nmarkdown for this view\n:::\nUse 2 to 5 views, each with a label under 30 characters and its own concrete content (a table, a code block, a short list). Never nest one block in another. Use at most one per answer, and only when flipping helps; otherwise plain markdown is better.';
 const CHAT_SYSTEM = {
   // Examples follow the person's own field: a leadership question from a designer gets design examples, not PRs.
-  answer: 'You are Claude. Answer helpfully and concisely, in markdown. Match your examples to the role or field the person states; if they give none, use examples that fit most workplaces. Use code, in fenced blocks, only when the question is about code.',
-  followUp: 'You are Claude, in an ongoing chat with someone who is practising what you showed them. Explain clearly and briefly, in markdown. Help them see why; do not rewrite their whole solution unless they ask. If they quote a try the check marked wrong, answer what they actually asked, and point them to the slip before giving the full answer. Do not quiz them or end with a question to check their understanding: the app checks that separately, in the Own it panel (research §8f). End on the idea itself.' + SHOWS,
+  answer:
+    'You are Claude. Answer helpfully and concisely, in markdown. Match your examples to the role or field the person states; if they give none, use examples that fit most workplaces. Use code, in fenced blocks, only when the question is about code.',
+  followUp:
+    'You are Claude, in an ongoing chat with someone who is practising what you showed them. Explain clearly and briefly, in markdown. Help them see why; do not rewrite their whole solution unless they ask. If they quote a try the check marked wrong, answer what they actually asked, and point them to the slip before giving the full answer. Do not quiz them or end with a question to check their understanding: the app checks that separately, in the Own it panel (research §8f). End on the idea itself.' +
+    SHOWS,
 };
 
 export const TASKS = {
-  chat: { kind: 'tutor', chat: true, system: i => i.gap ? gapSystem(i.gap) : CHAT_SYSTEM[i.mode] || CHAT_SYSTEM.answer },
+  chat: {
+    kind: 'tutor',
+    chat: true,
+    system: i =>
+      i.gap ? gapSystem(i.gap) : CHAT_SYSTEM[i.mode] || CHAT_SYSTEM.answer,
+  },
 
-  sam: { kind: 'tutor', chat: true, system: i => `You are Sam, a friendly beginner ${i.prose ? 'who knows nothing about this topic' : `who has never used ${s(i.lang)}`}. The learner is explaining this ${i.prose ? 'idea' : 'code'} to you:\n${s(i.code)}\nA grader noted this gap in the learner's understanding: "${s(i.gap)}". Gently steer one question toward that gap. Ask ONE short follow-up (under 35 words), in a casual beginner voice, never explain things yourself, never use the words "great" or "exactly". If the learner says they're unsure or guesses, do NOT answer it for them or fill it in: say it sounds like an open question. ${i.last ? 'This is the last turn: say in one sentence what you now understand, in your own naive words; if anything they explained was a guess, say plainly that part is still a mystery to you both. Then thank them.' : ''}` },
+  sam: {
+    kind: 'tutor',
+    chat: true,
+    system: i =>
+      `You are Sam, a friendly beginner ${i.prose ? 'who knows nothing about this topic' : `who has never used ${s(i.lang)}`}. The learner is explaining this ${i.prose ? 'idea' : 'code'} to you:\n${s(i.code)}\nA grader noted this gap in the learner's understanding: "${s(i.gap)}". Gently steer one question toward that gap. Ask ONE short follow-up (under 35 words), in a casual beginner voice, never explain things yourself, never use the words "great" or "exactly". If the learner says they're unsure or guesses, do NOT answer it for them or fill it in: say it sounds like an open question. ${i.last ? 'This is the last turn: say in one sentence what you now understand, in your own naive words; if anything they explained was a guess, say plainly that part is still a mystery to you both. Then thank them.' : ''}`,
+  },
 
   // ---- chat: is this person working to get better at something? ----
-  inferLearning: { kind: 'json', json: true, system: 'You judge intent carefully and conservatively. Strict JSON only.',
-    user: i => `Someone is chatting with Claude. Their latest message:\n"${s(i.text)}"\nClaude's reply to it (excerpt):\n${s(i.answer).slice(0, 800)}\n\nIs this person working to get better at something, not just curious about it? Signs: they ask why or how something works, test their understanding ("so it's..., right?", "what if I..."), say they're confused, or try to apply the idea to a new case. A side question out of curiosity ("what about X?") or a request to do something doesn't count. Return ONLY JSON {"learning": boolean, "topic": what they want to get better at, as a short learning goal under 9 words, or ""}` },
+  inferLearning: {
+    kind: 'json',
+    json: true,
+    system: 'You judge intent carefully and conservatively. Strict JSON only.',
+    user: i =>
+      `Someone is chatting with Claude. Their latest message:\n"${s(i.text)}"\nClaude's reply to it (excerpt):\n${s(i.answer).slice(0, 800)}\n\nIs this person working to get better at something, not just curious about it? Signs: they ask why or how something works, test their understanding ("so it's..., right?", "what if I..."), say they're confused, or try to apply the idea to a new case. A side question out of curiosity ("what about X?") or a request to do something doesn't count. Return ONLY JSON {"learning": boolean, "topic": what they want to get better at, as a short learning goal under 9 words, or ""}`,
+  },
 
-  askedLabel: { kind: 'json', json: true, system: 'Strict JSON only.',
-    user: i => `Someone asked Claude to explain this.${i.quote ? `\nPart of the answer they quoted:\n${s(i.quote)}` : ''}\nTheir question: ${s(i.question) || '(explain it)'}\nName what they want to understand as a short learning goal, under 9 words, phrased as a topic (e.g. "When an effect's cleanup runs"). Return ONLY JSON {"label": string}` },
+  askedLabel: {
+    kind: 'json',
+    json: true,
+    system: 'Strict JSON only.',
+    user: i =>
+      `Someone asked Claude to explain this.${i.quote ? `\nPart of the answer they quoted:\n${s(i.quote)}` : ''}\nTheir question: ${s(i.question) || '(explain it)'}\nName what they want to understand as a short learning goal, under 9 words, phrased as a topic (e.g. "When an effect's cleanup runs"). Return ONLY JSON {"label": string}`,
+  },
 
   // ---- Own it ----
-  focusOptions: { kind: 'json', json: true, system: 'You return strict JSON only.',
-    user: i => `A learner highlighted part of a ${s(i.lang)} answer and wants to learn it, not just use it.\nFull answer:\n${s(i.fullCode)}\n\nHighlighted:\n${s(i.code)}\n\nPropose 3 specific things they might want to own about the highlighted part, most likely first. Each must be about what the highlighted part actually says, and name something the learner can do or decide (a skill), phrased without author or source names (e.g. "Helping generously without burning out", not "Grant's otherish givers"). Mention a source only if the source itself is what's being learned. Also say whether the topic is personal: faith, family, attachment, or the learner's own emotions or sense of self, where there's no answer key to check them against. Being about people isn't enough (leadership, parenting skills or children's reading are not personal). Return ONLY JSON {"personal": boolean, "spot": if personal, what they could practise recognising, under 7 words (e.g. "shame vs conviction"), else "", "options":[{"label": a learning target under 9 words, phrased as a topic (e.g. "When to use LEFT vs INNER JOIN"), "mode": "sequence" if it is about the written order or structure of several lines, else "concept" (when or in what order things happen at runtime is "concept")}]}.` },
+  focusOptions: {
+    kind: 'json',
+    json: true,
+    system: 'You return strict JSON only.',
+    user: i =>
+      `A learner highlighted part of a ${s(i.lang)} answer and wants to learn it, not just use it.\nFull answer:\n${s(i.fullCode)}\n\nHighlighted:\n${s(i.code)}\n\nPropose 3 specific things they might want to own about the highlighted part, most likely first. Each must be about what the highlighted part actually says, and name something the learner can do or decide (a skill), phrased without author or source names (e.g. "Helping generously without burning out", not "Grant's otherish givers"). Mention a source only if the source itself is what's being learned. Also say whether the topic is personal: faith, family, attachment, or the learner's own emotions or sense of self, where there's no answer key to check them against. Being about people isn't enough (leadership, parenting skills or children's reading are not personal). Return ONLY JSON {"personal": boolean, "spot": if personal, what they could practise recognising, under 7 words (e.g. "shame vs conviction"), else "", "options":[{"label": a learning target under 9 words, phrased as a topic (e.g. "When to use LEFT vs INNER JOIN"), "mode": "sequence" if it is about the written order or structure of several lines, else "concept" (when or in what order things happen at runtime is "concept")}]}.`,
+  },
 
   // Personal topics have no answer key, so they get recognition practice on made-up people, never scored (research §13).
   // How to handle faith, family and feelings is left to Claude's own judgement; the prompt only sets the format.
-  spotPractice: { kind: 'json', json: true, system: 'You return strict JSON only.',
-    user: i => `A learner wants to practise recognising this: "${s(i.spot)}".\nThe conversation it came from (for context only):\n${s(i.fullCode).slice(0, 3500)}\n\nWrite 3 short scenarios about made-up people, each in a different setting and none about the learner's own life. After each, ask what's going on, with 3 options: plausible readings a thoughtful person might give. Spotting it must take the idea, not a giveaway: keep the options within a few words of each other in length and equally specific, and don't make the best fit the longest, the most nuanced-sounding, or the only one that names the idea. This is practice, not a test: nothing is scored. For each option give a "note": one or two sentences on how that reading fits or doesn't, framed as one way to see it, not as a verdict. Mark the reading that fits best as "fits": true. Return ONLY JSON {"scenarios":[{"text": the scenario in 2-4 sentences, "prompt": the question, "options":[{"label": string, "fits": boolean, "note": string}]}]}` },
+  spotPractice: {
+    kind: 'json',
+    json: true,
+    system: 'You return strict JSON only.',
+    user: i =>
+      `A learner wants to practise recognising this: "${s(i.spot)}".\nThe conversation it came from (for context only):\n${s(i.fullCode).slice(0, 3500)}\n\nWrite 3 short scenarios about made-up people, each in a different setting and none about the learner's own life. After each, ask what's going on, with 3 options: plausible readings a thoughtful person might give. Spotting it must take the idea, not a giveaway: keep the options within a few words of each other in length and equally specific, and don't make the best fit the longest, the most nuanced-sounding, or the only one that names the idea. This is practice, not a test: nothing is scored. For each option give a "note": one or two sentences on how that reading fits or doesn't, framed as one way to see it, not as a verdict. Mark the reading that fits best as "fits": true. Return ONLY JSON {"scenarios":[{"text": the scenario in 2-4 sentences, "prompt": the question, "options":[{"label": string, "fits": boolean, "note": string}]}]}`,
+  },
 
-  asmFeedback: { kind: 'tutor', system: 'You are a calm tutor. Plain language.',
-    user: i => `A learner is ordering shuffled lines of ${s(i.lang)} code (a Parsons problem). Correct version:\n${s(i.correct)}\n\nTheir version:\n${s(i.yours) || '(empty)'}\n${i.distractor ? '\nThey included this piece that does not belong: ' + s(i.distractor) : ''}${i.missing ? '\nThey left ' + Number(i.missing) + ' piece(s) unplaced.' : ''}${(i.wrongLines || []).length ? '\nLines currently in the wrong position: ' + i.wrongLines.map(l => '`' + s(l) + '`').join(', ') : ''}\n\nIn at most 2 sentences, name the ONE most important line to reconsider by quoting it in backticks, and connect it to what happens at runtime (execution order). Do not give the answer. No praise, no shame.` },
+  asmFeedback: {
+    kind: 'tutor',
+    system: 'You are a calm tutor. Plain language.',
+    user: i =>
+      `A learner is ordering shuffled lines of ${s(i.lang)} code (a Parsons problem). Correct version:\n${s(i.correct)}\n\nTheir version:\n${s(i.yours) || '(empty)'}\n${i.distractor ? '\nThey included this piece that does not belong: ' + s(i.distractor) : ''}${i.missing ? '\nThey left ' + Number(i.missing) + ' piece(s) unplaced.' : ''}${(i.wrongLines || []).length ? '\nLines currently in the wrong position: ' + i.wrongLines.map(l => '`' + s(l) + '`').join(', ') : ''}\n\nIn at most 2 sentences, name the ONE most important line to reconsider by quoting it in backticks, and connect it to what happens at runtime (execution order). Do not give the answer. No praise, no shame.`,
+  },
 
   // The generated try. Choice questions must not give the answer away by length or wording (see scripts/eval-generated.mjs).
-  writeTask: { kind: 'json', json: true, system: 'You design short, fair practice. Strict JSON only.',
+  writeTask: {
+    kind: 'json',
+    json: true,
+    system: 'You design short, fair practice. Strict JSON only.',
     user: i => `A learner highlighted part of an answer and wants to own: "${s(i.label) || 'the highlighted part'}".\nHighlighted:\n${s(i.code)}\nFull answer (for context):\n${s(i.fullCode).slice(0, 3500)}\n\nDesign ONE short practice that checks they own exactly that, on a NEW small case (not the same example). Choose the format that fits:\n- "code": they write or fix a few lines. Only if producing code IS the skill being owned.\n- "choice": 2-3 multiple-choice questions about the reasoning, 2-3 options each; wrong options must be common misconceptions, each with a one-sentence "gap" explaining why it's wrong.
   Choice questions must be fair. Every question must test the learning goal itself, not a side detail. Make it impossible to pass without the idea: keep the options in a question about the same length and equally specific; don't make wrong options absolute ("always", "never", "only") while the right one is hedged; don't let the right option echo the question's wording; don't make the right option the odd one out by type. The new case must have a different answer from the example in Claude's answer.\n- "respond": for an interpersonal or judgment skill (leading, giving feedback, delegating, saying no, handling conflict, negotiating, parenting), where doing it is the skill and picking the best of three options is only recognising it. A realistic scenario from the same part of life as the question (work stays at work, home stays at home), with different people and a different setting from Claude's answer, that ends at the moment they have to act; they write what they'd say or do next, in their own words. The task and context describe the situation only: never name the idea, the method or the moves (not "respond by asking what would have to be true"), since knowing to use it is part of the skill. "keyPoints" are 2-3 moves a good response makes, each the idea in action (e.g. "hands the problem back instead of taking it over"), checkable in any wording, never a script, a tone or a phrase to use. "sample" is one short way a person might say it, shown after they answer as one way, not the answer. Use "choice" for a people skill only when the point is telling apart two things people confuse (kindness vs accommodation), not how to act.
-- "steps": they work it out on a new case with different numbers, in 2-4 steps, each one number they enter. Use this whenever the highlighted part is a calculation or a procedure with numbers: doing it is the skill, so recognising it among options is not enough.\n- "explain": one question asking them to explain the idea and apply it to the new case, with 2-3 short key points a good answer contains.\nPrefer "steps", "explain", "respond" or "code" when doing it or saying it in your own words is the skill; use "choice" only when the point is telling apart ideas people commonly confuse.\nNever ask what a named person said or believes, or who said something: test applying the idea to the new case.\nAlso say whether the WRITTEN ORDER of the highlighted lines is itself what's being learned ("orderIsInsight": true only then; runtime order or timing is not written order). Return ONLY JSON {"orderIsInsight": boolean, "format": "code"|"choice"|"explain"|"respond"|"steps", "task": one sentence starting "Now a new situation:", "context": what they have to work with, or "", "reference": a reference solution (code only), "requirements": [2-4 short phrases, each one thing a correct answer must do, the first being the learning goal itself] (code only), "questions": [{"prompt": string, "short": the topic it checks in under 8 words, without giving the answer (e.g. "what runs first"), "options": [{"label": string, "correct": boolean, "gap": string|null}]}] (choice only), "keyPoints": [string] (explain and respond), "keyTopics": [for each key point, in the same order, the topic it covers in under 8 words without giving it away (e.g. "what happens to the old request")] (explain and respond), "sample": string (respond only), "steps": [{"label": what to work out in this step, without the answer, "answer": number, "unit": "%" or "", "how": one sentence on how to get it, shown only if they miss it}] (steps only)}` },
+- "steps": they work it out on a new case with different numbers, in 2-4 steps, each one number they enter. Use this whenever the highlighted part is a calculation or a procedure with numbers: doing it is the skill, so recognising it among options is not enough.\n- "explain": one question asking them to explain the idea and apply it to the new case, with 2-3 short key points a good answer contains.\nPrefer "steps", "explain", "respond" or "code" when doing it or saying it in your own words is the skill; use "choice" only when the point is telling apart ideas people commonly confuse.\nNever ask what a named person said or believes, or who said something: test applying the idea to the new case.\nAlso say whether the WRITTEN ORDER of the highlighted lines is itself what's being learned ("orderIsInsight": true only then; runtime order or timing is not written order). Return ONLY JSON {"orderIsInsight": boolean, "format": "code"|"choice"|"explain"|"respond"|"steps", "task": one sentence starting "Now a new situation:", "context": what they have to work with, or "", "reference": a reference solution (code only), "requirements": [2-4 short phrases, each one thing a correct answer must do, the first being the learning goal itself] (code only), "questions": [{"prompt": string, "short": the topic it checks in under 8 words, without giving the answer (e.g. "what runs first"), "options": [{"label": string, "correct": boolean, "gap": string|null}]}] (choice only), "keyPoints": [string] (explain and respond), "keyTopics": [for each key point, in the same order, the topic it covers in under 8 words without giving it away (e.g. "what happens to the old request")] (explain and respond), "sample": string (respond only), "steps": [{"label": what to work out in this step, without the answer, "answer": number, "unit": "%" or "", "how": one sentence on how to get it, shown only if they miss it}] (steps only)}`,
+  },
 
-  hint: { kind: 'tutor', system: 'Hints, not answers.',
-    user: i => `Task: ${s(i.task)}\nReference solution (never reveal it):\n${s(i.ref)}\nLearner draft so far:\n${s(i.draft) || '(nothing yet)'}\nPrevious hints: ${(i.hints || []).map(s).join(' | ') || 'none'}\nGive ONE new hint as a question or nudge, under 25 words. Never write the code for them.` },
+  hint: {
+    kind: 'tutor',
+    system: 'Hints, not answers.',
+    user: i =>
+      `Task: ${s(i.task)}\nReference solution (never reveal it):\n${s(i.ref)}\nLearner draft so far:\n${s(i.draft) || '(nothing yet)'}\nPrevious hints: ${(i.hints || []).map(s).join(' | ') || 'none'}\nGive ONE new hint as a question or nudge, under 25 words. Never write the code for them.`,
+  },
 
   // Shared grader: requirement checklist with quoted evidence; the app then applies deterministic clamps.
-  grade: { kind: 'grade', json: true, system: 'Exacting, fair grader. Quote evidence, never assume. Strict JSON only.',
-    user: i => `You are grading a learner's unassisted attempt.\nTask: ${s(i.task)}\nReference solution (one valid answer; alternates are fine):\n${s(i.ref)}\nLearner attempt:\n${s(i.attempt)}\n\nDifferent but reasonable table, column, alias, or variable names are fine and never count against them; judge the structure and logic. Only grade requirements the task itself states; never penalise for omitting something the task did not ask for.\n\nStep 1: ${(i.requirements || []).length ? `the requirements are fixed; check exactly these, in this order, using them as the "requirement" strings: ${i.requirements.map((q, k) => `${k + 1}. ${s(q)}`).join(' ')}` : 'list every concrete requirement implied by the task (e.g. filter, aggregate, grouping, sort direction, limit, state handling).'} Step 2: for each, quote the EXACT substring of the attempt that satisfies it, or null if none. A requirement with no quoted evidence is NOT met. Never infer something the attempt does not contain. Step 3: score. 5 = all requirements met and would run; 4 = all met, cosmetic issue; 3 = would run but result differs from the task (any unmet requirement caps at 3); 2 = would not run; 1 = not close.\n\nReturn ONLY JSON {"checks":[{"requirement": string, "quoted_evidence": string|null, "met": boolean}], "score": integer, ${i.variant === 'note' ? `"note": one sentence, specific, curious not judgmental, naming what held and what slipped` : `"worked": one sentence on what you got right, "gap": one sentence naming the specific unmet requirement (or "Nothing structural." only if every check is met)`}}. All prose addressed to the learner as "you".` },
+  grade: {
+    kind: 'grade',
+    json: true,
+    system:
+      'Exacting, fair grader. Quote evidence, never assume. Strict JSON only.',
+    user: i =>
+      `You are grading a learner's unassisted attempt.\nTask: ${s(i.task)}\nReference solution (one valid answer; alternates are fine):\n${s(i.ref)}\nLearner attempt:\n${s(i.attempt)}\n\nDifferent but reasonable table, column, alias, or variable names are fine and never count against them; judge the structure and logic. Only grade requirements the task itself states; never penalise for omitting something the task did not ask for.\n\nStep 1: ${(i.requirements || []).length ? `the requirements are fixed; check exactly these, in this order, using them as the "requirement" strings: ${i.requirements.map((q, k) => `${k + 1}. ${s(q)}`).join(' ')}` : 'list every concrete requirement implied by the task (e.g. filter, aggregate, grouping, sort direction, limit, state handling).'} Step 2: for each, quote the EXACT substring of the attempt that satisfies it, or null if none. A requirement with no quoted evidence is NOT met. Never infer something the attempt does not contain. Step 3: score. 5 = all requirements met and would run; 4 = all met, cosmetic issue; 3 = would run but result differs from the task (any unmet requirement caps at 3); 2 = would not run; 1 = not close.\n\nReturn ONLY JSON {"checks":[{"requirement": string, "quoted_evidence": string|null, "met": boolean}], "score": integer, ${i.variant === 'note' ? `"note": one sentence, specific, curious not judgmental, naming what held and what slipped` : `"worked": one sentence on what you got right, "gap": one sentence naming the specific unmet requirement (or "Nothing structural." only if every check is met)`}}. All prose addressed to the learner as "you".`,
+  },
 
-  notes: { kind: 'json', json: true, system: 'You are a kind, precise senior reviewer. Strict JSON only.',
-    user: i => `A learner's attempt has already been checked${i.gap ? ` (what to fix: ${s(i.gap)})` : ''}. Do NOT re-score it or repeat that.\nTask: ${s(i.task)}\nTheir attempt (${s(i.lang)}):\n${s(i.text)}\nAlready noted: ${(i.have || []).map(s).join(' | ') || 'nothing'}\n\nWrite 0 to 2 short notes beyond what the task required: good practice worth keeping (kind "nice"), or something worth improving (kind "improve"). ${i.lang === 'concept' || i.lang === 'text' || !i.isCode ? 'This is about understanding, not writing: notes may only address the idea (a misconception, a missing link, a strong application), never tone, confidence, hedging or phrasing.' : 'Notes may address how they wrote it (robustness, readability) or a misconception visible in it.'} Skip anything already noted. Each note must quote an exact short fragment (under 40 characters) of their attempt. Return ONLY JSON {"notes":[{"kind":"nice"|"improve","quote":string,"text":string under 30 words, addressed to "you"}]}. Return an empty list if nothing is genuinely useful.` },
+  notes: {
+    kind: 'json',
+    json: true,
+    system: 'You are a kind, precise senior reviewer. Strict JSON only.',
+    user: i =>
+      `A learner's attempt has already been checked${i.gap ? ` (what to fix: ${s(i.gap)})` : ''}. Do NOT re-score it or repeat that.\nTask: ${s(i.task)}\nTheir attempt (${s(i.lang)}):\n${s(i.text)}\nAlready noted: ${(i.have || []).map(s).join(' | ') || 'nothing'}\n\nWrite 0 to 2 short notes beyond what the task required: good practice worth keeping (kind "nice"), or something worth improving (kind "improve"). ${i.lang === 'concept' || i.lang === 'text' || !i.isCode ? 'This is about understanding, not writing: notes may only address the idea (a misconception, a missing link, a strong application), never tone, confidence, hedging or phrasing.' : 'Notes may address how they wrote it (robustness, readability) or a misconception visible in it.'} Skip anything already noted. Each note must quote an exact short fragment (under 40 characters) of their attempt. Return ONLY JSON {"notes":[{"kind":"nice"|"improve","quote":string,"text":string under 30 words, addressed to "you"}]}. Return an empty list if nothing is genuinely useful.`,
+  },
 
   // What teaching Sam showed. "Unsure" splits in two: hedged and wrong (a gap), hedged but right (underconfidence).
-  debrief: { kind: 'json', json: true, system: 'Strict JSON only. Quote exactly.',
-    user: i => `A learner explained "${s(i.label) || 'an idea'}" to a beginner named Sam. Conversation:\n${(i.msgs || []).map(m => (m.role === 'sam' ? 'Sam: ' : 'Learner: ') + s(m.text)).join('\n')}\n\nReturn ONLY JSON {"clear":[{"quote": exact words from a Learner line, "text": what that shows they understand, under 20 words}], "unsure":[{"quote": exact words from a Learner line where they hedged, guessed or got it wrong, "question": the Sam question that exposed it, "topic": the open topic as a short learning goal, under 10 words, e.g. "How an aggregator gets started", "right": true only if what they said, despite hedging, is actually correct}]}. Up to 2 clear, up to 2 unsure. Only list unsure if the learner really hedged, guessed or was wrong. Address nothing to the learner; just the JSON.` },
+  debrief: {
+    kind: 'json',
+    json: true,
+    system: 'Strict JSON only. Quote exactly.',
+    user: i =>
+      `A learner explained "${s(i.label) || 'an idea'}" to a beginner named Sam. Conversation:\n${(i.msgs || []).map(m => (m.role === 'sam' ? 'Sam: ' : 'Learner: ') + s(m.text)).join('\n')}\n\nReturn ONLY JSON {"clear":[{"quote": exact words from a Learner line, "text": what that shows they understand, under 20 words}], "unsure":[{"quote": exact words from a Learner line where they hedged, guessed or got it wrong, "question": the Sam question that exposed it, "topic": the open topic as a short learning goal, under 10 words, e.g. "How an aggregator gets started", "right": true only if what they said, despite hedging, is actually correct}]}. Up to 2 clear, up to 2 unsure. Only list unsure if the learner really hedged, guessed or was wrong. Address nothing to the learner; just the JSON.`,
+  },
 
   // ---- gaps ----
   // The check that closes a gap: explain and apply, not recite.
-  gapCheck: { kind: 'json', json: true, system: 'Strict JSON only.',
-    user: g => `Write one question that checks whether someone now understands: "${s(g.topic)}".${g.context ? ` Context: ${s(g.context)}.` : ''} It must ask them to explain the idea in their own words AND apply it to a concrete case, not recall a definition. Also list 2 or 3 key points a good answer must contain, each a short phrase. Return ONLY JSON {"question": string, "keyPoints": [string]}` },
+  gapCheck: {
+    kind: 'json',
+    json: true,
+    system: 'Strict JSON only.',
+    user: g =>
+      `Write one question that checks whether someone now understands: "${s(g.topic)}".${g.context ? ` Context: ${s(g.context)}.` : ''} It must ask them to explain the idea in their own words AND apply it to a concrete case, not recall a definition. Also list 2 or 3 key points a good answer must contain, each a short phrase. Return ONLY JSON {"question": string, "keyPoints": [string]}`,
+  },
 
-  gapJudge: { kind: 'grade', json: true, system: 'Fair, exacting, warm. Quote evidence; never assume. Strict JSON only.',
-    user: i => `Someone is closing a gap in their understanding: "${s(i.topic)}".\nQuestion they answered: ${s(i.question)}\nKey points a good answer contains: ${(i.keyPoints || []).map((p, k) => `${k + 1}. ${s(p)}`).join(' ')}\nTheir answer: ${s(i.answer)}\n\nFor each key point, quote the EXACT words of their answer that show it (any wording is fine if the idea is there), or null.\nReturn ONLY JSON {"points":[{"point": string, "evidence": string|null}], "feedback": one or two warm, specific sentences to them; if a point is missing, ask about it as a question to think about, without giving the answer}` },
+  gapJudge: {
+    kind: 'grade',
+    json: true,
+    system:
+      'Fair, exacting, warm. Quote evidence; never assume. Strict JSON only.',
+    user: i =>
+      `Someone is closing a gap in their understanding: "${s(i.topic)}".\nQuestion they answered: ${s(i.question)}\nKey points a good answer contains: ${(i.keyPoints || []).map((p, k) => `${k + 1}. ${s(p)}`).join(' ')}\nTheir answer: ${s(i.answer)}\n\nFor each key point, quote the EXACT words of their answer that show it (any wording is fine if the idea is there), or null.\nReturn ONLY JSON {"points":[{"point": string, "evidence": string|null}], "feedback": one or two warm, specific sentences to them; if a point is missing, ask about it as a question to think about, without giving the answer}`,
+  },
 
   // ---- you go first, when you ask again ----
-  goFirstMatch: { kind: 'json', json: true, system: 'You judge carefully and conservatively. Strict JSON only.',
-    user: i => `Someone has practised these ideas until they own them:\n${(i.owned || []).map((t, k) => `${k + 1}. ${s(t)}`).join('\n')}\n\nThey now ask Claude a new question:\n"${s(i.question)}"\n\nWould answering it well require applying one of those ideas to this new case (not just mentioning a related word)? If several, pick the most central. Return ONLY JSON {"match": the idea's number, or 0 if none}` },
+  goFirstMatch: {
+    kind: 'json',
+    json: true,
+    system: 'You judge carefully and conservatively. Strict JSON only.',
+    user: i =>
+      `Someone has practised these ideas until they own them:\n${(i.owned || []).map((t, k) => `${k + 1}. ${s(t)}`).join('\n')}\n\nThey now ask Claude a new question:\n"${s(i.question)}"\n\nWould answering it well require applying one of those ideas to this new case (not just mentioning a related word)? If several, pick the most central. Return ONLY JSON {"match": the idea's number, or 0 if none}`,
+  },
 
   // The verdict on the idea you own comes first and apart from anything else; new gaps are only named, never saved
   // (Learnings holds what you chose to own). Each gap is an idea to go deeper on, not a fix to the query.
-  goFirstCompare: { kind: 'json', json: true, system: 'You are Claude. Warm, specific, brief. Strict JSON only.',
-    user: i => `You were asked: "${s(i.question)}"\nBefore seeing your answer, the person wrote their own. They had already practised this idea: "${s(i.owned)}".\nTheir answer:\n${s(i.attempt)}\n\nYour answer:\n${s(i.answer).slice(0, 3000)}\n\nReturn ONLY JSON {"owned": "yes" | "partly" | "no" (did their answer apply "${s(i.owned)}" correctly to this case? judge only that idea), "ownedLine": one sentence, addressed to them, on how they applied that idea, quoting a few of their words, "note": 2-3 short sentences of markdown, addressed to them, on the one thing that matters most where yours differs, beyond that idea (empty string if nothing), "deeper": up to 2 other ideas their answer shows they could go deeper on, most useful first, each {"idea": the idea as a short topic under 9 words (e.g. "Counting matches after a LEFT JOIN"), not a fix to their code}; [] if none}. No score, no praise words like "great". Don't repeat your whole answer; it's shown in the chat.` },
+  goFirstCompare: {
+    kind: 'json',
+    json: true,
+    system: 'You are Claude. Warm, specific, brief. Strict JSON only.',
+    user: i =>
+      `You were asked: "${s(i.question)}"\nBefore seeing your answer, the person wrote their own. They had already practised this idea: "${s(i.owned)}".\nTheir answer:\n${s(i.attempt)}\n\nYour answer:\n${s(i.answer).slice(0, 3000)}\n\nReturn ONLY JSON {"owned": "yes" | "partly" | "no" (did their answer apply "${s(i.owned)}" correctly to this case? judge only that idea), "ownedLine": one sentence, addressed to them, on how they applied that idea, quoting a few of their words, "note": 2-3 short sentences of markdown, addressed to them, on the one thing that matters most where yours differs, beyond that idea (empty string if nothing), "deeper": up to 2 other ideas their answer shows they could go deeper on, most useful first, each {"idea": the idea as a short topic under 9 words (e.g. "Counting matches after a LEFT JOIN"), not a fix to their code}; [] if none}. No score, no praise words like "great". Don't repeat your whole answer; it's shown in the chat.`,
+  },
 
   // ---- recall ----
-  recallTask: { kind: 'json', json: true, system: 'Strict JSON only.',
+  recallTask: {
+    kind: 'json',
+    json: true,
+    system: 'Strict JSON only.',
     // Recall applies the idea to a new case, like the try (§8f invariants 2-3, log 42): days later, nobody should
     // need to remember Claude's wording, lists or labels to answer it.
-    user: i => `Someone owned ${i.title ? `"${s(i.title)}"` : `the idea in this ${s(i.lang)} code`} a few days ago, from the answer below. Write a short unassisted recall task that checks they can still USE the idea: a new concrete situation, from the same part of life as the answer (work stays at work, home stays at home), with different people and details, then one question asking what they would do or say, or what is going on, and why. It must make sense on its own to someone who doesn't remember the answer's wording: never ask them to recall a term, a named approach, a list, a number of steps or signs, or anything the answer said. Under 60 words, starting "From memory:". Also give a reference answer: what a good answer does, in 1-2 sentences. Return ONLY JSON {"task": string, "reference": string}.\nThe answer:\n${s(i.code)}` },
+    user: i =>
+      `Someone owned ${i.title ? `"${s(i.title)}"` : `the idea in this ${s(i.lang)} code`} a few days ago, from the answer below. Write a short unassisted recall task that checks they can still USE the idea: a new concrete situation, from the same part of life as the answer (work stays at work, home stays at home), with different people and details, then one question asking what they would do or say, or what is going on, and why. It must make sense on its own to someone who doesn't remember the answer's wording: never ask them to recall a term, a named approach, a list, a number of steps or signs, or anything the answer said. Under 60 words, starting "From memory:". Also give a reference answer: what a good answer does, in 1-2 sentences. Return ONLY JSON {"task": string, "reference": string}.\nThe answer:\n${s(i.code)}`,
+  },
 
-  gapRecall: { kind: 'json', json: true, system: 'Strict JSON only.',
-    user: i => `Write one new question that checks, from memory, whether someone still understands "${s(i.topic)}" by applying it to a different concrete case than before (${s(i.before)}). Return ONLY JSON {"question": string}` },
+  gapRecall: {
+    kind: 'json',
+    json: true,
+    system: 'Strict JSON only.',
+    user: i =>
+      `Write one new question that checks, from memory, whether someone still understands "${s(i.topic)}" by applying it to a different concrete case than before (${s(i.before)}). Return ONLY JSON {"question": string}`,
+  },
 };

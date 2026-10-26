@@ -12,12 +12,23 @@ export async function ask(task, input) {
 // The first complete JSON object or array in a reply. Models sometimes add a sentence, or a second object, after
 // the JSON; a greedy match would swallow that and fail to parse (2 of 40 generated tries did, in the eval).
 function firstJson(t) {
-  const start = t.search(/[{[]/); if (start < 0) throw new Error('no JSON');
-  let depth = 0, inStr = false, esc = false;
+  const start = t.search(/[{[]/);
+  if (start < 0) throw new Error('no JSON');
+  let depth = 0,
+    inStr = false,
+    esc = false;
   for (let i = start; i < t.length; i++) {
     const c = t[i];
-    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
-    if (c === '"') inStr = true; else if (c === '{' || c === '[') depth++; else if ((c === '}' || c === ']') && --depth === 0) return t.slice(start, i + 1);
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === '{' || c === '[') depth++;
+    else if ((c === '}' || c === ']') && --depth === 0)
+      return t.slice(start, i + 1);
   }
   throw new Error('unfinished JSON');
 }
@@ -29,25 +40,33 @@ export async function complete({ task, input = {}, messages, onText }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ task, input, messages, stream: !!onText }),
   });
-  if (onText && r.ok && /ndjson/.test(r.headers.get('Content-Type') || '')) return readStream(r, onText);
+  if (onText && r.ok && /ndjson/.test(r.headers.get('Content-Type') || ''))
+    return readStream(r, onText);
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(data.error || `HTTP ${r.status}`), { status: r.status });
+  if (!r.ok)
+    throw Object.assign(new Error(data.error || `HTTP ${r.status}`), {
+      status: r.status,
+    });
   return data.text;
 }
 
 // NDJSON lines: {"t": piece} …, then {"done": true} or {"error": message}.
 async function readStream(r, onText) {
-  const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = '', text = '';
+  const reader = r.body.getReader(),
+    dec = new TextDecoder();
+  let buf = '',
+    text = '';
   for (;;) {
     const { value, done } = await reader.read();
     buf += dec.decode(value || new Uint8Array(), { stream: !done });
-    const lines = buf.split('\n'); buf = lines.pop();
+    const lines = buf.split('\n');
+    buf = lines.pop();
     for (const l of lines.filter(Boolean)) {
       const m = JSON.parse(l);
       if (m.error) throw new Error(m.error);
       if (m.done) return text;
-      text += m.t; onText(text);
+      text += m.t;
+      onText(text);
     }
     if (done) throw new Error('The answer was cut off.');
   }

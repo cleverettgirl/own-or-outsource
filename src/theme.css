@@ -1,73 +1,99 @@
 /* Tailwind, and the app's colour tokens. Tailwind's reset (preflight) is left out on purpose: the app's own base
    styles are in base.css, and the reset would restyle Claude's rendered answers (lists, headings, spacing). */
 @layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 /* Phones and narrow windows: `phone:` classes. The panel-as-sheet behaviour is in sheet.css. */
 @custom-variant phone (@media (max-width: 760px));
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+}
 
 /* Colours by role, so light and dark are two lists of values and every class (bg-page, text-muted, border-line…)
    follows the theme. Light follows claude.ai's current light mode: white page, light grey sidebar, near-black text.
    The clay accent and the teal for "owned" are the app's own. */
 @theme static {
-  --color-page: #FFFFFF;          /* behind the chat */
-  --color-sidebar: #F8F8F6;
-  --color-surface: #FFFFFF;       /* cards, panels, inputs */
-  --color-surface-2: #FAFAF8;     /* a quieter card: code blocks, chips */
-  --color-sunken: #F3F3F0;        /* inline code, wells, quiet hovers */
-  --color-bubble: #F0EFEB;        /* your messages */
-  --color-wash: #ECECE8;          /* hovered and selected rows */
-  --color-line-soft: #F0EFEB;
-  --color-line: #E6E5E0;
-  --color-line-strong: #D5D4CE;
+  --color-page: #ffffff; /* behind the chat */
+  --color-sidebar: #f8f8f6;
+  --color-surface: #ffffff; /* cards, panels, inputs */
+  --color-surface-2: #fafaf8; /* a quieter card: code blocks, chips */
+  --color-sunken: #f3f3f0; /* inline code, wells, quiet hovers */
+  --color-bubble: #f0efeb; /* your messages */
+  --color-wash: #ecece8; /* hovered and selected rows */
+  --color-line-soft: #f0efeb;
+  --color-line: #e6e5e0;
+  --color-line-strong: #d5d4ce;
   --color-ink: #141413;
-  --color-ink-2: #3D3D3A;
-  --color-muted: #73726C;
-  --color-faint: #A9A8A1;
-  --color-inverse: #141413;       /* dark buttons, the highlight popover */
-  --color-on-inverse: #FFFFFF;
-  --color-on-accent: #FFFFFF;     /* text on clay or teal */
-  --color-accent: #C4613A;
-  --color-accent-hover: #A85331;
-  --color-accent-text: #9E4B2A;
-  --color-accent-deep: #5A3A2A;
-  --color-accent-mid: #E3A88A;
-  --color-accent-border: #EBCDBD;
-  --color-accent-soft-2: #FADCCB;
-  --color-accent-soft: #FCEEE7;
-  --color-good: #2F8F86;
-  --color-good-text: #1F6B64;
-  --color-good-mid: #7FA394;
-  --color-good-border: #CFE3DE;
-  --color-good-soft: #E4F2EF;
-  --color-olive: #5B7F3C;
-  --color-blue: #6A9BD8;
-  --color-purple: #9B8AC4;
+  --color-ink-2: #3d3d3a;
+  --color-muted: #73726c;
+  --color-faint: #a9a8a1;
+  --color-inverse: #141413; /* dark buttons, the highlight popover */
+  --color-on-inverse: #ffffff;
+  --color-on-accent: #ffffff; /* text on clay or teal */
+  --color-accent: #c4613a;
+  --color-accent-hover: #a85331;
+  --color-accent-text: #9e4b2a;
+  --color-accent-deep: #5a3a2a;
+  --color-accent-mid: #e3a88a;
+  --color-accent-border: #ebcdbd;
+  --color-accent-soft-2: #fadccb;
+  --color-accent-soft: #fceee7;
+  --color-good: #2f8f86;
+  --color-good-text: #1f6b64;
+  --color-good-mid: #7fa394;
+  --color-good-border: #cfe3de;
+  --color-good-soft: #e4f2ef;
+  --color-olive: #5b7f3c;
+  --color-blue: #6a9bd8;
+  --color-purple: #9b8ac4;
 
   --font-sans: 'Instrument Sans', system-ui, sans-serif;
   --font-serif: Newsreader, Georgia, serif;
   --font-mono: 'JetBrains Mono', Menlo, monospace;
 
-  --animate-blink: blink 1.2s infinite;      /* "thinking" dots and loading lines */
-  --animate-rise: rise .3s ease;             /* a message or block arriving */
-  --animate-slidein: slidein .25s ease;      /* a side panel opening */
+  --animate-blink: blink 1.2s infinite; /* "thinking" dots and loading lines */
+  --animate-rise: rise 0.3s ease; /* a message or block arriving */
+  --animate-slidein: slidein 0.25s ease; /* a side panel opening */
 }
 
 /* Dark follows the system setting. */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --color-page: #262624; --color-sidebar: #1F1E1D; --color-surface: #30302E; --color-surface-2: #2B2B29; --color-sunken: #1F1E1D; --color-bubble: #141413;
-    --color-wash: #3A3936; --color-line-soft: #34332F; --color-line: #3E3D3A; --color-line-strong: #4D4C48;
-    --color-ink: #F5F4EF; --color-ink-2: #D9D7CF; --color-muted: #A6A39A; --color-faint: #76746D;
-    --color-inverse: #F5F4EF; --color-on-inverse: #1F1E1D; --color-on-accent: #FFFFFF;
-    --color-accent: #D97757; --color-accent-hover: #E08A6D; --color-accent-text: #EE9B7A; --color-accent-deep: #F0CDBB; --color-accent-mid: #B5674A;
-    --color-accent-border: #6B4434; --color-accent-soft-2: #5A3426; --color-accent-soft: #3A2A22;
-    --color-good: #3FA89D; --color-good-text: #7CCFC4; --color-good-mid: #6E9A88; --color-good-border: #2E5550; --color-good-soft: #1E3532;
-    --color-olive: #9DBB7A; --color-blue: #7FA8DE; --color-purple: #A898D0;
+    --color-page: #262624;
+    --color-sidebar: #1f1e1d;
+    --color-surface: #30302e;
+    --color-surface-2: #2b2b29;
+    --color-sunken: #1f1e1d;
+    --color-bubble: #141413;
+    --color-wash: #3a3936;
+    --color-line-soft: #34332f;
+    --color-line: #3e3d3a;
+    --color-line-strong: #4d4c48;
+    --color-ink: #f5f4ef;
+    --color-ink-2: #d9d7cf;
+    --color-muted: #a6a39a;
+    --color-faint: #76746d;
+    --color-inverse: #f5f4ef;
+    --color-on-inverse: #1f1e1d;
+    --color-on-accent: #ffffff;
+    --color-accent: #d97757;
+    --color-accent-hover: #e08a6d;
+    --color-accent-text: #ee9b7a;
+    --color-accent-deep: #f0cdbb;
+    --color-accent-mid: #b5674a;
+    --color-accent-border: #6b4434;
+    --color-accent-soft-2: #5a3426;
+    --color-accent-soft: #3a2a22;
+    --color-good: #3fa89d;
+    --color-good-text: #7ccfc4;
+    --color-good-mid: #6e9a88;
+    --color-good-border: #2e5550;
+    --color-good-soft: #1e3532;
+    --color-olive: #9dbb7a;
+    --color-blue: #7fa8de;
+    --color-purple: #a898d0;
   }
 }
-
