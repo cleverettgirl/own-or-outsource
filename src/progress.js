@@ -5,9 +5,6 @@ import { SCENARIOS, scKey } from './scenarios.js';
 import { foldRepeats } from './util.js';
 
 export const STORE = 'own-it:v1';
-// ?demo in the URL loads a realistic sample state (for recording the demo video), kept under its own key so it
-// never mixes with a real tester's progress.
-export const DEMO_STORE = 'own-it:demo:v1';
 
 export function saveProgress(key, S, uid) {
   const sc = x => ({ ...x, scenario: scKey(x.scenario) });

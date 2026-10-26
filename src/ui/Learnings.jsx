@@ -98,7 +98,7 @@ export default function Learnings({ V }) {
           </div>
           <div className="flex gap-2.5 items-center text-[13px] flex-wrap text-muted">
             <button onClick={L.skipAhead} data-role="skip-ahead" className="bg-transparent border border-dashed border-faint rounded-lg py-[7px] px-3 text-ink-2 text-[13px] whitespace-nowrap hover:border-good hover:text-good-text">⏩ Skip ahead 3 days</button>
-            <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · {L.isDemo ? 'sample data' : 'saved in this browser'}</span>
+            <span>demo control{L.shifted ? ` · it's ${L.shiftDays} days later` : ''} · saved in this browser</span>
             <button onClick={L.resetDemo} data-role="reset-demo" className={LINK_MUTED}>Reset demo</button>
           </div>
         </div>

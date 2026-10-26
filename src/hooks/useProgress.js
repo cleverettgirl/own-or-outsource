@@ -1,6 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { loadProgress } from '../progress.js';
-import { seedLedger, demoState } from '../demo.js';
+import { seedLedger } from '../demo.js';
 import { DAY } from '../util.js';
 import { useMergeState } from './useMergeState.js';
 
@@ -11,14 +11,14 @@ export function useProgress(app) {
 
   useLayoutEffect(() => {
     const saved = loadProgress(app.storeKey);
-    if (saved) { app.uid = Math.max(app.uid, saved.uid); set(saved.state); } else if (app.isDemo) set(demoState()); else if (!ref.current.ledger.length) set({ ledger: seedLedger() });
+    if (saved) { app.uid = Math.max(app.uid, saved.uid); set(saved.state); } else if (!ref.current.ledger.length) set({ ledger: seedLedger() });
   }, []);
 
   function resetDemo() {
-    if (!window.confirm(app.isDemo ? 'Reset the sample data to how it started?' : 'Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
+    if (!window.confirm('Clear everything you own, your gaps and recalls, and start the demo fresh?')) return;
     try { window.localStorage.removeItem(app.storeKey); } catch (e) { /* nothing saved */ }
     app.uid = 0;
-    set({ ledger: seedLedger(), exits: [], gaps: [], asked: [], practised: [], ...(app.isDemo ? demoState() : {}), timeShift: 0, tipDismissed: false });
+    set({ ledger: seedLedger(), exits: [], gaps: [], asked: [], practised: [], timeShift: 0, tipDismissed: false });
     app.chat.set({ messages: [], activeGap: null, chatTitle: 'New chat', view: 'chat', composer: '' });
     app.own.set({ own: null });
     app.recall.set({ recall: null });

@@ -687,10 +687,10 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   step('markdown: a lone pipe in text is not a table', !plain.includes('<table'));
 }
 
-// ---- ?demo: a realistic sample for recording, under its own key; the normal state is never touched.
+// ---- A first visit (nothing saved) gets the seeded recall; asking Claude about a recall. The earlier progress is put back after.
 {
   const realBefore = window.localStorage.getItem('own-it:v1');
-  dom.reconfigure({ url: 'http://localhost/?demo' });
+  window.localStorage.removeItem('own-it:v1');
   const box = document.createElement('div'); document.body.appendChild(box);
   const demoRoot = createRoot(box);
   await act(async () => { demoRoot.render(React.createElement(App)); });
@@ -698,11 +698,11 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   await act(async () => { box.querySelector('button[data-role=nav-learnings]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await wait(50);
   const t = box.textContent, cards = box.querySelectorAll('[data-role=learning], [data-role=due-item]');
-  step('demo: ?demo loads the sample (6 owned, one due, an open gap), labelled', cards.length === 6 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('sample data') && t.includes('Open gaps') && t.includes('Calibration, across'), `${cards.length} cards`);
+  step('first visit: one seeded recall, due and labelled as an example', cards.length === 1 && box.querySelectorAll('[data-role=due-item]').length === 1 && t.includes('An example: as if') && t.includes('saved in this browser'), `${cards.length} cards`);
   // Recall in the sample, then a question about it: quoted into a new chat, the question left to you, no go-first offer.
   const bclick = label => act(async () => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.trim() === label) || [...box.querySelectorAll('button')].find(x => x.textContent.includes(label)); b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
   await bclick('Recall now · about a minute'); await wait(30);
-  step('demo: no "Ask Claude about this" on a recall before you answer', !box.querySelector('[data-role=recall-ask]'));
+  step('first visit: no "Ask Claude about this" on a recall before you answer', !box.querySelector('[data-role=recall-ask]'));
   await bclick("Knowing which stranger's home cooking"); await bclick('Result'); await bclick('Owns its customers less'); await bclick('Check it'); await wait(50);
   await act(async () => { box.querySelector('[data-role=recall-ask]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await wait(30);
   const draft = box.querySelector('main textarea')?.value || '';
@@ -714,8 +714,7 @@ step('not ready: going to Claude first is kept as data, not counted as a miss', 
   globalThis.fetch = offline;
   step('recall ask: Claude answers it (no go-first offer for a question you bring)', tasks.includes('chat') && !tasks.includes('goFirstMatch') && box.textContent.includes('Because missing needs every house'));
   await act(async () => { demoRoot.unmount(); }); box.remove();
-  dom.reconfigure({ url: 'http://localhost/' });
-  step('demo: the real saved progress is untouched by ?demo', window.localStorage.getItem('own-it:v1') === realBefore && !!window.localStorage.getItem('own-it:demo:v1'));
+  if (realBefore === null) window.localStorage.removeItem('own-it:v1'); else window.localStorage.setItem('own-it:v1', realBefore);
 }
 
 // ---- The try fits the focus: a focus about order at runtime ("when the cleanup runs") gets a try designed for it,

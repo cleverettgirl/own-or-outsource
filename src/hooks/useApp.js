@@ -1,5 +1,5 @@
 import { createRef, useLayoutEffect, useRef } from 'react';
-import { STORE, DEMO_STORE, saveProgress } from '../progress.js';
+import { STORE, saveProgress } from '../progress.js';
 import { useProgress } from './useProgress.js';
 import { useChat } from './useChat.js';
 import { useGoFirst } from './useGoFirst.js';
@@ -14,12 +14,10 @@ function useCore() {
   const ref = useRef(null);
   if (!ref.current) {
     const pending = [];
-    // ?demo in the URL loads a realistic sample state (for recording the demo video), kept under its own key.
-    const isDemo = typeof window !== 'undefined' && /[?&]demo\b/.test(window.location.search);
     const app = {
       uid: 0,
       nid: () => ++app.uid,
-      isDemo, storeKey: isDemo ? DEMO_STORE : STORE,
+      storeKey: STORE,
       scrollRef: createRef(), panelRef: createRef(), composerRef: createRef(),
       // Callbacks from set(patch, cb), run after the update commits (like a class's setState callback).
       afterCommit: cb => pending.push(cb),

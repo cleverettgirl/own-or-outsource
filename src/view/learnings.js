@@ -33,7 +33,7 @@ export function learningsVals(app) {
   const sorted = S.learnSort === 'due' ? items.slice().sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)) : items;
   return {
     back: S.learnFrom ? app.chat.backFromLearnings : null, backLabel: S.own ? 'Back to your try' : 'Back to the chat', justOwned: S.justOwned || null,
-    isDemo: app.isDemo, untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => app.chat.set(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
+    untried, sorted, sortByDue: S.learnSort === 'due', toggleSort: () => app.chat.set(s => ({ learnSort: s.learnSort === 'due' ? null : 'due' })),
     recalling: items.find(it => it.recall) || null, nextUp: items.filter(it => !it.due && it.dueAt != null).sort((a, b) => a.dueAt - b.dueAt)[0] || null,
     calPct: (() => { const c = calibration(S.ledger); return c.items ? c.got : null; })(),
     practised: (S.practised || []).slice().reverse().map(p => ({ ...p, when: rel(p.at, now) })),
