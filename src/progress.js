@@ -14,7 +14,11 @@ export function saveProgress(key, S, uid) {
       focus: o.focus,
       lang: o.lang,
       code: String(o.code || '').slice(0, 4000),
-      write: { schema: (o.write && o.write.schema) || '' },
+      // format says whether the try was code, which is what Sam asks about when you explain it from Learnings.
+      write: {
+        schema: (o.write && o.write.schema) || '',
+        format: (o.write && o.write.format) || '',
+      },
     };
   const data = {
     v: 1,

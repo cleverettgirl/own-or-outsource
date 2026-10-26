@@ -12,67 +12,9 @@ export function learningsVals(app) {
     .reverse()
     .map(e => {
       const key = goFirstFor(e.own.focus && e.own.focus.target);
-      const steps = (
-        e.kind === 'gap'
-          ? [
-              {
-                label: 'Gap found',
-                v: e.gap.source === 'recall' ? 'in a recall' : 'teaching Sam',
-                tone: 'mute',
-              },
-              { label: 'Closed', v: 'checked ✓', tone: 'act' },
-            ]
-          : (e.earlier || [])
-              .map(x => ({
-                label: `Earlier, ${rel(x.at, now)}`,
-                v: `predicted ${x.predicted}, got ${x.actual} of ${x.n}`,
-                tone: 'mute',
-              }))
-              .concat([
-                {
-                  label: 'Predicted',
-                  v: `${e.predicted} of ${e.n}`,
-                  tone: 'pred',
-                },
-                {
-                  label: 'First try',
-                  v: `${e.actual} of ${e.n}${e.judged ? ', judged by Claude' : ''}`,
-                  tone: 'act',
-                },
-              ])
-      )
-        .concat(
-          e.fixed != null && e.fixed !== e.actual
-            ? [{ label: 'Fixed', v: `${e.fixed} of ${e.n}`, tone: 'mute' }]
-            : [],
-        )
-        .concat(
-          (e.reviews || []).map(rv => ({
-            label: `Recall · ${rel(rv.at, now)}`,
-            v: `${rv.right} of ${rv.n}`,
-            tone: 'act',
-          })),
-        )
-        .concat(
-          (e.realWork || []).map(r =>
-            r.outsourced
-              ? { label: 'Real work', v: 'let Claude answer', tone: 'mute' }
-              : r.n
-                ? {
-                    label: 'Real work',
-                    v: `went first, ${r.actual} of ${r.n}`,
-                    tone: 'act',
-                  }
-                : { label: 'Real work', v: 'went first', tone: 'act' },
-          ),
-        )
-        .concat(
-          e.dueAt != null && e.dueAt > now
-            ? [{ label: 'Recall', v: rel(e.dueAt, now), tone: 'next' }]
-            : [],
-        );
       const due = e.dueAt != null && e.dueAt <= now,
         r = S.recall && S.recall.entryId === e.id ? S.recall : null;
+      const tc = S.teaching && S.teaching.entryId === e.id ? S.teaching : null;
       // For the map and the card covers: which chat it came from, what kind it is, how soon it comes back.
       return {
         sc: e.kind === 'gap' ? 'GAP' : scKey(e.own.scenario),
@@ -92,7 +34,6 @@ export function learningsVals(app) {
             : e.own.scenario
               ? e.own.scenario.title
               : S.chatTitle,
-        steps,
         due,
         owned: e.ownedAt != null ? `owned ${rel(e.ownedAt, now)}` : '',
         next: e.dueAt != null && !due ? `next recall ${rel(e.dueAt, now)}` : '',
@@ -102,35 +43,58 @@ export function learningsVals(app) {
             ? { ...r, ...tally(r.grade), full: allRight(r.grade) }
             : r,
         then: r ? r.thenLabel : '',
+        onTeach: () => app.teach.startTeach(e),
+        teaching: tc,
         onNew: key ? () => app.goFirst.startGoFirst(key) : null,
         newLabel: key ? GO_FIRST[key].chip : '',
       };
     });
   const real = S.ledger.flatMap(e => e.realWork || []);
-  // Related questions you haven't tried yet: the "go first" questions what you own unlocks, shown dashed on the map.
-  const untried = [
+  // The new question each thing you own unlocks: a node on the map off its parent, dashed until you've tried it.
+  // Clicking it starts the question (You go first). The cards keep to recall and Sam (log 115).
+  const related = [
     ...new Set(items.map(it => it.onNew && it.newLabel).filter(Boolean)),
-  ]
-    .filter(
-      chip =>
-        !S.ledger.some(
-          e =>
-            (e.realWork || []).length &&
-            goFirstFor(e.own.focus && e.own.focus.target) &&
-            GO_FIRST[goFirstFor(e.own.focus && e.own.focus.target)].chip ===
-              chip,
-        ),
-    )
-    .map(chip => ({
+  ].map(chip => {
+    const it = items.find(x => x.newLabel === chip);
+    return {
       label: chip.split(' · ')[1],
-      parent: items.find(it => it.newLabel === chip).id,
-    }));
+      parent: it.id,
+      onClick: it.onNew,
+      tried: S.ledger.some(
+        e =>
+          (e.realWork || []).length &&
+          goFirstFor(e.own.focus && e.own.focus.target) &&
+          GO_FIRST[goFirstFor(e.own.focus && e.own.focus.target)].chip === chip,
+      ),
+    };
+  });
   return {
     back: S.learnFrom ? app.chat.backFromLearnings : null,
     backLabel: S.own ? 'Back to your try' : 'Back to the chat',
     justOwned: S.justOwned || null,
-    untried,
+    related,
     recalling: items.find(it => it.recall) || null,
+    teachingItem: items.find(it => it.teaching) || null,
+    teach: S.teaching && {
+      msgs: S.teaching.msgs.map(x => ({
+        text: x.text,
+        isSam: x.role === 'sam',
+      })),
+      loading: S.teaching.loading,
+      open: S.teaching.turns < 3 && !S.teaching.debrief,
+      input: S.teaching.input,
+      onInput: app.teach.onInput,
+      send: app.teach.sendTeach,
+      debrief: S.teaching.debrief,
+      debriefLoading: S.teaching.debriefLoading,
+      gapTopics: S.gaps.map(g => g.topic),
+      savedLabel: 'Saved under Open gaps',
+      explore: app.teach.exploreGap,
+      save: app.teach.saveGap,
+    },
+    canWrapTeach: !!S.teaching && S.teaching.turns >= 1 && !S.teaching.debrief,
+    wrapTeach: app.teach.wrapTeach,
+    closeTeach: app.teach.close,
     nextUp:
       items
         .filter(it => !it.due && it.dueAt != null)

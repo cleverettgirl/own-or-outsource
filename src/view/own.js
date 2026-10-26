@@ -397,29 +397,23 @@ export function ownVals(app, o) {
       app.own.isCodeOwn(o),
     finishOwn: app.own.finishOwn,
     goTeach: app.own.goTeach,
-    teachMsgs: tc.msgs.map(x => ({
-      text: x.text,
-      isSam: x.role === 'sam',
-      row: x.role === 'sam' ? 'self-start' : 'self-end',
-      bubble: x.role === 'sam' ? 'bg-surface' : 'bg-bubble',
-    })),
-    teachLoading: tc.loading,
-    teachOpen: tc.turns < 3 && !tc.debrief,
-    teachDebrief: tc.debrief || null,
-    teachDebriefLoading: !!tc.debriefLoading,
+    teach: {
+      msgs: tc.msgs.map(x => ({ text: x.text, isSam: x.role === 'sam' })),
+      loading: tc.loading,
+      open: tc.turns < 3 && !tc.debrief,
+      input: tc.input,
+      onInput: e =>
+        app.own.setOwn(cur => ({
+          teach: { ...cur.teach, input: e.target.value },
+        })),
+      send: app.own.sendTeach,
+      debrief: tc.debrief || null,
+      debriefLoading: !!tc.debriefLoading,
+      gapTopics: S.gaps.map(g => g.topic),
+      explore: u => app.gaps.exploreGap(app.gaps.teachGap(u)),
+      save: u => app.gaps.teachGap(u),
+    },
     wrapTeach: app.own.debriefTeach,
     canWrap: tc.turns >= 1 && !tc.debrief,
-    exploreTeachGap: u => app.gaps.exploreGap(app.gaps.teachGap(u)),
-    saveTeachGap: u => app.gaps.teachGap(u),
-    gapTopics: S.gaps.map(g => g.topic),
-    teachInput: tc.input,
-    onTeachInput: e =>
-      app.own.setOwn(cur => ({
-        teach: { ...cur.teach, input: e.target.value },
-      })),
-    onTeachKey: e => {
-      if (e.key === 'Enter') app.own.sendTeach();
-    },
-    sendTeach: app.own.sendTeach,
   };
 }

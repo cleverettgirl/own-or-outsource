@@ -42,6 +42,9 @@ const { act } = React;
 
 const wait = ms => act(() => new Promise(r => setTimeout(r, ms)));
 const text = () => document.body.textContent;
+// What Learnings has recorded (the cards show only recall and Sam; the history is in saved progress, log 115).
+const savedLedger = () =>
+  JSON.parse(window.localStorage.getItem('own-it:v1') || '{}').ledger || [];
 const ownTitle = () =>
   document.querySelector('[data-role=own-title]')?.textContent || '';
 const buttons = () => [...document.querySelectorAll('button')];
@@ -561,14 +564,12 @@ step(
 );
 await openLearnings();
 step(
-  'learnings: a fix shows next to the first try',
-  (document.querySelector('[data-role=learnings]')?.textContent || '').includes(
-    'Fixed 2 of 2',
-  ),
+  'learnings: a fix is recorded next to the first try',
+  savedLedger().some(e => e.fixed === 2 && e.n === 2),
 );
 // Owned here: LEFT vs INNER vs RIGHT, so the new question is its own: which table's unmatched rows survive, the
 // SELECT written for you, and only that idea checked (log 112). No counting: that's the whole query's question.
-await click('Try a new question · every customer and their orders');
+await click('every customer and their orders');
 step(
   'go first: Claude offers the first try instead of answering',
   !!document.querySelector('[data-role=go-first]') &&
@@ -664,7 +665,7 @@ await act(async () => {
 });
 // A query that doesn't run, with Claude out of reach: nothing could be checked, so nothing is scored.
 await openLearnings();
-await click('Try a new question · every customer and their orders');
+await click('every customer and their orders');
 await click("I'll go first");
 await act(async () => {
   panel()
@@ -686,7 +687,9 @@ step(
 await openLearnings();
 step(
   'go first: Learnings records it as real work',
-  text().includes('went first, 1 of 2'),
+  savedLedger().some(e =>
+    (e.realWork || []).some(r => !r.outsourced && r.actual === 1 && r.n === 2),
+  ),
 );
 
 // ---- Third run: leave halfway. "Back to chat" must be on every screen of the card.
@@ -1108,8 +1111,13 @@ await openLearnings();
 step(
   'gaps: a closed gap becomes something you own, not an open gap',
   !document.querySelector('[data-role=open-gap]') &&
-    text().includes('Gap found') &&
-    text().includes('checked ✓'),
+    savedLedger().some(e => e.kind === 'gap') &&
+    JSON.parse(window.localStorage.getItem('own-it:v1')).gaps.some(
+      g => g.status === 'closed',
+    ) &&
+    [...document.querySelectorAll('[data-role=learning]')].some(c =>
+      c.textContent.includes(savedLedger().find(e => e.kind === 'gap').title),
+    ),
 );
 await click('New chat');
 
@@ -1117,16 +1125,18 @@ await click('New chat');
 await click('New chat');
 await openLearnings();
 step(
-  'go first: every owned topic offers its new question on Learnings',
+  'go first: every owned topic offers its new question on the Learnings map',
   [
     'orders per customer',
     '6 timed checkouts',
     'a top writer wants a bigger cut',
   ].every(l =>
-    buttons().some(b => b.textContent.includes('Try a new question · ' + l)),
+    [...document.querySelectorAll('[data-role=map-question]')].some(
+      b => b.textContent.trim() === l,
+    ),
   ),
 );
-await click('Try a new question · a top writer wants a bigger cut');
+await click('a top writer wants a bigger cut');
 await click('Just answer this time');
 step(
   'go first: outsourcing gets the answer straight away, and is noted',
@@ -1504,8 +1514,9 @@ step(
   !!document.querySelector('[data-role=learnings]') &&
     document.querySelectorAll('[data-role=learning], [data-role=due-item]')
       .length >= 4 &&
-    text().includes('First try') &&
-    text().includes('went first, 1 of 2'),
+    savedLedger().some(e =>
+      (e.realWork || []).some(r => r.actual === 1 && r.n === 2),
+    ),
 );
 step(
   'learnings: no "You asked about" or "stepped away" sections (cut for focus), sample history labelled',
@@ -1513,7 +1524,7 @@ step(
     !document.querySelector('[data-role=asked-about]') &&
     text().includes('sample history, mocked'),
 );
-await click('Try a new question · 6 timed checkouts');
+await click('6 timed checkouts');
 step(
   'learnings: revisit by trying a new question',
   !document.querySelector('[data-role=learnings]') &&
@@ -1583,8 +1594,12 @@ const sideCards = () =>
 step(
   'repeat: owning the same thing again is one card, with the earlier attempt on it',
   sideCards().length === 1 &&
-    sideCards()[0].textContent.includes('predicted 0, got 2 of 3') &&
-    sideCards()[0].textContent.includes('Earlier, '),
+    savedLedger().some(
+      e =>
+        !e.merged &&
+        e.title.startsWith('Which side an aggregator owns') &&
+        (e.earlier || []).length >= 1,
+    ),
 );
 step(
   'repeat: the map shows it once',
@@ -2173,7 +2188,7 @@ step(
   );
   step(
     'first visit: the seeded Mechanism item offers its own new question, not the which-side one (log 112)',
-    t.includes('Try a new question · what gives Juno its hold') &&
+    t.includes('what gives Juno its hold') &&
       !t.includes('a top writer wants a bigger cut'),
   );
   // Recall in the sample, then a question about it: quoted into a new chat, the question left to you, no go-first offer.
@@ -2199,6 +2214,10 @@ step(
   await bclick('Owns its customers less');
   await bclick('Check it');
   await wait(50);
+  step(
+    'recall: once checked, you can explain it to Sam next',
+    !!box.querySelector('[data-role=recall-teach]'),
+  );
   await act(async () => {
     box
       .querySelector('[data-role=recall-ask]')
@@ -2823,7 +2842,95 @@ await click('Back to chat');
 await openLearnings();
 step(
   'hybrid: the card says the first try was judged by Claude',
-  text().includes('First try 3 of 4, judged by Claude'),
+  savedLedger().some(e => e.judged && e.actual === 3 && e.n === 4),
+);
+
+step(
+  'cards: recall and Sam only; history behind a disabled "See history"; no pills or new-question button',
+  [
+    ...document.querySelectorAll('[data-role=learning], [data-role=due-item]'),
+  ].every(
+    c =>
+      !!c.querySelector('[data-role=teach-sam], [data-role=see-history]') &&
+      c.querySelector('[data-role=see-history]')?.title ===
+        'Disabled for demo purposes' &&
+      !c.textContent.includes('Try a new question') &&
+      !c.textContent.includes('Predicted'),
+  ),
+);
+// ---- Teach one from Learnings: explain anything you own to Sam, not only at the end of a try. (Already on Learnings.)
+const teachBtn = document.querySelector('[data-role=teach-sam]');
+step('learn teach: each Owning card offers Explain it to Sam', !!teachBtn);
+await act(async () => {
+  teachBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+await wait(30);
+const learnTeach = () => document.querySelector('[data-role=learn-teach]');
+step(
+  'learn teach: Sam opens on Learnings, not in a panel',
+  !!learnTeach() &&
+    !document.querySelector('[data-role=own-panel]') &&
+    text().includes('Explaining to Sam above'),
+);
+const samCalls = [];
+globalThis.fetch = async (url, opts) => {
+  const b = JSON.parse(opts.body);
+  samCalls.push(b);
+  const t =
+    b.task === 'debrief'
+      ? JSON.stringify({
+          clear: [
+            { quote: 'it owns the side that', text: 'You named who it owns.' },
+          ],
+          unsure: [
+            {
+              quote: 'not sure, maybe they',
+              question: 'How does it start?',
+              topic: 'How a new marketplace gets its first users',
+              right: false,
+            },
+          ],
+        })
+      : 'Hm, but how does it start?';
+  return { ok: true, status: 200, json: async () => ({ text: t }) };
+};
+for (const line of [
+  'it owns the side that customers keep coming back to',
+  'not sure, maybe they pay the first suppliers',
+  'that is all I know',
+]) {
+  await type(
+    document.querySelector('input[placeholder^="Explain it to Sam"]'),
+    line,
+  );
+  await click('Send');
+  await wait(60);
+}
+globalThis.fetch = offline;
+const samReq = samCalls.find(b => b.task === 'sam');
+step(
+  'learn teach: Sam hears what you own (the answer, or its name), with no gap to steer to',
+  !!samReq && !!samReq.input.code && !samReq.input.gap,
+);
+step(
+  'learn teach: after three turns, what teaching Sam showed, quoting you',
+  !!learnTeach().querySelector('[data-role=teach-debrief]') &&
+    learnTeach().textContent.includes('“it owns the side that”') &&
+    !!learnTeach().querySelector('[data-role=teach-gap]'),
+);
+await click('Save for later');
+step(
+  'learn teach: the shaky spot is saved as an open gap on the same page',
+  learnTeach().textContent.includes('Saved under Open gaps') &&
+    document
+      .querySelector('[data-role=open-gaps]')
+      ?.textContent.includes('How a new marketplace gets its first users'),
+);
+await click('Done');
+step(
+  'learn teach: Learnings records that you taught Sam',
+  !learnTeach() &&
+    savedLedger().some(e => (e.taught || []).some(x => x.gaps === 1)),
 );
 
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));

@@ -1,8 +1,10 @@
 // Learnings: what you own and how it went (design 3a). A map of what you own around you (inner ring: recall this
 // week), the next recall and the counts beside it, calibration, then a card per thing you own. Below: recall when
 // it's open, open gaps, and a labelled sample history.
+import { useEffect, useRef } from 'react';
 import { ChoiceQuestions } from './parts.jsx';
-import { BODY, LINK_MUTED, LOADING, PRE } from './styles.js';
+import TeachSam from './TeachSam.jsx';
+import { BODY, BTN_QUIET, LINK_MUTED, LOADING, PRE } from './styles.js';
 
 const pill = {
   pred: 'bg-accent-soft text-accent-hover',
@@ -128,7 +130,7 @@ function Map({ L }) {
       a,
     };
   });
-  const kids = L.untried
+  const kids = L.related
     .filter(u => pos[u.parent])
     .map(u => {
       const p = pos[u.parent];
@@ -237,12 +239,21 @@ function Map({ L }) {
         </button>
       ))}
       {kids.map((k, i) => (
-        <div key={'n' + i} className={NODE} style={at(k.x, k.y)}>
-          <span className="w-4 h-4 rounded-full box-border border-[1.5px] border-dashed border-muted"></span>
-          <span className="text-[12px] whitespace-nowrap text-muted">
+        <button
+          key={'n' + i}
+          onClick={k.onClick}
+          data-role="map-question"
+          title={`Try a new question: ${k.label}`}
+          className={`${NODE} bg-transparent border-none p-0 cursor-pointer group`}
+          style={at(k.x, k.y)}
+        >
+          <span
+            className={`w-4 h-4 rounded-full box-border border-[1.5px] border-muted ${k.tried ? '' : 'border-dashed'}`}
+          ></span>
+          <span className="text-[12px] whitespace-nowrap text-muted group-hover:text-accent group-hover:underline">
             {k.label}
           </span>
-        </div>
+        </button>
       ))}
       <div className="absolute right-5.5 bottom-4.5 text-[12px] text-muted">
         inner ring: recall this week · outer ring: later
@@ -262,8 +273,6 @@ export default function Learnings({ V }) {
       {!!note && <span className="text-[13px] text-muted">{note}</span>}
     </div>
   );
-  const outline =
-    'bg-transparent border border-accent text-accent rounded-full py-[7px] px-3 text-[13px] font-medium';
   const SAMPLE = [
     {
       title: 'Regex lookaheads: matching without consuming',
@@ -455,6 +464,8 @@ export default function Learnings({ V }) {
           </section>
         )}
 
+        {!!L.teachingItem && <Teaching L={L} head={head} card={card} />}
+
         {!L.empty && (
           <section className="flex flex-col gap-3.5">
             {head('Owning')}
@@ -475,14 +486,7 @@ export default function Learnings({ V }) {
                       {it.owned ? it.owned + ' · ' : ''}
                       {it.from}
                     </span>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {it.steps
-                        .filter(st => st.tone !== 'next')
-                        .map((st, j) => (
-                          <Pill key={j} st={st} />
-                        ))}
-                    </div>
-                    <div className="mt-auto flex flex-col gap-2 items-start">
+                    <div className="mt-auto flex gap-x-4 gap-y-2 flex-wrap items-center">
                       {it.due && !it.recall && (
                         <button
                           onClick={it.onRecall}
@@ -501,15 +505,29 @@ export default function Learnings({ V }) {
                           {inDays(it.daysToDue)}
                         </span>
                       )}
-                      {!!it.onNew && (
+                      {it.teaching ? (
+                        <span className="text-[13px] text-olive">
+                          Explaining to Sam above ↑
+                        </span>
+                      ) : (
                         <button
-                          onClick={it.onNew}
-                          className={`${outline} hover:bg-accent-soft`}
+                          onClick={it.onTeach}
+                          data-role="teach-sam"
+                          className="bg-transparent border-none p-0 text-[13px] font-semibold text-olive"
                         >
-                          Try a new question · {it.newLabel.split(' · ')[1]}
+                          Explain it to Sam
                         </button>
                       )}
                     </div>
+                    {/* The full timeline (predictions, tries, recalls, Sam) would live behind this; not in the demo. */}
+                    <span
+                      data-role="see-history"
+                      aria-disabled="true"
+                      title="Disabled for demo purposes"
+                      className="self-start text-[12.5px] text-faint underline underline-offset-[2px] cursor-not-allowed"
+                    >
+                      See history
+                    </span>
                   </div>
                 </div>
               ))}
@@ -718,6 +736,15 @@ function Recall({ it, L }) {
                 ✓ Saved as an open gap
               </span>
             )}
+            {!it.teaching && (
+              <button
+                onClick={it.onTeach}
+                data-role="recall-teach"
+                className="bg-transparent border border-olive rounded-full py-[7px] px-3.5 text-[12.5px] text-olive"
+              >
+                Explain it to Sam
+              </button>
+            )}
             <button
               onClick={L.askAboutRecall}
               data-role="recall-ask"
@@ -735,5 +762,42 @@ function Recall({ it, L }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Teach one, from Learnings: the same Sam as the panel, for anything you own. Opens in view, since you may have
+// started it from a card further down.
+function Teaching({ L, head, card }) {
+  const ref = useRef(null);
+  const id = L.teachingItem.id;
+  useEffect(() => {
+    const el = ref.current;
+    if (el && el.scrollIntoView)
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [id]);
+  return (
+    <section
+      ref={ref}
+      data-role="learn-teach"
+      className="flex flex-col gap-2.5"
+    >
+      {head('Explain it to Sam', L.teachingItem.title, 'text-olive')}
+      <div className={`${card} border-line`}>
+        <TeachSam T={L.teach} />
+        <div className="flex gap-2">
+          {!!L.canWrapTeach && (
+            <button onClick={L.wrapTeach} className={BTN_QUIET}>
+              I'm done explaining
+            </button>
+          )}
+          <button
+            onClick={L.closeTeach}
+            className="bg-transparent border border-line-strong rounded-full py-[7px] px-3.5 text-[12.5px] text-ink-2"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

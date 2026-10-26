@@ -9,6 +9,7 @@ import {
   inline,
 } from './parts.jsx';
 import SpotPractice from './SpotPractice.jsx';
+import TeachSam from './TeachSam.jsx';
 import {
   BODY,
   PANEL,
@@ -702,142 +703,7 @@ export default function OwnPanel({ V }) {
 
           {!!V.phaseTeach && (
             <div className="flex flex-col gap-3">
-              <div className="text-[13px] text-muted">
-                Sam has never touched this. Explain in your own words; Sam will
-                ask what doesn't make sense.
-              </div>
-              <div className="flex flex-col gap-2.5 bg-sunken rounded-[10px] p-3">
-                {(V.teachMsgs || []).map((t, _i) => (
-                  <div
-                    key={_i}
-                    className={`flex gap-2.5 items-start max-w-[88%] ${t.row}`}
-                  >
-                    {!!t.isSam && (
-                      <span className="w-6.5 h-6.5 rounded-full bg-olive text-on-accent text-[12px] flex items-center justify-center flex-none font-serif">
-                        S
-                      </span>
-                    )}
-                    <div
-                      className={`text-[14px] leading-normal py-2 px-3 rounded-[10px] whitespace-pre-wrap ${t.bubble}`}
-                    >
-                      {t.text}
-                    </div>
-                  </div>
-                ))}
-                {!!V.teachLoading && (
-                  <div className="text-[12.5px] text-olive animate-blink">
-                    Sam is thinking…
-                  </div>
-                )}
-              </div>
-              {!!V.teachOpen && (
-                <div className="flex gap-2">
-                  <input
-                    value={V.teachInput}
-                    onChange={V.onTeachInput}
-                    onKeyDown={V.onTeachKey}
-                    placeholder="Explain it to Sam…"
-                    className="flex-1 border border-line-strong rounded-lg py-2.5 px-3 text-[14px] bg-surface outline-none"
-                  />
-                  <button
-                    onClick={V.sendTeach}
-                    className="bg-inverse text-on-inverse border-none rounded-lg py-[9px] px-3.5 text-[13.5px]"
-                  >
-                    Send
-                  </button>
-                </div>
-              )}
-              {!!V.teachDebriefLoading && (
-                <div className="text-[12.5px] text-olive animate-blink">
-                  Looking back at how you explained it…
-                </div>
-              )}
-              {!!V.teachDebrief && (
-                <div
-                  data-role="teach-debrief"
-                  className="flex flex-col gap-2.5 border border-line bg-surface rounded-xl py-3.5 px-4 animate-rise"
-                >
-                  <div className="font-serif text-[19px]">
-                    What teaching Sam showed
-                  </div>
-                  {V.teachDebrief.clear.map((c, i) => (
-                    <div key={'c' + i} className={NOTE_ROW}>
-                      <span className={`${MARK} bg-good-soft text-good-text`}>
-                        ✓
-                      </span>
-                      <span>
-                        <b className="text-good-text">You explained clearly:</b>{' '}
-                        <i>“{c.quote}”</i> {c.text}
-                      </span>
-                    </div>
-                  ))}
-                  {(V.teachDebrief.unsureRight || []).map((u, i) => (
-                    <div
-                      key={'r' + i}
-                      data-role="teach-unsure-right"
-                      className={NOTE_ROW}
-                    >
-                      <span className={`${MARK} bg-good-soft text-good-text`}>
-                        ✓
-                      </span>
-                      <span>
-                        <b className="text-good-text">Unsure, but right:</b> you
-                        said <i>“{u.quote}”</i> That holds. You knew more than
-                        you trusted.
-                      </span>
-                    </div>
-                  ))}
-                  {V.teachDebrief.unsure.map((u, i) => (
-                    <div
-                      key={'u' + i}
-                      data-role="teach-gap"
-                      className="flex flex-col gap-2 bg-accent-soft border border-accent-soft-2 rounded-[10px] py-2.5 px-3"
-                    >
-                      <div className={NOTE_ROW}>
-                        <span
-                          className={`${MARK} bg-accent-soft text-accent-text`}
-                        >
-                          ?
-                        </span>
-                        <span>
-                          <b className="text-accent-text">You weren't sure:</b>{' '}
-                          Sam asked <i>“{u.question}”</i> and you said{' '}
-                          <i>“{u.quote}”</i>
-                        </span>
-                      </div>
-                      <div className="text-[13px] text-accent-deep pl-7">
-                        That's a gap you didn't know you had: <b>{u.topic}</b>.
-                      </div>
-                      <div className="flex gap-2 pl-7 flex-wrap">
-                        <button
-                          onClick={() => V.exploreTeachGap(u)}
-                          className="bg-accent text-on-accent border-none rounded-lg py-1.5 px-3 text-[12.5px]"
-                        >
-                          Explore this gap with Claude
-                        </button>
-                        {V.gapTopics.includes(u.topic) ? (
-                          <span className="text-[12.5px] text-good-text self-center">
-                            ✓ Saved to Learnings
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => V.saveTeachGap(u)}
-                            className="bg-transparent border border-accent-border rounded-lg py-1.5 px-3 text-[12.5px] text-accent-text hover:bg-accent-soft"
-                          >
-                            Save for later
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {V.teachDebrief.unsure.length === 0 && (
-                    <div className="text-[13px] text-good-text">
-                      No shaky spots: you answered every question Sam asked.
-                      Explaining it is the strongest sign you own it.
-                    </div>
-                  )}
-                </div>
-              )}
+              <TeachSam T={V.teach} />
               <div className="flex gap-2">
                 {!!V.canWrap && (
                   <button onClick={V.wrapTeach} className={BTN_QUIET}>

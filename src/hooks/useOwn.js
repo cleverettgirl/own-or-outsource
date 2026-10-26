@@ -1,10 +1,15 @@
-import { ask, complete } from '../claude.js';
+import { ask } from '../claude.js';
 import { SQL_TARGETS } from '../targets.js';
 import { normalizeSpot, spotSummary } from '../spot.js';
 import { longestIsRight } from '../choiceCheck.js';
 import { ruleNotes, keepQuoted } from '../notes.js';
 import { tally } from '../scoring.js';
-import { isColdStart } from '../gaps.js';
+import {
+  isCodeOwn as isCodeOwnOf,
+  samOpening,
+  samReply,
+  debriefTeach as debriefOf,
+} from '../teach.js';
 import {
   SQL,
   REACT,
@@ -1062,10 +1067,8 @@ export function useOwn(app) {
     }));
 
   // ---------- teach one ----------
-  // Is what you're owning code? The replayed chats say so themselves; otherwise it's code only when the try was
-  // writing code. A live answer about a health headline or leadership is an idea, so Sam asks about an idea.
-  const isCodeOwn = (o = app.state.own) =>
-    o.scenario ? !o.scenario.prose : o.write.format === 'code';
+  // Sam and the debrief live in teach.js, shared with Learnings, where you can explain anything you own.
+  const isCodeOwn = (o = app.state.own) => isCodeOwnOf(o);
   function goTeach() {
     const o = app.state.own;
     setOwn({
@@ -1074,16 +1077,7 @@ export function useOwn(app) {
         ...o.teach,
         msgs: o.teach.msgs.length
           ? o.teach.msgs
-          : [
-              {
-                role: 'sam',
-                text:
-                  (o.scenario && o.scenario.samOpen) ||
-                  (isCodeOwn(o)
-                    ? "Hey! So I've never done this before. Can you tell me what this code is for, like, what problem it solves?"
-                    : "Hi! I've never come across this before. What's the main idea, in plain words, and why does it matter?"),
-              },
-            ],
+          : [{ role: 'sam', text: samOpening(o) }],
       },
     });
   }
@@ -1094,41 +1088,13 @@ export function useOwn(app) {
     const msgs = o.teach.msgs.concat([{ role: 'user', text: t }]);
     const turns = o.teach.turns + 1;
     setOwn({ teach: { ...o.teach, msgs, input: '', turns, loading: true } });
-    let reply;
-    const gap = o.write.grade ? o.write.grade.gap : '';
-    try {
-      const hist = msgs.map(m => ({
-        role: m.role === 'sam' ? 'assistant' : 'user',
-        content: m.text,
-      }));
-      // The API needs the conversation to open with a user turn; Sam speaks first in the UI.
-      if (hist[0].role === 'assistant')
-        hist.unshift({
-          role: 'user',
-          content: '(The learner opens the chat with Sam.)',
-        });
-      reply = await complete({
-        task: 'sam',
-        input: {
-          lang: o.lang,
-          prose: !isCodeOwn(o),
-          code: o.code,
-          gap,
-          last: turns >= 3,
-        },
-        messages: hist,
-      });
-      reply = String(reply).trim();
-    } catch (e) {
-      const sl = o.scenario && o.scenario.samLines;
-      reply = sl
-        ? sl[Math.min(turns, 3) - 1]
-        : turns >= 3
-          ? 'Ok I think I get it: you squash the rows into one per person first, and only then can you ask about the totals. Thanks!'
-          : turns === 1
-            ? "Hm ok. So the part that filters, does it look at every single row, or at the totals? I don't get when the totals show up."
-            : "Wait so if I wanted only people whose total is big, why can't I just put that in the first filter?";
-    }
+    const reply = await samReply({
+      own: o,
+      material: o.code,
+      msgs,
+      turns,
+      gap: o.write.grade ? o.write.grade.gap : '',
+    });
     setOwn(
       cur => ({
         teach: {
@@ -1142,71 +1108,14 @@ export function useOwn(app) {
       },
     );
   }
-  // The aha of teaching: what you explained clearly, and where you weren't sure (a gap you didn't know you had).
-  // Claude reads the conversation and must quote your words; offline, hedges ("not sure", "I guess") mark the gaps.
   async function debriefTeach() {
-    const o = app.state.own,
-      msgs = o.teach.msgs;
+    const o = app.state.own;
     if (o.teach.debrief || o.teach.debriefLoading) return;
     setOwn(cur => ({ teach: { ...cur.teach, debriefLoading: true } }));
-    const mine = msgs.filter(m => m.role === 'user').map(m => m.text);
-    const samBefore = i => {
-      for (let k = i - 1; k >= 0; k--)
-        if (msgs[k].role === 'sam') return msgs[k].text;
-      return '';
-    };
-    const quoted = (q, list) =>
-      q &&
-      list.some(t =>
-        t.toLowerCase().includes(String(q).toLowerCase().trim().slice(0, 25)),
-      );
-    let d;
-    try {
-      const r = await ask('debrief', {
-        label: o.focus ? o.focus.label : '',
-        msgs,
-      });
-      // Hedged but right is underconfidence, the other half of calibration: shown as "unsure, but right", not a gap.
-      const unsure = (r.unsure || [])
-        .filter(u => quoted(u.quote, mine) && u.topic)
-        .slice(0, 2);
-      d = {
-        clear: (r.clear || []).filter(c => quoted(c.quote, mine)).slice(0, 2),
-        unsure: unsure.filter(u => !u.right),
-        unsureRight: unsure.filter(u => u.right),
-      };
-    } catch (e) {
-      const hedge =
-        /not (really |quite )?sure|i guess|i'd guess|i would guess|maybe|no idea|i think|don't know|dont know/i;
-      d = {
-        clear: mine
-          .filter(t => !hedge.test(t))
-          .slice(0, 1)
-          .map(t => ({
-            quote: t.length > 90 ? t.slice(0, 90) + '…' : t,
-            text: 'You put the core idea in your own words.',
-          })),
-        unsure: msgs
-          .map((m, i) => ({ m, i }))
-          .filter(x => x.m.role === 'user' && hedge.test(x.m.text))
-          .slice(0, 2)
-          .map(x => ({
-            quote: x.m.text,
-            question: samBefore(x.i),
-            topic: isColdStart({ topic: '', question: samBefore(x.i) })
-              ? 'How a two-sided platform solves the cold start'
-              : (
-                  samBefore(x.i)
-                    .replace(/^(oo+h|oh|ok|hm+|wait)[,!. ]+/i, '')
-                    .split(/[.?!]/)
-                    .filter(Boolean)
-                    .pop() || 'The question Sam asked'
-                )
-                  .trim()
-                  .slice(0, 70),
-          })),
-      };
-    }
+    const d = await debriefOf({
+      label: o.focus ? o.focus.label : '',
+      msgs: o.teach.msgs,
+    });
     setOwn(cur => ({
       teach: { ...cur.teach, debrief: d, debriefLoading: false },
     }));

@@ -6,6 +6,7 @@ import { useGoFirst } from './useGoFirst.js';
 import { useOwn } from './useOwn.js';
 import { useGaps } from './useGaps.js';
 import { useRecall } from './useRecall.js';
+import { useTeach } from './useTeach.js';
 
 // The app as one object the views read: app.state (every domain's state, as last rendered), the refs, and each
 // domain's actions (app.chat, app.own, …). Domains call each other through it when an action runs, so they can
@@ -30,6 +31,7 @@ function useCore() {
           ...app.chat.ref.current,
           ...app.own.ref.current,
           ...app.recall.ref.current,
+          ...app.teach.ref.current,
         };
       },
       // Simulated "now": the demo can skip ahead in time to bring things due.
@@ -60,6 +62,7 @@ export function useApp() {
   app.chat = useChat(app);
   app.own = useOwn(app);
   app.recall = useRecall(app);
+  app.teach = useTeach(app);
   app.goFirst = useGoFirst(app);
   app.gaps = useGaps(app);
 
