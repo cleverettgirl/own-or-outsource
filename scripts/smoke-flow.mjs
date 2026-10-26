@@ -2933,6 +2933,70 @@ step(
     savedLedger().some(e => (e.taught || []).some(x => x.gaps === 1)),
 );
 
+// ---- A chat's first answer always gets the plain Own it icon, even when it streamed in (a quick start) and Claude
+// would call the question "working to get better". Only a follow-up can expand it.
+{
+  const enc = new TextEncoder();
+  const ndjson = text => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => 'application/x-ndjson' },
+    body: new ReadableStream({
+      // Two pieces with a pause between, as a real stream arrives: the answer is on screen before it's done.
+      async start(c) {
+        const half = Math.ceil(text.length / 2);
+        c.enqueue(
+          enc.encode(JSON.stringify({ t: text.slice(0, half) }) + '\n'),
+        );
+        await new Promise(r => setTimeout(r, 40));
+        c.enqueue(enc.encode(JSON.stringify({ t: text.slice(half) }) + '\n'));
+        c.enqueue(enc.encode(JSON.stringify({ done: true }) + '\n'));
+        c.close();
+      },
+    }),
+  });
+  const inferCalls = [];
+  globalThis.fetch = async (url, opts) => {
+    const b = JSON.parse(opts.body);
+    if (b.task === 'inferLearning') inferCalls.push(b);
+    if (b.stream)
+      return ndjson('Leading without a title starts with how you disagree.');
+    const text =
+      b.task === 'inferLearning'
+        ? '{"learning": true, "topic": "Disagreeing without criticizing"}'
+        : b.task === 'chat'
+          ? 'Ask what would have to be true for the plan to work.'
+          : '{}';
+    return { ok: true, status: 200, json: async () => ({ text }) };
+  };
+  await click('New chat');
+  await act(async () => {
+    document
+      .querySelector('[data-role=start-lead]')
+      .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  });
+  await wait(150);
+  const expanded = () => text().includes('Own it · about 2 min');
+  step(
+    'first answer: a streamed quick start gets the plain icon, and its question is not judged',
+    text().includes('Leading without a title starts') &&
+      !expanded() &&
+      inferCalls.length === 0,
+  );
+  const box = document.querySelector('main textarea');
+  await type(
+    box,
+    'wait, so how do I ask that without sounding like I am stalling?',
+  );
+  await click('↑');
+  await wait(150);
+  step(
+    'first answer: a follow-up is still judged, and can expand the button',
+    inferCalls.length === 1 && expanded(),
+  );
+  globalThis.fetch = offline;
+}
+
 const reactErrors = errors.filter(e => !e.includes('offline (smoke test)'));
 step(
   'no React/runtime errors',

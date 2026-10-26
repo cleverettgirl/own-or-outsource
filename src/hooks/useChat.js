@@ -393,7 +393,7 @@ export function useChat(app) {
     return reply;
   }
   function showReply(m, reply, id = app.nid()) {
-    const followUp = canOfferOwn();
+    const followUp = canOfferOwn(id);
     set(s => ({
       messages: s.messages
         .filter(x => x.type !== 'thinking' && x.id !== id)
@@ -404,9 +404,11 @@ export function useChat(app) {
     // Trying to understand something is the moment to offer Own it: Claude judges that from the message.
     if (reply.plain && followUp) inferLearning(m.question, reply.code, id);
   }
-  const canOfferOwn = () =>
+  // Only on a follow-up: a chat's first answer always gets the plain icon. The answer being shown doesn't count, even
+  // when it's already on screen because it streamed in (a quick start), or the first answer would count as earlier.
+  const canOfferOwn = id =>
     !app.state.activeGap &&
-    app.state.messages.filter(x => x.type === 'assistant').length >= 1;
+    app.state.messages.some(x => x.type === 'assistant' && x.id !== id);
   // Is this follow-up working to get better at something (why/how, "I'm confused", applying it), not a curious aside or a request?
   // Judged from the latest message only: with earlier questions as context, every follow-up looked like learning (process log 54).
   // Claude decides and names it; keyword matching is only the fallback when Claude can't be reached. It only ever offers.
