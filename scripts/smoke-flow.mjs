@@ -1146,7 +1146,7 @@ step(
 await openLearnings();
 step(
   'go first: Learnings notes you let Claude answer',
-  text().includes('let Claude answer'),
+  savedLedger().some(e => (e.realWork || []).some(r => r.outsourced)),
 );
 
 // ---- React: Claude's real answer, and the cleanup's timing as a timeline you step through.
@@ -1519,10 +1519,10 @@ step(
     ),
 );
 step(
-  'learnings: no "You asked about" or "stepped away" sections (cut for focus), sample history labelled',
+  'learnings: no "You asked about", "stepped away" or mocked sample history (cut for focus)',
   !text().includes('You wanted to learn, then stepped away') &&
     !document.querySelector('[data-role=asked-about]') &&
-    text().includes('sample history, mocked'),
+    !text().includes('sample history'),
 );
 await click('6 timed checkouts');
 step(

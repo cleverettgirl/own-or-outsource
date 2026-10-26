@@ -1,29 +1,11 @@
 // Learnings: what you own and how it went (design 3a). A map of what you own around you (inner ring: recall this
-// week), the next recall and the counts beside it, calibration, then a card per thing you own. Below: recall when
-// it's open, open gaps, and a labelled sample history.
+// week), the next recall and the counts beside it, calibration, then a card per thing you own. Recall and Sam open
+// above the cards; open gaps below.
 import { useEffect, useRef } from 'react';
 import { ChoiceQuestions } from './parts.jsx';
 import TeachSam from './TeachSam.jsx';
 import { BODY, BTN_QUIET, LINK_MUTED, LOADING, PRE } from './styles.js';
 
-const pill = {
-  pred: 'bg-accent-soft text-accent-hover',
-  act: 'bg-good-soft text-good-text',
-  mute: 'bg-sunken text-muted',
-  next: 'border border-dashed border-faint text-muted',
-};
-// "Predicted 3 of 3", "Real work · let Claude answer", "Recall 3 days ago: 3 of 3".
-const pillText = st =>
-  /^Recall · /.test(st.label)
-    ? `Recall ${st.label.slice(9)}: ${st.v}`
-    : /^\d/.test(st.v)
-      ? `${st.label} ${st.v}`
-      : `${st.label} · ${st.v}`;
-const Pill = ({ st }) => (
-  <span className={`py-1 px-[9px] rounded-full text-[12px] ${pill[st.tone]}`}>
-    {pillText(st)}
-  </span>
-);
 const shortTitle = t => {
   const s = String(t).split(/:\s|,\s/)[0];
   return s.length > 34 ? s.slice(0, 32) + '…' : s;
@@ -273,37 +255,6 @@ export default function Learnings({ V }) {
       {!!note && <span className="text-[13px] text-muted">{note}</span>}
     </div>
   );
-  const SAMPLE = [
-    {
-      title: 'Regex lookaheads: matching without consuming',
-      from: 'Validate a password field',
-      steps: [
-        { label: 'Predicted', v: '3 of 3', tone: 'pred' },
-        { label: 'First try', v: '1 of 3', tone: 'act' },
-        { label: 'Fixed', v: '3 of 3', tone: 'mute' },
-        { label: '3 days later', v: '2 of 3', tone: 'act' },
-      ],
-    },
-    {
-      title: 'groupby vs pivot_table in pandas',
-      from: 'Weekly signups by channel',
-      steps: [
-        { label: 'Predicted', v: '1 of 2', tone: 'pred' },
-        { label: 'First try', v: '2 of 2', tone: 'act' },
-        { label: 'Real work', v: 'went first, 3 of 3', tone: 'act' },
-        { label: 'Real work', v: 'let Claude answer', tone: 'mute' },
-      ],
-    },
-    {
-      title: 'Why a P/E ratio can mislead',
-      from: 'Reading an earnings report',
-      steps: [
-        { label: 'Predicted', v: '3 of 3', tone: 'pred' },
-        { label: 'First try', v: '2 of 3', tone: 'act' },
-        { label: '3 days later', v: '3 of 3', tone: 'act' },
-      ],
-    },
-  ];
   return (
     <div
       data-role="learnings"
@@ -597,33 +548,6 @@ export default function Learnings({ V }) {
             </div>
           </section>
         )}
-
-        {/* "You asked about" and "stepped away" were cut for focus (process log 75): both are still recorded, and
-            listed in the doc as ways to extend this. Asking leads to owning from the chat's own Own it button. */}
-
-        <section className="flex flex-col gap-3 opacity-[.75]">
-          {head(
-            'Earlier',
-            'sample history, mocked to show what a few weeks of use looks like',
-          )}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-            {SAMPLE.map((it, i) => (
-              <div key={i} className={`${card} border-line`}>
-                <span className="text-[15px] font-medium">{it.title}</span>
-                <span className="text-[12px] text-muted">{it.from}</span>
-                <div className="flex gap-1.5 flex-wrap">
-                  {it.steps.map((st, j) => (
-                    <Pill key={j} st={st} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="text-[13px] text-muted">
-            Over these weeks, you went from expecting 30% more than you got to
-            5% more. You're getting better at knowing what you know.
-          </div>
-        </section>
       </div>
     </div>
   );
